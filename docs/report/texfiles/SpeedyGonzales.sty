@@ -1,0 +1,25 @@
+\ProvidesPackage{SpeedyGonzales}
+
+\usepackage[utf8]{inputenc}
+
+%\usepackage[hidelinks]{hyperref}
+\usepackage[hyphens]{url}
+
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm, includeheadfoot]{geometry}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{changepage}
+\usepackage[nottoc, numbib]{tocbibind}
+\usepackage{lastpage}
+\usepackage{setspace}
+\usepackage[bottom]{footmisc}
+
+\fancypagestyle{plain}
+{
+	\fancyhf{}
+	\rfoot{Side \thepage{} af \pageref{LastPage}}
+	\renewcommand{\headrulewidth}{0pt}
+}
+
+%\newcommand{\horiline}{\noindent\makebox[\textwidth]{\rule{\textwidth}{0.4pt}}}
