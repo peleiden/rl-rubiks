@@ -2,7 +2,7 @@ from cffi import FFI
 
 ffi = FFI()
 ffi.cdef("""
-    int doub(int);
+	int doub(int);
 """)
 
 C = ffi.dlopen("pyrs/target/debug/libpyrs.so")

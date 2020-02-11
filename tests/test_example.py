@@ -6,6 +6,7 @@ sys.path.append(os.path.join(sys.path[0], '..', 'src'))
 import torch 
 
 from example import ExampleAdder
+from utils.ticktock import TickTock
 
 
 
@@ -25,3 +26,13 @@ class TestExampleAdder:
 		
 		#Testing that standard value is 3
 		assert torch.equal(expected,  ex.add_to_tensor())
+
+class TestTickTock:
+	def test_tick_tock(self):
+		tt = TickTock()
+		tt.tick()
+		torch.zeros(100)
+		tt.tock(True)
+
+if __name__ == "__main__":
+	TestTickTock().test_tick_tock()
