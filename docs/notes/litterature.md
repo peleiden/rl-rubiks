@@ -13,8 +13,7 @@
 ## Found literature
 
 * (Given by Mikkel) Forest Agostinelli, Stephen McAleer, Alexander Shmakov and Pierre Baldi, "Solving the Rubik's cube
-with deep reinforcement learning and search", URL: https://www.nature.com/articles/s42256-019-
-0070-z
+with deep reinforcement learning and search", URL: https://www.nature.com/articles/s42256-019-0070-z
 
 * (Given by Mikkel) Max Lapan, "Reinforcement Learning to solve Rubik’s cube (and other complex problems!) "
 URL: https://medium.com/datadriveninvestor/reinforcement-learning-to-solve-rubiks-cube-andother-complex-problems-106424cf26ff
