@@ -2,118 +2,59 @@
 import torch
 from copy import deepcopy
 
-# The i'th index contain the neighbors of the i'th side in positive direction
-neighbors = (
-	{  # Front
-		1: (slice(None), -1),
-		2: (0, slice(None)),
-		3: (slice(None), 0),
-		4: (-1, slice(None)),
-	},
-	{  # Left
-		0: (slice(None), 0),
-		4: (),
-		5: (),
-		2: (),
-	},
-	{  # Below
-		0: (),
-		1: (),
-		5: (),
-		3: (),
-	},
-	{  # Right, reverse of left
-		2: (),
-		5: (),
-		4: (),
-		0: (),
-	},
-	{  # Above, reverse of below
-		3: (),
-		5: (),
-		1: (),
-		0: (),
-	},
-	{  # Behind, reverse of front
-		4: (),
-		3: (),
-		2: (),
-		1: (),
-	},
-)
-
 
 class RubiksCube:
 
-	def __init__(self, n = 3, device = torch.device("cpu")):
+	def __init__(self, device = torch.device("cpu")):
 
 		"""
-		Shape: 6 x n x n
-		Sides:
-			0: Front
-			1: Left
-			2: Below
-			3: Right
-			4: Above
-			5: Behind
-		The state is initialized as a solved cube
-		Colours are represented as numbers 0 through 5 and initialized such that colour 0 is on side 0 etc.
-		
-		Indices on a given side:
-		Turn a side towards you. The indices for the matrix on that side follow normal matrix indexing
+		Shape: 6 x 8 uint8, see method three here: https://stackoverflow.com/a/55505784
 		"""
 
-		if n != 3:
-			raise NotImplementedError("Rubik's cube must be 3 x 3, not %i x %i" % (n, n))
-
-		self.n = n
-		shape = (6, self.n, self.n)
-		self.state = torch.empty(*shape, dtype = torch.uint8, device = device)
+		self.device = device
+		self.state = torch.zeros(6, 8, dtype = torch.uint8, device = device)
 		for i in range(6):
 			self.state[i] = i
+		
+		# The i'th index contain the neighbors of the i'th side in positive direction
+		self.neighbors = (
+			(1, 5, 4, 2),  # Front
+			(2, 3, 5, 0),  # Left
+			(0, 4, 3, 1),  # Top
+			(5, 1, 2, 4),  # Back
+			(3, 2, 0, 5),  # Right
+			(4, 0, 1, 3),  # Bottom
+		)
+		self.revolution = (
+			torch.tensor([6, 7, 0], device = device),
+			torch.arange(2, 5, device = device),
+			torch.arange(4, 7, device = device),
+			torch.arange(0, 3, device = device),
+		)
 	
-	def rotate(self, side: int, pos_rev: bool):
+	def rotate(self, face: int, pos_rev: bool):
 
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
 
-		if not 0 <= side <= 5:
-			raise IndexError("As there are only six sides, the side should be 0-5, not %i" % side)
+		if not 0 <= face <= 5:
+			raise IndexError("As there are only six sides, the side should be 0-5, not %i" % face)
 
-		# First the corresponding side is rotated
-		# np.rot90(a) is recreated as transpose(flip(a))
-		# Reversed is flip(transpose(a))
-		# https://github.com/pytorch/pytorch/issues/6271
-
-		# Rotates the actual side
-		if pos_rev:
-			self.state[side] = torch.flip(self.state[side].t())
-		else:
-			self.state[side] = torch.flip(self.state[side]).t()
+		# Rolls the face
+		shift = 1 if pos_rev else -1
+		self.state[face] = self.state[face].roll(2 * shift)
 		
-		# Rotates the parts of the other sides
-		# https://pytorch.org/docs/stable/torch.html#torch.roll
-		# First makes a tensor referencing all the 4*n values next to the given side that should be shifted
-		to_shift = torch.empty(4 * self.n, dtype = torch.uint8)
+		# Rolls the adjacent rows
+		rowvec = torch.cat([
+			self.state[self.neighbors[face][i], self.revolution[i]] for i in range(4)
+		]).roll(3 * shift)
 		for i in range(4):
-			to_shift[i*self.n:(i+1)*self.n] = self.state[self.neighbors[side][i], <]
+			self.state[self.neighbors[face][i], self.revolution[i]] = rowvec[i*3:(i+1)*3]
 		
 	def __str__(self):
 
 		return str(self.state)
-	
-	def copy(self):
-
-		"""
-		Returns a deep copy of self
-		"""
-
-		return deepcopy(self)
-	
-	def _get_slice(self, n: int or None):
-
-		return n if type(n) == int else slice(0, self.n)
 	
 	def to(self, device: torch.device, in_place = True):
 
@@ -123,22 +64,35 @@ class RubiksCube:
 		If not in_place, a new RubiksCube instance is returned
 		"""
 
+		self.device = device
 		attrs = ("state", )
-		new_rc = self.copy()
+		new_rc = deepcopy(self)
 		for attr in attrs:
-			setattr(
-				new_rc,
-				attr,
-				getattr(self, attr).to(device)
-			)
+			setattr(new_rc, attr, getattr(self, attr).to(device))
 		
 		if in_place:
 			self = new_rc
 		else:
 			return new_rc
+	
+	def is_complete(self):
+
+		full_faces = torch.empty(6, dtype = bool)
+		for i in range(6):
+			full_faces[i] = (self.state[i] == self.state[i, 0]).all()
+		
+		return full_faces.all()
 
 
 
-
-
+if __name__ == "__main__":
+	rube = RubiksCube()
+	print(rube)
+	print(rube.is_complete())
+	rube.rotate(0, True)
+	print(rube)
+	print(rube.is_complete())
+	rube.rotate(0, False)
+	print(rube)
+	print(rube.is_complete())
 
