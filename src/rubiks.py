@@ -86,13 +86,22 @@ class RubiksCube:
 
 
 if __name__ == "__main__":
-	rube = RubiksCube()
-	print(rube)
-	print(rube.is_complete())
-	rube.rotate(0, True)
-	print(rube)
-	print(rube.is_complete())
-	rube.rotate(0, False)
-	print(rube)
-	print(rube.is_complete())
+	from utils.ticktock import TickTock
+	n = int(1e5)
+	faces = torch.randint(6, (n,))
+	dirs = torch.randint(2, (n,))
+	tt = TickTock()
+
+	tt.tick()
+	cpu_rube = RubiksCube()
+	for face, d in zip(faces, dirs):
+		cpu_rube.rotate(face, d)
+	tt.tock(True)
+
+	tt.tick()
+	gpu_rube = RubiksCube(torch.device("cuda"))
+	for face, d in zip(faces, dirs):
+		gpu_rube.rotate(face, d)
+	tt.tock(True)
+	
 

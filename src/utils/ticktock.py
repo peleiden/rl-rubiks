@@ -1,5 +1,4 @@
-from datetime import datetime
-
+from time import time
 
 def get_timestamp(for_file=False):
 	# Returns a timestamp
@@ -14,13 +13,13 @@ class TickTock:
 	_start: float
 
 	def tick(self):
-		self._start = datetime.now().microsecond
+		self._start = time()
 		return self._start
 	
-	def tock(self, with_print = False):
-		end = datetime.now().microsecond
+	def tock(self, with_print = True):
+		end = time()
 		passed_time = end - self._start
 		if with_print:
-			print(f"{passed_time / 1000:3f} ms")
+			print(f"{passed_time/1000:3f} ms")
 		return passed_time
 
