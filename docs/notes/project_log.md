@@ -18,13 +18,13 @@ Tasks before next meeting:
 
 ### Week 2:
 #### 12/2-2020
-Discussed implementation of Rubiks and settled for starting with a `numpy` implentation which includes possibility for $N\times N\times N$ cube. 
+Discussed implementation of Rubiks and settled for starting with a `torch` implentation which includes possibility for $N\times N\times N$ cube. 
 Getting overview of project plan. 
 Wrote project contract.
 Wrote learning objectives.
 
 Tasks before next meeting (friday):
-* Asger: Implement a Rubiks environment class in `numpy` which takes in actions and returns the board position + checks for win. Focus on getting $3\times 3\times 3$ to work before next meeting.
+* Asger: Implement a Rubiks environment class in `torch` which takes in actions and returns the board position + checks for win. Focus on getting $3\times 3\times 3$ to work before next meeting.
 * Anne: Find questions for meeting with supervisor that can be used to write the project description + find recommendation for group theory paper.
 * Søren: Set up Gantt and Project Canvas + set up TeX-system for report and project description.
 
