@@ -48,13 +48,13 @@ a) Flekstid
 * Arbejdsopgaver til alle på alle tidspunker
 * Alle skal føle at de har bidraget nok til projektet
 
-b) Forventninger: Hvad er gruppens succeskriterier? At alle har ejerskab for projektet og at alle føler, at vi lærer noget? Kun at bestå eksamen?
+b) Forventninger 
 * Dyb forståelse for RL + bevise at vi har dyb forståelse
 * Anvendelse af RL med gode resultater
 * Ambitiøst arbejde
 * Alle i gruppen skal kunne forstå og forklare alle afsnit i rapporten
 
-c) Ejerskab: Hvordan vil vi hver især bidrage til at nå de fælles succeskriterier? Hvad er vi hver især gode til?
+c) Ejerskab 
 * Anne: Diskret matematik (det teoretiske matematik) 
 * Asger: Programmering
 * Søren: Programmering
