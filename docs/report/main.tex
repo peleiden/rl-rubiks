@@ -5,6 +5,11 @@
 \usepackage{texfiles/SpeedyGonzales}
 \usepackage{texfiles/MediocreMike}
 
+\usepackage{subfiles}
+
+
+
+
 \title{Example}
 \author{Lala}
 \date{\today}
@@ -22,21 +27,40 @@
 \rhead{}
 \rfoot{Side \thepage{} af \pageref{LastPage}}
 
-\graphicspath{{Billeder/}}
+\graphicspath{{imgs/}{../imgs/}}
 \linespread{1.15}
 
 
-%\numberwithin{equation}{section}
-%\numberwithin{footnote}{section}
-%\numberwithin{figure}{section}
-%\numberwithin{table}{section}
+%TODO: \numberwithin{equation}{section}
+%TODO: \numberwithin{footnote}{section}
+%TODO: \numberwithin{figure}{section}
+%TODO: \numberwithin{table}{section}
 
 \begin{document}
 
 \maketitle
+%FRONTPAGE
+%ABSTRACT
+%PREFACE
+\tableofcontents
 %\thispagestyle{fancy}
 %\tableofcontents
+\subfile{sections/intro}
 
+\subfile{sections/methods}
+
+\subfile{sections/data}
+
+\subfile{sections/results}
+
+\subfile{sections/discussion}
+
+%TODO: References
+
+\subfile{sections/conclusion}
+
+
+\subfile{sections/appendix}
 
 \end{document}
 
