@@ -20,6 +20,6 @@ class TickTock:
 		end = time()
 		passed_time = end - self._start
 		if with_print:
-			print(f"{passed_time/1000:3f} ms")
+			print(f"{passed_time*1000:3f} ms")
 		return passed_time
 
