@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
 	import multiprocessing as mp
 	import matplotlib.pyplot as plt
-	nps = range(1, 6)
+	nps = range(1, 7)
 	times = np.empty(nps.stop - nps.start)
 	moves = np.empty(nps.stop - nps.start)
 	games = 12
