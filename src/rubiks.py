@@ -93,23 +93,43 @@ class RubiksCube:
 		return bool(list(filter(lambda x: (x[0] == x).all(), self.state)))
 
 
-
 if __name__ == "__main__":
+	import numpy as np
 	from utils.ticktock import TickTock
 	n = int(1e4)
 	tt = TickTock()
 
-	# for _ in range(5):
-	tt.tick()
-	cpu_rube = RubiksCube()
-	cpu_rube.scramble(n)
-	tt.tock()
+	# tt.tick()
+	# cpu_rube = RubiksCube()
+	# cpu_rube.scramble(n)
+	# tt.tock()
 
-	if torch.cuda.is_available():
-		device = torch.device("cuda")
-		tt.tick()
-		gpu_rube = RubiksCube(device)
-		gpu_rube.scramble(n)
-		tt.tock()
-	
+	# if torch.cuda.is_available():
+	# 	device = torch.device("cuda")
+	# 	tt.tick()
+	# 	gpu_rube = RubiksCube(device)
+	# 	gpu_rube.scramble(n)
+	# 	tt.tock()
+
+	def test_scramble(_, device = torch.device("cpu")):
+		rube = RubiksCube(device)
+		rube.scramble(n)
+
+	import multiprocessing as mp
+	import matplotlib.pyplot as plt
+	nps = range(1, 6)
+	times = np.empty(nps.stop - nps.start)
+	moves = np.empty(nps.stop - nps.start)
+	games = 12
+	for n_processes in nps:
+		with mp.Pool(n_processes) as p:
+			tt.tick()
+			p.map(test_scramble, np.empty(games))
+			times[n_processes-nps.start] = tt.tock(False)
+			moves[n_processes-nps.start] = n * n_processes
+	plt.plot(nps, times)
+	plt.xlabel("Number of threads")
+	plt.ylabel("Time to complete %i games of %i rotations" % (games, n))
+	plt.grid(True)
+	plt.show()
 
