@@ -11,12 +11,13 @@ class RubiksCube:
 		Shape: 6 x 8 uint8, see method three here: https://stackoverflow.com/a/55505784
 		"""
 
-		self.device = device
+		# self.device = device
 		self.state = torch.zeros(6, 8, dtype = torch.uint8, device = device)
 		for i in range(6):
 			self.state[i] = i
 		
 		# The i'th index contain the neighbors of the i'th side in positive direction
+		# Do not make this a tensor, as it will slow execution significantly
 		self.neighbors = (
 			(1, 5, 4, 2),  # Front
 			(2, 3, 5, 0),  # Left
@@ -25,12 +26,13 @@ class RubiksCube:
 			(3, 2, 0, 5),  # Right
 			(4, 0, 1, 3),  # Bottom
 		)
-		self.revolution = (
-			torch.tensor([6, 7, 0], device = device),
-			torch.arange(2, 5, device = device),
-			torch.arange(4, 7, device = device),
-			torch.arange(0, 3, device = device),
-		)
+		# Du not make this a tuple, as it will slow execution significantly
+		self.revolution = torch.tensor((
+			(6, 7, 0),
+			(2, 3, 4),
+			(4, 5, 6),
+			(0, 1, 2),
+		), device = device)
 	
 	def rotate(self, face: int, pos_rev: bool):
 
@@ -38,8 +40,9 @@ class RubiksCube:
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
 
-		if not 0 <= face <= 5:
-			raise IndexError("As there are only six sides, the side should be 0-5, not %i" % face)
+		# Leave this check out, as it increases runtime by ~15 %
+		# if not 0 <= face <= 5:
+		# 	raise IndexError("Face should be 0-5, not %i" % face)
 
 		# Rolls the face
 		shift = 1 if pos_rev else -1
@@ -75,34 +78,58 @@ class RubiksCube:
 		else:
 			return new_rc
 	
-	def is_complete(self):
+	def scramble(self, n: int):
 
-		full_faces = torch.empty(6, dtype = bool)
-		for i in range(6):
-			full_faces[i] = (self.state[i] == self.state[i, 0]).all()
+		faces = torch.randint(6, (n, ))
+		dirs = torch.randint(2, (n, ))
+
+		for face, d in zip(faces, dirs):
+			self.rotate(face, d)
 		
-		return full_faces.all()
-
+		return faces, dirs
+	
+	def is_complete(self):
+		 
+		return bool(list(filter(lambda x: (x[0] == x).all(), self.state)))
 
 
 if __name__ == "__main__":
 	from utils.ticktock import TickTock
-	n = int(1e5)
-	faces = torch.randint(6, (n,))
-	dirs = torch.randint(2, (n,))
+	n = int(1e4)
 	tt = TickTock()
 
-	tt.tick()
-	cpu_rube = RubiksCube()
-	for face, d in zip(faces, dirs):
-		cpu_rube.rotate(face, d)
-	tt.tock(True)
+	# tt.tick()
+	# cpu_rube = RubiksCube()
+	# cpu_rube.scramble(n)
+	# tt.tock()
 
-	if torch.cuda.is_available():
-		tt.tick()
-		gpu_rube = RubiksCube(torch.device("cuda"))
-		for face, d in zip(faces, dirs):
-			gpu_rube.rotate(face, d)
-		tt.tock(True)
-	
+	# if torch.cuda.is_available():
+	# 	device = torch.device("cuda")
+	# 	tt.tick()
+	# 	gpu_rube = RubiksCube(device)
+	# 	gpu_rube.scramble(n)
+	# 	tt.tock()
+
+	def test_scramble(_, device = torch.device("cpu")):
+		rube = RubiksCube(device)
+		rube.scramble(n)
+
+	import multiprocessing as mp
+	import matplotlib.pyplot as plt
+	nps = range(1, 7)
+	times = torch.empty(nps.stop - nps.start)
+	moves = torch.empty(nps.stop - nps.start)
+	games = 12
+	for n_processes in nps:
+		with mp.Pool(n_processes) as p:
+			tt.tick()
+			p.map(test_scramble, torch.empty(games))
+			times[n_processes-nps.start] = tt.tock(False)
+			moves[n_processes-nps.start] = n * n_processes
+			print(f"{games:02} games\n{n} moves per game\n{n_processes} threads\n{times[n_processes-nps.start]:4} seconds\n")
+	plt.plot(nps, times)
+	plt.xlabel("Number of threads")
+	plt.ylabel("Time to complete %i games of %i rotations" % (games, n))
+	plt.grid(True)
+	plt.show()
 
