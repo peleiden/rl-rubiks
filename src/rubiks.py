@@ -98,10 +98,11 @@ if __name__ == "__main__":
 		cpu_rube.rotate(face, d)
 	tt.tock(True)
 
-	tt.tick()
-	gpu_rube = RubiksCube(torch.device("cuda"))
-	for face, d in zip(faces, dirs):
-		gpu_rube.rotate(face, d)
-	tt.tock(True)
+	if torch.cuda.is_available():
+		tt.tick()
+		gpu_rube = RubiksCube(torch.device("cuda"))
+		for face, d in zip(faces, dirs):
+			gpu_rube.rotate(face, d)
+		tt.tock(True)
 	
 
