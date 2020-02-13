@@ -17,6 +17,7 @@ class RubiksCube:
 			self.state[i] = i
 		
 		# The i'th index contain the neighbors of the i'th side in positive direction
+		# Do not make this a tensor, as it will slow execution significantly
 		self.neighbors = (
 			(1, 5, 4, 2),  # Front
 			(2, 3, 5, 0),  # Left
@@ -25,6 +26,7 @@ class RubiksCube:
 			(3, 2, 0, 5),  # Right
 			(4, 0, 1, 3),  # Bottom
 		)
+		# Du not make this a tuple, as it will slow execution significantly
 		self.revolution = torch.tensor((
 			(6, 7, 0),
 			(2, 3, 4),
