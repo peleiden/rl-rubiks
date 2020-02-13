@@ -11,7 +11,7 @@ class RubiksCube:
 		Shape: 6 x 8 uint8, see method three here: https://stackoverflow.com/a/55505784
 		"""
 
-		self.device = device
+		# self.device = device
 		self.state = torch.zeros(6, 8, dtype = torch.uint8, device = device)
 		for i in range(6):
 			self.state[i] = i
@@ -94,7 +94,6 @@ class RubiksCube:
 
 
 if __name__ == "__main__":
-	import numpy as np
 	from utils.ticktock import TickTock
 	n = int(1e4)
 	tt = TickTock()
@@ -118,15 +117,16 @@ if __name__ == "__main__":
 	import multiprocessing as mp
 	import matplotlib.pyplot as plt
 	nps = range(1, 7)
-	times = np.empty(nps.stop - nps.start)
-	moves = np.empty(nps.stop - nps.start)
+	times = torch.empty(nps.stop - nps.start)
+	moves = torch.empty(nps.stop - nps.start)
 	games = 12
 	for n_processes in nps:
 		with mp.Pool(n_processes) as p:
 			tt.tick()
-			p.map(test_scramble, np.empty(games))
+			p.map(test_scramble, torch.empty(games))
 			times[n_processes-nps.start] = tt.tock(False)
 			moves[n_processes-nps.start] = n * n_processes
+			print(f"{games:02} games\n{n} moves per game\n{n_processes} threads\n{times[n_processes-nps.start]:4} seconds\n")
 	plt.plot(nps, times)
 	plt.xlabel("Number of threads")
 	plt.ylabel("Time to complete %i games of %i rotations" % (games, n))
