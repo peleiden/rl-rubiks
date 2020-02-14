@@ -1,7 +1,5 @@
 import numpy as np
-from copy import deepcopy
-from operator import itemgetter
-from struct import pack, unpack
+
 
 class RubiksCube:
 
@@ -64,10 +62,6 @@ class RubiksCube:
 			for i in range(4):
 				self.state[self.neighbors[face][i-1], self.adjecents[i-1]]\
 					= ini_state[i, self.adjecents[i]]
-		
-	def __str__(self):
-		
-		return str(self.state)
 
 	def scramble(self, n: int):
 
@@ -82,6 +76,12 @@ class RubiksCube:
 	def is_complete(self):
 		
 		return (self.state == self.assembled).all()
+	
+	# def to(device: torch.device)
+		
+	def __str__(self):
+		
+		return str(self.state)
 
 
 if __name__ == "__main__":
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
 	import multiprocessing as mp
 	import matplotlib.pyplot as plt
-	nps = range(1, 13)
+	nps = range(5, 13)
 	times = np.empty(nps.stop - nps.start)
 	moves = np.empty(nps.stop - nps.start)
 	games = 24
@@ -115,5 +115,7 @@ if __name__ == "__main__":
 	plt.ylabel("Time to complete %i games of %i rotations" % (games, n))
 	plt.grid(True)
 	plt.show()
+
+	
 	
 
