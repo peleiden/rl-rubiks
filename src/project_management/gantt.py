@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 handy_week_converter = lambda week_n: datetime(2020, 1, 31) + timedelta(weeks=week_n)
 
 # Homebrewed format: Name, starting week, ending week
+# Week goes from friday to friday
 tasks = [
       ("Skriv på projekt", 1, 16),
       ("Implementer Rubiks-terning", 2, 3),
