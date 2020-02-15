@@ -1,23 +1,39 @@
-% !TeX spellcheck = da_DK
-\documentclass[12pt,fleqn,]{article}
+% !TeX spellcheck = en_GB
+\documentclass[12pt,fleqn,]{report}
 
-\usepackage[danish]{babel}
+
+\usepackage[english]{babel}
 \usepackage{texfiles/SpeedyGonzales}
 \usepackage{texfiles/MediocreMike}
+\usepackage{texfiles/Blastoise}
 
 \usepackage{subfiles}
 
 
 
 
-\title{Example}
-\author{Lala}
+
+
+
+
+% Changes chapter behaviour
+\titleformat{\chapter}{\normalfont\huge}{\thechapter.}{20pt}{\huge}
+\titlespacing*{\chapter}{0pt}{0pt}{40pt}
+
+
+
+
+
+
+
+\title{Solving the Rubik's cube using big brain}
+\author{Søren Winkel Holm, Anne Agathe Pedersen, Asger Laurits Schultz}
 \date{\today}
 
 \fancypagestyle{plain}
 {
 	\fancyhf{}
-	\rfoot{Side \thepage{} af \pageref{LastPage}}
+	\rfoot{Page \thepage{} of  \pageref{LastPage}}
 	\renewcommand{\headrulewidth}{0pt}
 }
 \pagestyle{fancy}
@@ -25,7 +41,7 @@
 \lhead{Lala}
 \chead{}
 \rhead{}
-\rfoot{Side \thepage{} af \pageref{LastPage}}
+\rfoot{Page \thepage{} of \pageref{LastPage}}
 
 \graphicspath{{imgs/}{../imgs/}}
 \linespread{1.15}
@@ -37,6 +53,15 @@
 %TODO: \numberwithin{table}{section}
 
 \begin{document}
+
+
+
+
+
+
+
+
+
 
 \maketitle
 %FRONTPAGE
@@ -55,12 +80,24 @@
 
 \subfile{sections/discussion}
 
-%TODO: References
+
 
 \subfile{sections/conclusion}
 
+\bibliographystyle{unsrt}
+\bibliography{references}
 
 \subfile{sections/appendix}
+
+
+
+
+
+
+
+
+
+
 
 \end{document}
 
