@@ -4,7 +4,7 @@
 \begin{document}
 
 \chapter{Introduction}
-
+\cite{SolvingNature}
 -- Problem challenge: Large state space, single goal state 
 
 -- Do without domain knowledge
@@ -12,19 +12,25 @@
 -- Learn to solve planning problems
 
 -- Rooted in group theory: application of machine learning methods to mathematics
+
+
 \section{State of the Art}
 \cite{SolvingNature}
 -- DeepCubeA solves all test configurations and generalizes to other puzzles
 
 -- Puzzle specific pattern databases solves these rubiks well
 
+-- A shortest path (non-learned) solver is iterative deepening A* search with heuristic from puzzle specific pattern database
+
 \subsection{DeepCubeA}
 \cite{SolvingNature}
--- Combines DL with approximate value iteration and weighted A* search
+-- Combines DL with approximate value iteration and batch weighted A* search
 
--- DNN approximates cost-to-go 
+-- DNN approximates cost-to-go and is called deep approximate value iteration. It only looks one step ahead but multi-step lookahead  and MC tree search was not found to be better
 
--- DeepCubeA builds on antorher implementation which was based on policy and Monte Carlo tree search based implementation 
+-- DeepCubeA builds on another implementation which was based on policy and Monte Carlo tree search 
 
+-- Learned cost-to-go function then used as heuristic to find path to goal state using weighted A* search
 
+%Scrambling between 100 and 10000 times + included furthest states.
 \end{document}
