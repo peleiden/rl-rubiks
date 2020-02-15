@@ -33,6 +33,27 @@ Tasks before supervisor meeting:
 * All: Continue search for literature.
 * Asger & Søren: Read recommended group theory paper.
   
-## Supervisor Meeting
+#### 14/2-2020
+Anne recommends reading Alex Wein's paper on group theory in relation to the Rubik's cube.
+We found more questions for the supervisor meeting. 
+Asger explained his implementation of the Rubik's cube. 
+
+Tasks before supervisor meeting: 
+* Same as from meeting on 12/2-2020.
+* Asger & Søren: Read Alex Wein paper.
+* Anne & Søren: Write tests for Asger's implementation. 
+* Anne: Buy an IRL Rubik's cube. 
+
+
+## Supervisor Meetings
  
-### Week N
+### Week 3
+#### 19/2-2020
+* Generelle inputs til projektbeskrivelse (skal fylde 1 side) 
+* Er projektet basically bare at implementere Nature-artiklens model? 
+* Hvordan kan vi kombinere gruppeteori og reinforcement i rapporten/projektet?
+* Repræsentation af rubiksterningen 
+* Ingeniørmæssig anvendelse/perspektivering
+* Forventninger til projektet
+* Skal vi skrive rapport på dansk eller engelsk? 
+* Hvordan går det? Vil du med på Tour des Rubick's
