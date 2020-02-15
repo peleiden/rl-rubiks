@@ -20,7 +20,7 @@
 
 -- Puzzle specific pattern databases solves these rubiks well
 
--- A shortest path (non-learned) solver is iterative deepening A* search with heuristic from puzzle specific pattern database
+-- A shortest path (non-learned) solver is iterative deepening A* search with heuristic from puzzle specific pattern database and uses large data base and group theory 
 
 \subsection{DeepCubeA}
 \cite{SolvingNature}
@@ -32,5 +32,6 @@
 
 -- Learned cost-to-go function then used as heuristic to find path to goal state using weighted A* search
 
+-- DNN: Two fully connected hidden layers, four residual blocks, linear output unit
 %Scrambling between 100 and 10000 times + included furthest states.
 \end{document}
