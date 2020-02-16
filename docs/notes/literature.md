@@ -26,3 +26,9 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 * Provenza, Hannah, "GROUP THEORY AND THE RUBIK’S CUBE", URL: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.643.2667
 
 * Wein, Alex, "Mathematics of the Rubik’s Cube", URL: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.433.3390
+
+## Found implementations
+
+* Max Lapan: https://github.com/Shmuma/rl/tree/master/articles/01_rubic
+
+* Anton Bobrov: https://github.com/antbob/qub3rt
