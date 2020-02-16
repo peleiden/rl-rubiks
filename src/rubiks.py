@@ -3,9 +3,9 @@ import numpy as np
 
 class RubiksCube:
 
-	assembled = np.empty((6, 8), dtype = np.uint8)
+	assembled = np.zeros((6, 8, 6), dtype = int)
 	for i in range(6):
-		assembled[i] = i
+		assembled[i, ..., i] = 1
 
 	def __init__(self):
 
@@ -32,14 +32,14 @@ class RubiksCube:
 		])
 	
 	@staticmethod
-	def _shift_left(a: np.ndarray, bits: int):
+	def _shift_left(a: np.ndarray, num_elems: int):
 
-		return np.roll(a, -bits)
+		return np.roll(a, -num_elems, axis = 0)
 	
 	@staticmethod
-	def _shift_right(a: np.ndarray, bits: int):
+	def _shift_right(a: np.ndarray, num_elems: int):
 
-		return np.roll(a, bits)
+		return np.roll(a, num_elems, axis = 0)
 	
 	def rotate(self, face: int, pos_rev: bool):
 
@@ -56,11 +56,11 @@ class RubiksCube:
 		ini_state = self.state[self.neighbors[face]].copy()
 		if pos_rev:
 			for i in range(4):
-				self.state[self.neighbors[face][i], self.adjecents[i]]\
+				self.state[self.neighbors[face, i], self.adjecents[i]]\
 					= ini_state[i-1, self.adjecents[i-1]]
 		else:
 			for i in range(4):
-				self.state[self.neighbors[face][i-1], self.adjecents[i-1]]\
+				self.state[self.neighbors[face, i-1], self.adjecents[i-1]]\
 					= ini_state[i, self.adjecents[i]]
 
 	def scramble(self, n: int):
@@ -73,25 +73,28 @@ class RubiksCube:
 		
 		return faces, dirs
 	
-	def is_complete(self):
+	def is_assembled(self):
 		
 		return (self.state == self.assembled).all()
-	
-	# def to(device: torch.device)
 		
 	def __str__(self):
 		
-		return str(self.state)
+		return str(self.as68())
+	
+	def as68(self):
+
+		"""
+		Un-encodes one-hot and returns self.state as 6x8 matrix
+		"""
+
+		state68 = np.where(self.state == 1)[2].reshape((6, 8))
+		return state68
 
 
 if __name__ == "__main__":
 	from utils.ticktock import TickTock
-	n = int(1e5)
+	n = int(1e4)
 	tt = TickTock()
-	# rube = RubiksCube()
-	# tt.tick()
-	# rube.scramble(n)
-	# tt.tock()
 
 	def test_scramble(_):
 		rube = RubiksCube()
@@ -99,10 +102,10 @@ if __name__ == "__main__":
 
 	import multiprocessing as mp
 	import matplotlib.pyplot as plt
-	nps = range(5, 13)
+	nps = range(1, 7)
 	times = np.empty(nps.stop - nps.start)
 	moves = np.empty(nps.stop - nps.start)
-	games = 24
+	games = 12
 	for n_processes in nps:
 		with mp.Pool(n_processes) as p:
 			tt.tick()
