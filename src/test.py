@@ -12,7 +12,7 @@ def gen_data(size, dtype):
 	return torch.randint(0, 1, size=(int(size),), dtype=dtype)
 
 if __name__ == "__main__":
-	sizes = torch.logspace(1, 4, 32)
+	sizes = torch.logspace(1, 5, 128)
 	dtypes = {torch.int8: 1, torch.int16: 2, torch.int32: 4, torch.int64: 8}
 	transfertimes = {str(dtype): [[], []] for dtype in dtypes}
 	tt = TickTock()
@@ -29,6 +29,13 @@ if __name__ == "__main__":
 			transfertimes[str(dtype)][1].append(time)
 	pprint(transfertimes)
 	
+	dtype = str(torch.int64)
+	y = transfertimes[dtype][1]
+	A = np.ones((len(sizes), 2))
+	A[:, 1] = transfertimes[dtype][0]
+	b, a = np.linalg.solve(A.T @ A, A.T @ y)
+	print("a, b =", a, b)
+
 	for dtype, time in transfertimes.items():
 		plt.plot(time[0], time[1], label=dtype)
 		plt.legend(loc=2)
