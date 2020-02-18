@@ -1,3 +1,4 @@
+from datetime import datetime
 from time import time
 
 def get_timestamp(for_file=False):
@@ -16,7 +17,7 @@ class TickTock:
 		self._start = time()
 		return self._start
 	
-	def tock(self, with_print = True):
+	def tock(self, with_print = False):
 		end = time()
 		passed_time = end - self._start
 		if with_print:

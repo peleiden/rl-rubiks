@@ -1,6 +1,6 @@
 import os
 
-from ticktock import get_timestamp
+from utils.ticktock import get_timestamp
 
 class Logger:
 
