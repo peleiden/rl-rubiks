@@ -7,10 +7,15 @@ class RubiksCube:
 	for i in range(6):
 		assembled[i, ..., i] = 1
 
+	#Scrambling procudere saved as dict for reproducability 
+	scrambling_procedure = {
+		'N_scrambles':	(5, 10), #Tuple for scrambling random # moves in uniform(low, high)
+	}
+
 	def __init__(self):
 
 		"""
-		Shape: 6 x 8 uint8, see method three here: https://stackoverflow.com/a/55505784
+		Shape: 6 x 8 uint8, see method three here: https://stackoverflow.com/a/55505784 
 		"""
 
 		self.state = self.assembled.copy()
@@ -24,22 +29,29 @@ class RubiksCube:
 			[3, 2, 0, 5],  # Right
 			[4, 0, 1, 3],  # Bottom
 		])
-		self.adjecents = np.array([
+		self.adjacents = np.array([
 			[6, 7, 0],
 			[2, 3, 4],
 			[4, 5, 6],
 			[0, 1, 2],
 		])
-	
-	@staticmethod
-	def _shift_left(a: np.ndarray, num_elems: int):
 
-		return np.roll(a, -num_elems, axis = 0)
-	
-	@staticmethod
-	def _shift_right(a: np.ndarray, num_elems: int):
+	def move(self, face: int, pos_rev: bool):
+		'''
+		Performs rotation, mutates state and returns whether cube is completed
+		'''
+		self.state = self.rotate(face, pos_rev)
+		return self.is_assembled()
+		 
+	def reset(self):
+		'''
+		Resets cube by random scramblings in accordance with self.scrambling_procedure
+		'''
+		self.state = self.assembled.copy()		
+		self.scramble( self.scrambling_procedure["N_scrambles"] )
+		
+		while self.is_assembled(): self.scramble(1) # Avoid randomly solving the cube
 
-		return np.roll(a, num_elems, axis = 0)
 	
 	def rotate(self, face: int, pos_rev: bool):
 
@@ -49,19 +61,33 @@ class RubiksCube:
 
 		# if not 0 <= face <= 5:
 		# 	raise IndexError("Face should be 0-5, not %i" % face)
+		altered_state = self.state.copy() #TODO: Is it neccessary to both copy here and in ini_state?
 
-		self.state[face] = self._shift_right(self.state[face], 2)\
+		altered_state[face] = self._shift_right(self.state[face], 2)\
 			if pos_rev else self._shift_left(self.state[face], 2)
 		
 		ini_state = self.state[self.neighbors[face]].copy()
+		
 		if pos_rev:
 			for i in range(4):
-				self.state[self.neighbors[face, i], self.adjecents[i]]\
-					= ini_state[i-1, self.adjecents[i-1]]
+				altered_state[self.neighbors[face, i], self.adjacents[i]]\
+					= ini_state[i-1, self.adjacents[i-1]]
 		else:
 			for i in range(4):
-				self.state[self.neighbors[face, i-1], self.adjecents[i-1]]\
-					= ini_state[i, self.adjecents[i]]
+				altered_state[self.neighbors[face, i-1], self.adjacents[i-1]]\
+					= ini_state[i, self.adjacents[i]]
+		
+		return altered_state
+		
+	@staticmethod
+	def _shift_left(a: np.ndarray, num_elems: int):
+
+		return np.roll(a, -num_elems, axis = 0)
+	
+	@staticmethod
+	def _shift_right(a: np.ndarray, num_elems: int):
+
+		return np.roll(a, num_elems, axis = 0)
 
 	def scramble(self, n: int):
 
@@ -69,7 +95,7 @@ class RubiksCube:
 		dirs = np.random.randint(2, size = (n, )).astype(bool)
 
 		for face, d in zip(faces, dirs):
-			self.rotate(face, d)
+			self.state = self.rotate(face, d) #Uses rotate instead of move as checking for victory is not needed here
 		
 		return faces, dirs
 	
@@ -89,6 +115,7 @@ class RubiksCube:
 
 		state68 = np.where(self.state == 1)[2].reshape((6, 8))
 		return state68
+
 
 
 if __name__ == "__main__":
