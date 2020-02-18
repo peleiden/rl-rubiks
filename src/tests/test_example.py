@@ -1,12 +1,7 @@
-# Hacky import code needed to import from sibling dir
-import sys, os
-sys.path.append(os.path.join(sys.path[0], '..', 'src'))
+import torch
 
-
-import torch 
-
-from example import ExampleAdder
-from utils.ticktock import TickTock
+from ..rubiks.example import ExampleAdder
+from ..rubiks.utils.ticktock import TickTock
 
 
 

@@ -1,9 +1,8 @@
 # Hacky import code needed to import from sibling dir
 import sys, os
-sys.path.append(os.path.join(sys.path[0], '..', 'src'))
+from ..rubiks.rubiks import RubiksCube
 
 import torch
-from rubiks import RubiksCube
 
 class TestCube:
 	pass

@@ -3,7 +3,7 @@ import numpy as np
 
 class RubiksCube:
 
-	assembled = np.zeros((6, 8, 6), dtype = int)
+	assembled = np.zeros((6, 8, 6), dtype = np.uint8)
 	for i in range(6):
 		assembled[i, ..., i] = 1
 
@@ -93,7 +93,7 @@ class RubiksCube:
 
 if __name__ == "__main__":
 	from utils.ticktock import TickTock
-	n = int(1e4)
+	n = int(1e5)
 	tt = TickTock()
 
 	def test_scramble(_):
@@ -102,10 +102,10 @@ if __name__ == "__main__":
 
 	import multiprocessing as mp
 	import matplotlib.pyplot as plt
-	nps = range(1, 7)
+	nps = range(1, 13)
 	times = np.empty(nps.stop - nps.start)
 	moves = np.empty(nps.stop - nps.start)
-	games = 12
+	games = 24
 	for n_processes in nps:
 		with mp.Pool(n_processes) as p:
 			tt.tick()
