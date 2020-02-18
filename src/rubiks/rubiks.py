@@ -61,12 +61,12 @@ class RubiksCube:
 
 		# if not 0 <= face <= 5:
 		# 	raise IndexError("Face should be 0-5, not %i" % face)
-		altered_state = self.state.copy() #TODO: Is it neccessary to both copy here and in ini_state?
+		altered_state = self.state.copy()
 
 		altered_state[face] = self._shift_right(self.state[face], 2)\
 			if pos_rev else self._shift_left(self.state[face], 2)
 		
-		ini_state = self.state[self.neighbors[face]].copy()
+		ini_state = self.state[self.neighbors[face]]
 		
 		if pos_rev:
 			for i in range(4):
