@@ -131,7 +131,7 @@ if __name__ == "__main__":
 
 	# Multithreaded performance test
 	title = f"{games.size} cubes each with {n} scrambles"
-	bm = Benchmark(test_scramble, "rubiks_test", title)
+	bm = Benchmark(test_scramble, "local_benchmarks/rubiks", title)
 	threads, times = bm.multi_threaded(nt, games, title)
 	bm.plot_mt_results(threads, times, title)
 
