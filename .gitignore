@@ -9,7 +9,7 @@
 *__pycache__
 *.DS_Store
 *.out
-
+**/local*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
