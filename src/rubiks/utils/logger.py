@@ -5,7 +5,7 @@ from utils.ticktock import get_timestamp
 class Logger:
 
 	def __init__(self, fpath: str, title: str):
-		dirs = "".join(fpath.split('/')[:-1])
+		dirs = "/".join(fpath.split('/')[:-1])
 		if not os.path.exists(dirs):
 			os.makedirs(dirs)
 
@@ -33,8 +33,8 @@ class Logger:
 				logs[0] = n_spaces * " " + "\t" + logs[0]
 			for i in range(1, len(logs)):
 				logs[i] = n_spaces * " " + "\t" + logs[i]
-			if logs[i].strip() == "":
-				logs[i] = ""
+				if logs[i].strip() == "":
+					logs[i] = ""
 			tolog = "\n".join(logs)
 			logfile.write(tolog+"\n")
 			print(tolog)

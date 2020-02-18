@@ -116,42 +116,30 @@ class RubiksCube:
 		state68 = np.where(self.state == 1)[2].reshape((6, 8))
 		return state68
 
-
 if __name__ == "__main__":
-	# from utils.ticktock import TickTock
+	
+	# Benchmarking example
 	from utils.benchmark import Benchmark
-	n = int(1e4)
-	# tt = TickTock()
 
-	def test_scramble(_):
-		rube = RubiksCube()
-		rube.scramble(n)
+	def test_scramble(games):
+		# Function is weird, as it is designed to work for both single and multithreaded benchmarks
+		if hasattr(games, "__iter__"):
+			for _ in games:
+				rube = RubiksCube()
+				rube.scramble(n)
+		else:
+			rube = RubiksCube()
+			rube.scramble(n)
+	
+	n = int(1e5)
 	nt = range(1, 7)
 	games = np.empty(24)
 
-	# Multithreaded performance test
-	title = f"{games.size} cubes each with {n} scrambles"
-	bm = Benchmark(test_scramble, "local_benchmarks/rubiks", title)
-	threads, times = bm.multi_threaded(nt, games, title)
+	title = f"Scramble bench: {games.size} cubes each with {n} scrambles"
+	bm = Benchmark(test_scramble, "local_benchmarks/scramble_example", title)
+	bm.singlethreaded("", games)
+	threads, times = bm.multithreaded(nt, games)
 	bm.plot_mt_results(threads, times, title)
-
-	# import multiprocessing as mp
-	# import matplotlib.pyplot as plt
-	# times = np.empty(nps.stop - nps.start)
-	# moves = np.empty(nps.stop - nps.start)
-	# games = 24
-	# for n_processes in nps:
-	# 	with mp.Pool(n_processes) as p:
-	# 		tt.tick()
-	# 		p.map(test_scramble, np.empty(games))
-	# 		times[n_processes-nps.start] = tt.tock(False)
-	# 		moves[n_processes-nps.start] = n * n_processes
-	# 		print(f"{games:02} games\n{n} moves per game\n{n_processes} threads\n{times[n_processes-nps.start]:4} seconds\n")
-	# plt.plot(nps, times)
-	# plt.xlabel("Number of threads")
-	# plt.ylabel("Time to complete %i games of %i rotations" % (games, n))
-	# plt.grid(True)
-	# plt.show()
 
 	
 	

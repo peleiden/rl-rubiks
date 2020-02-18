@@ -9,14 +9,14 @@ from utils.logger import Logger
 class Benchmark:
 
 	def __init__(self, fun, outdir: str, title: str = ""):
-		makedirs(outdir, exist_ok=True)
-		rmtree(f"{outdir}/")
+		rmtree(f"{outdir}/", ignore_errors=True)
+		makedirs(outdir)
 		self.title = title if title else outdir
 		self.tt = TickTock()
 		self.log = Logger(f"{outdir}/benchmark.log", title)
 		self.fun = fun
 	
-	def single_threaded(self, data_desc = "", *args, **kwargs):
+	def singlethreaded(self, data_desc = "", *args, **kwargs):
 		self.log(f"Beginning single threaded benchmark of function {self.fun.__name__}")
 		if data_desc:
 			self.log(f"Data description:\n{data_desc}\n")
@@ -30,20 +30,21 @@ class Benchmark:
 			self.log(f"Test crashed with exception\n{e}\n")
 			return 0
 	
-	def multi_threaded(self, threads: range, data: list, data_desc = ""):
+	def multithreaded(self, threads: range, data: list, data_desc = ""):
 		threads = np.array(threads)
 		times = np.empty(len(threads))
 		self.log(f"Beginning multi threaded benchmark of function {self.fun.__name__}")
 		if data_desc:
 			self.log(f"Data description:\n{data_desc}\n")
-		self.log("Benchmark results\n")
+		self.log("Benchmark results")
 		try:
 			for i, n_treads in enumerate(threads):
 				with mp.Pool(n_treads) as p:
 					self.tt.tick()
 					p.map(self.fun, data)
 					times[i] = self.tt.tock()
-			self.log("\n".join(f"{n:02} threads: {t:f}" for n, t in zip(n_treads, times)) + "\n")
+					self.log(f"{n_treads} threads: {times[i]:f} s", with_timestamp=False)
+			self.log("")
 			return threads, times
 		except Exception as e:
 			self.log(f"Test crashed with exception\n{e}\n")
