@@ -44,6 +44,18 @@ Tasks before supervisor meeting:
 * Anne & Søren: Write tests for Asger's implementation. 
 * Anne: Buy an IRL Rubik's cube. 
 
+#### 19/2-2020
+Vi aftaler at skrive rapporten på dansk. 
+Vi aftaler at skrive kodekommentarer på engelsk. 
+Fagtermer skrives som udgangspunkt på dansk i rapporten, men skal også have den engelske oversættelse ved siden ad. 
+
+Vi har lavet projektlærred, Gantt-plot, projektbeskrivelse og læremål. 
+Det hele er blevet sendt til Mikkel for feedback. 
+
+Opgaver inden næste møde (fredag): 
+* Anne oversætter tidligere projektindlæg fra engelsk til dansk. 
+* Søren sender alt i projektbeskrivelsen i en mail til Mikkel. 
+
 
 ## Supervisor Meetings
  
