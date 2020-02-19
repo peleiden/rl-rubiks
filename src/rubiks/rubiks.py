@@ -31,7 +31,7 @@ class RubiksCube:
 	def __init__(self):
 
 		"""
-		Shape: 6 x 8 uint8, see method three here: https://stackoverflow.com/a/55505784 
+		Shape: 6 x 8 x 6 one hot of coding as method three here: https://stackoverflow.com/a/55505784 
 		"""
 
 		self.state = self.assembled.copy()
@@ -49,7 +49,8 @@ class RubiksCube:
 		Resets cube by random scramblings in accordance with self.scrambling_procedure
 		'''
 		self.state = self.assembled.copy()		
-		self.scramble( self.scrambling_procedure["N_scrambles"] )
+		N_resets = np.random.randint(*self.scrambling_procedure["N_scrambles"])
+		self.scramble(N_resets)
 		
 		while self.is_assembled(): self.scramble(1) # Avoid randomly solving the cube
 
@@ -111,19 +112,13 @@ class RubiksCube:
 	def as68(self):
 
 		"""
-		Un-encodes one-hot and returns self.state as 6x8 matrix
+		Un-encodes one-hot and returns self.state as 6x8 matrix 
 		"""
 
 		state68 = np.where(self.state == 1)[2].reshape((6, 8))
 		return state68
 
 if __name__ == "__main__":
-	# r = RubiksCube()
-	# print(r)
-	# print(r.as68())
-	# r.move(0, 1)
-	# print(r)
-	# raise NotImplementedError
 	
 	# Benchmarking example
 	from utils.benchmark import Benchmark
