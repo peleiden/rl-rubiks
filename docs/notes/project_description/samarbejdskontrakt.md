@@ -1,10 +1,10 @@
 # SAMARBEJDSKONTRAKT
 
-Projekttitel: Reinforcement learning med professorterningen
+Projekttitel: Løsning af Rubiks terning med reinforcement learning
 
 Gruppedeltagere: Asger, Søren og Anne
 
-Vejleder: Mikkel N. 
+Vejleder: Mikkel N. Schmidt
 
 ## MØDER
 
