@@ -12,6 +12,22 @@ class RubiksCube:
 		'N_scrambles':	(5, 10), #Tuple for scrambling random # moves in uniform(low, high)
 	}
 
+	# The i'th index contain the neighbors of the i'th side in positive direction
+	neighbors = np.array([
+		[1, 5, 4, 2],  # Front
+		[2, 3, 5, 0],  # Left
+		[0, 4, 3, 1],  # Top
+		[5, 1, 2, 4],  # Back
+		[3, 2, 0, 5],  # Right
+		[4, 0, 1, 3],  # Bottom
+	])
+	adjacents = np.array([
+		[6, 7, 0],
+		[2, 3, 4],
+		[4, 5, 6],
+		[0, 1, 2],
+	])
+
 	def __init__(self):
 
 		"""
@@ -20,21 +36,6 @@ class RubiksCube:
 
 		self.state = self.assembled.copy()
 		
-		# The i'th index contain the neighbors of the i'th side in positive direction
-		self.neighbors = np.array([
-			[1, 5, 4, 2],  # Front
-			[2, 3, 5, 0],  # Left
-			[0, 4, 3, 1],  # Top
-			[5, 1, 2, 4],  # Back
-			[3, 2, 0, 5],  # Right
-			[4, 0, 1, 3],  # Bottom
-		])
-		self.adjacents = np.array([
-			[6, 7, 0],
-			[2, 3, 4],
-			[4, 5, 6],
-			[0, 1, 2],
-		])
 
 	def move(self, face: int, pos_rev: bool):
 		'''
@@ -117,6 +118,12 @@ class RubiksCube:
 		return state68
 
 if __name__ == "__main__":
+	# r = RubiksCube()
+	# print(r)
+	# print(r.as68())
+	# r.move(0, 1)
+	# print(r)
+	# raise NotImplementedError
 	
 	# Benchmarking example
 	from utils.benchmark import Benchmark
