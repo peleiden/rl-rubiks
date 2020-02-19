@@ -40,7 +40,7 @@ class RubiksCube:
 		'''
 		Performs rotation, mutates state and returns whether cube is completed
 		'''
-		self.state = self.rotate(face, pos_rev)
+		self.state = self.rotate(self.state, face, pos_rev)
 		return self.is_assembled()
 		 
 	def reset(self):
@@ -53,7 +53,7 @@ class RubiksCube:
 		while self.is_assembled(): self.scramble(1) # Avoid randomly solving the cube
 
 	
-	def rotate(self, face: int, pos_rev: bool):
+	def rotate(self, current_state: np.array, face: int, pos_rev: bool):
 
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
@@ -61,12 +61,12 @@ class RubiksCube:
 
 		# if not 0 <= face <= 5:
 		# 	raise IndexError("Face should be 0-5, not %i" % face)
-		altered_state = self.state.copy()
+		altered_state = current_state.copy()
 
 		altered_state[face] = self._shift_right(self.state[face], 2)\
 			if pos_rev else self._shift_left(self.state[face], 2)
 		
-		ini_state = self.state[self.neighbors[face]]
+		ini_state = current_state[self.neighbors[face]]
 		
 		if pos_rev:
 			for i in range(4):
@@ -95,7 +95,7 @@ class RubiksCube:
 		dirs = np.random.randint(2, size = (n, )).astype(bool)
 
 		for face, d in zip(faces, dirs):
-			self.state = self.rotate(face, d) #Uses rotate instead of move as checking for victory is not needed here
+			self.state = self.rotate(self.state, face, d) #Uses rotate instead of move as checking for victory is not needed here
 		
 		return faces, dirs
 	
@@ -120,7 +120,6 @@ if __name__ == "__main__":
 	
 	# Benchmarking example
 	from utils.benchmark import Benchmark
-
 	def test_scramble(games):
 		# Function is weird, as it is designed to work for both single and multithreaded benchmarks
 		if hasattr(games, "__iter__"):
