@@ -48,12 +48,32 @@ Tasks before supervisor meeting:
 ## Supervisor Meetings
  
 ### Week 3
+
 #### 19/2-2020
-* Generelle inputs til projektbeskrivelse (skal fylde 1 side) 
-* Er projektet basically bare at implementere Nature-artiklens model? 
-* Hvordan kan vi kombinere gruppeteori og reinforcement i rapporten/projektet?
-* Repræsentation af rubiksterningen 
-* Ingeniørmæssig anvendelse/perspektivering
-* Forventninger til projektet
-* Skal vi skrive rapport på dansk eller engelsk? 
-* Hvordan går det? Vil du med på Tour des Rubick's
+
+- Relater til andre diskrete kombinatoriske problemer, fx proteinfoldning og solcelleoptimering
+- Projekt kan gå i flere retninger
+- God adgang til flere GPU'er på Compute, men ellers bare skaler problemet ned
+- Værdiapproksimation skal kombineres med MCTS eller anden søgning for at virke
+- God idé: Reproducér DeepCubeA, men skær evt. nogle hjørner af
+- Brug A*
+- Se moves som 12 forskellige, ikke 6x2
+- Læs om tabulær Q learning (tabel i stedet for NN)
+  - Q learning har state-action-par med værdier med evt. discount
+  - Ofte skal værdier approksimeres
+- State space er for stort til tabulær Q, men Deep Q kan hjælpe
+- Primært mål er at lære om metoder, men resultater er selvfølgeligt også godt
+- Mikkel ville skrive engelsk, men dansk er en fin mulighed
+- Anbefaler 40-50 sider, da der skal meget med ud over det faglige
+- Konvolutioner kan køres på naboer i graf (hvis vi laver konvoer) - kræver gruppeteori
+  - Spændende, men svært
+- Brug kun gruppeteori, hvis det giver faglig mening
+- Næste møde 27/2-2020 kl 10
+
+### Week 4
+
+#### 27/2-2020
+
+
+
+

@@ -132,9 +132,9 @@ if __name__ == "__main__":
 			rube = RubiksCube()
 			rube.scramble(n)
 	
-	n = int(1e5)
-	nt = range(1, 7)
-	games = np.empty(24)
+	n = int(1e4)
+	nt = range(1, 5)
+	games = np.empty(12)
 
 	title = f"Scramble bench: {games.size} cubes each with {n} scrambles"
 	bm = Benchmark(test_scramble, "local_benchmarks/scramble_example", title)
