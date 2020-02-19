@@ -1,17 +1,10 @@
 **Læringsmål**
 
-1) Perspektivering af løsningerne gennem hhv. reinforcement learning og gruppeteori
+1) Forstå og anvende dyb Q-læring på diskret, deterministisk problem
 
-Refleksion: 
+2) Anvende reinforcement learning ved at udvikle miljø og  model og optimere implementationen
 
-2) Bevise dyb forståelse for reinforcement learning-problemet
+3) Analysere og perspektivere kombinatorisk problem i reinforcement learning-perpektiv
 
-Refleksion: 
+4) Kunne læse og forstå indflydelsesrige videnskabelig artikler og genskabe metoden med tilfredsstillende resultater
 
-3) Anvende avancerede reinforcement learning-modeller på et diskret problem med tilfredsstillende resultater
-
-Refleksion: 
-
-4) Kunne læse og forstå en videnskabelig artikel og genskabe resultaterne
-
-Refleksion: Vi vil gerne kunne anvende metoderne brugt i Nature-artiklen
