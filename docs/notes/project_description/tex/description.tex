@@ -6,8 +6,8 @@
 \usepackage{../../../report/texfiles/MediocreMike}
 
 
-\title{Project Description}
-\author{Søren, Anne og Agser}
+\title{Projektbeskrivelse til løsning af Rubiks terning med reinforcement learning}
+\author{Søren, Anne og Asger}
 \date{\today}
 
 \fancypagestyle{plain}
@@ -24,20 +24,34 @@
 \rfoot{Side \thepage{} af \pageref{LastPage}}
 
 
-\linespread{1.15}
-
-%TODO: \numberwithin{equation}{section}
-%TODO: \numberwithin{footnote}{section}
-%TODO: \numberwithin{figure}{section}
-%TODO: \numberwithin{table}{section}
+\linespread{1.15} 
 
 \begin{document}
 
 \maketitle
-%\tableofcontents
-%\thispagestyle{fancy}
-%\tableofcontents
+\noindent
+Rubiks terning er et eksempel på et diskret kombinatorisk problem med et utroligt stort tilstandsrum på $4.33\times 10^{19}$ distinkte, lovlige konfigurationer og kun én løsning. 
+Projektet vil forsøge at løse dette problem ved hjælp af reinforcement learning. 
 
+Den nyeste litteratur har formået at løse dette problem ved at kombinere dyb læring med approksimativ værdiiteration og vægtet A*-søgning\footnote{https://www.nature.com/articles/s42256-019-0070-z}.
+Intentionen med projektet er at forsøge selv at implementere dele af denne model. 
+Med tid som en begrænsende faktor vil vi dog forsimple problemet, således at vi løser terningekonfigurationer, som kun er få skridt fra løsningen.
+Derudover vil vi benytte gruppeteori til at beskrive udvalgte teoretiske aspekter af problemet.
+\\\\
+De konkrete mål for projektet er at
+\begin{itemize}
+	\item implementere en effektiv intern repræsentation af Rubiks terning
+	\item benytte gruppeteori til at beskrive udvalgte aspekter af problemet
+	\item implementere træsøgning på Rubiks terning
+	\item implementere dyb Q-læring herunder et neuralt netværk med todelt struktur og eventuelt residuel arkitektur
+	\item at samle træsøgningsmetoder og dyb Q-læring til at implementere model der er baseret på DeepCubeA 
+	\item at kunne løse lette terningekonfigurationer
+\end{itemize}
+Implementationen kan bruges til at afprøve og udvikle nye metoder til andre lignende problemer, også med store tilstandsrum, eksempelvis molekylestrukturer og solcelleoptimering. 
+
+
+
+ 
 
 \end{document}
 
