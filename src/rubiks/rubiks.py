@@ -13,7 +13,7 @@ class RubiksCube:
 	}
 
 	# The i'th index contain the neighbors of the i'th side in positive direction
-	neighbors = np.array([
+	neighbours = np.array([
 		[1, 5, 4, 2],  # Front
 		[2, 3, 5, 0],  # Left
 		[0, 4, 3, 1],  # Top
@@ -68,15 +68,15 @@ class RubiksCube:
 		altered_state[face] = self._shift_right(self.state[face], 2)\
 			if pos_rev else self._shift_left(self.state[face], 2)
 		
-		ini_state = current_state[self.neighbors[face]]
+		ini_state = current_state[self.neighbours[face]]
 		
 		if pos_rev:
 			for i in range(4):
-				altered_state[self.neighbors[face, i], self.adjacents[i]]\
+				altered_state[self.neighbours[face, i], self.adjacents[i]]\
 					= ini_state[i-1, self.adjacents[i-1]]
 		else:
 			for i in range(4):
-				altered_state[self.neighbors[face, i-1], self.adjacents[i-1]]\
+				altered_state[self.neighbours[face, i-1], self.adjacents[i-1]]\
 					= ini_state[i, self.adjacents[i]]
 		
 		return altered_state
