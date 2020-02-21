@@ -32,3 +32,7 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 * Max Lapan: https://github.com/Shmuma/rl/tree/master/articles/01_rubic
 
 * Anton Bobrov: https://github.com/antbob/qub3rt
+
+* PyTorch Deep Q learning: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+
+* Introduction to A star: https://www.redblobgames.com/pathfinding/a-star/introduction.html
