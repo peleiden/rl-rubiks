@@ -1,49 +1,50 @@
-# 02466 Project work in Artificial Intelligence and Data LOGBOOK
+# 02466 Projektarbejde i Kunstig Intelligens og Data LOGBOOG
 
 * Søren Winkel Holm s183911@student.dtu.dk
 * Asger Laurits Schultz s183912@student.dtu.dk 
 * Anne Agathe Pedersen s174300@student.dtu.dk
 
 
-## Project Meetings
+## Projektmøder
 
-### Week 1:  
+### Uge 1:  
 #### 6/2-2020
-Met and chose project priorities.
+Mødtes og valgte projektprioriteter.
 
-Tasks before next meeting:
-* All: Test that LaTeX works locally and that report.tex can be compiled.
-* All: Test that `pytest` works and that the command `pytest` can be run and gives that all tests are passed on the example script.
-* All: Start researching for existing literature when we get the project on monday.
+Opgaver før næste møde: 
+* Alle: Test at LaTeX virker lokalt og at report.tex kan kompileres. 
+* Alle: Test at `pytest` virker, at kommandoen `pytest` kan køre og giver, at alle tests accepteres på eksemplet. 
+* Alle: Begynd at lede efter eksisterende litteratur, når vi får projektet tildelt på mandag. 
 
-### Week 2:
+### Uge 2:
 #### 12/2-2020
-Discussed implementation of Rubiks and settled for starting with a `torch` implentation which includes possibility for $N\times N\times N$ cube. 
-Getting overview of project plan. 
-Wrote project contract.
-Wrote learning objectives.
+Diskuterede implementation af Rubiks terning og besluttede at begynde med en `torch`-implementation som inkluderer muligheden for en $N\times N\times N$-terning. 
+Skabte overblik over projektplan. 
+Skrev samarbejdskontrakt. 
+Skrev læringsmål. 
 
-Tasks before next meeting (friday):
-* Asger: Implement a Rubiks environment class in `torch` which takes in actions and returns the board position + checks for win. Focus on getting $3\times 3\times 3$ to work before next meeting.
-* Anne: Find questions for meeting with supervisor that can be used to write the project description + find recommendation for group theory paper.
-* Søren: Set up Gantt and Project Canvas + set up TeX-system for report and project description.
+Opgaver før næste møde (fredag):
+* Asger: Implementér en Rubiks-klasse i `torch`, som tager handlinger og returnerer terningen + tjekker om løst. Fokusér på at få en $3\times 3\times 3$ til at virke før næste møde. 
+* Anne: Find spørgsmål til møde med vejleder, som kan blive brugt til at skrive projektbeskrivelsen + find foreslag til artikel om gruppeteori. 
+* Søren: Opsæt Gantt og projektlærred + opsæt TeX-system for rapport og projektbeskrivelse. 
 
-Tasks before supervisor meeting:
-* All: Read all material given by Mikkel. 
-* All: Continue search for literature.
-* Asger & Søren: Read recommended group theory paper.
-  
+Opgaver før næste vejledermøde: 
+* Alle: Læs al materiale givet af Mikkel. 
+* Alle: Fortsat søg efter litteratur. 
+* Asger & Søren: Læs anbefalet artikel om gruppeteori. 
+
 #### 14/2-2020
-Anne recommends reading Alex Wein's paper on group theory in relation to the Rubik's cube.
-We found more questions for the supervisor meeting. 
-Asger explained his implementation of the Rubik's cube. 
+Anne anbefaler at læse Alex Weins artikel om gruppeteori i relation til Rubiks terning. 
+Vi fandt nogle flere spørgsmål til vejledermødet. 
+Asger gennemgik sin implementation af Rubiks terning. 
 
-Tasks before supervisor meeting: 
-* Same as from meeting on 12/2-2020.
-* Asger & Søren: Read Alex Wein paper.
-* Anne & Søren: Write tests for Asger's implementation. 
-* Anne: Buy an IRL Rubik's cube. 
+Opgaver før næste vejledermøde: 
+* Samme som fra 12/2-2020.
+* Asger & Søren: Læs Alex Wein-artikel. 
+* Anne & Søren: Skriv tests til Asgers implementation. 
+* Anne: Undersøg køb af rigtig Rubiks terning. 
 
+### Uge 3:
 #### 19/2-2020
 Vi aftaler at skrive rapporten på dansk. 
 Vi aftaler at skrive kodekommentarer på engelsk. 
@@ -56,11 +57,13 @@ Opgaver inden næste møde (fredag):
 * Anne oversætter tidligere projektindlæg fra engelsk til dansk. 
 * Søren sender alt i projektbeskrivelsen i en mail til Mikkel. 
 
+#### 21/2-2020
+hej
 
-## Supervisor Meetings
+
+## Vejledermøder
  
-### Week 3
-
+### Uge 3:
 #### 19/2-2020
 
 - Relater til andre diskrete kombinatoriske problemer, fx proteinfoldning og solcelleoptimering
@@ -82,8 +85,7 @@ Opgaver inden næste møde (fredag):
 - Brug kun gruppeteori, hvis det giver faglig mening
 - Næste møde 27/2-2020 kl 10
 
-### Week 4
-
+### Uge 4:
 #### 27/2-2020
 
 
