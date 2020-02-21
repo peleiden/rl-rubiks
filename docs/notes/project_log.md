@@ -58,9 +58,14 @@ Opgaver inden næste møde (fredag):
 * Søren sender alt i projektbeskrivelsen i en mail til Mikkel. 
 
 #### 21/2-2020
-hej
+Der blev aftalt at finde ressourcer på DQ-læring og afsøgning og diskuteret omstændigheder for agent-, træning- og model-struktur
 
 
+Opgaver inden vejledermøde:
+* VIGTIGT: Alle: Læs op på og find materiale til Dyb Q-læring og afsøgning
+* Søren: Implenetere evalueringsmodul + agentklasse, der kan modtage state af rubiks og outputte handling + implemtér randomagent
+* Asger: Påbegynd modelmodulet og træningsmodul
+  
 ## Vejledermøder
  
 ### Uge 3:
