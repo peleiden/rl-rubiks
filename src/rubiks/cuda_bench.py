@@ -1,6 +1,6 @@
 from utils.ticktock import TickTock
 import numpy as np
-from rubiks import RubiksCube
+from cube import RubiksCube
 import matplotlib.pyplot as plt
 import torch
 from pprint import pprint

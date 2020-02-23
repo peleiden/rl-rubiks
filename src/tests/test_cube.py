@@ -1,6 +1,6 @@
 # Hacky import code needed to import from sibling dir
 import sys, os
-from ..rubiks.rubiks import RubiksCube
+from ..rubiks.cube import RubiksCube
 
 import torch
 import numpy as np
