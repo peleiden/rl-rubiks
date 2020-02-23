@@ -38,9 +38,11 @@ class TestRubiksCube:
 
 	def test_reset(self):
 		r = RubiksCube()
-		r.reset()
+		np.random.seed(42)
+		N = r.reset()
 		assert not r.is_assembled()
-	
+		assert N >= r.scrambling_procedure['N_scrambles'][0]
+		assert N < r.scrambling_procedure['N_scrambles'][1]
 	def test_scramble(self):
 		r = RubiksCube()
 		np.random.seed(42)

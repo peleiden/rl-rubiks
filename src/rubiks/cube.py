@@ -9,7 +9,7 @@ class RubiksCube:
 
 	#Scrambling procudere saved as dict for reproducability 
 	scrambling_procedure = {
-		'N_scrambles':	(5, 10), #Tuple for scrambling random # moves in uniform(low, high)
+		'N_scrambles':	(5, 10), #Tuple for scrambling random # moves in uniform [low, high[
 	}
 
 	# The i'th index contain the neighbors of the i'th side in positive direction
@@ -52,8 +52,10 @@ class RubiksCube:
 		N_resets = np.random.randint(*self.scrambling_procedure["N_scrambles"])
 		self.scramble(N_resets)
 		
-		while self.is_assembled(): self.scramble(1) # Avoid randomly solving the cube
-
+		while self.is_assembled(): 
+			self.scramble(1) # Avoid randomly solving the cube
+			N_resets += 1
+		return N_resets
 	
 	def rotate(self, current_state: np.array, face: int, pos_rev: bool):
 
