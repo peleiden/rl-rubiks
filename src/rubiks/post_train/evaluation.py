@@ -30,13 +30,13 @@ class Evaluator:
 		with mp.Pool(n_threads) as p:
 			results = p.map(self._run_N_games, [int(N_games) // n_threads]*n_threads) #Divide games equally between threads
 		time = self.tt.tock()
-		self.log(f"Evaluation completed in time {time}")
+		self.log(f"Evaluation completed in {time:.4} s")
 
 		all_results = np.concatenate(results)
 		
 		self.log(f"Evaluation results out of {len(all_results)} games:\n\
 		\tnumber of wins: {len(all_results[all_results != 0])}\n\
-		\tmoves to win-distribution: {np.unique(all_results[all_results != 0], return_counts = True)}   ")
+		\tmoves to win-distribution [[moves], [counts]]:{[ list(res) for res in np.unique(all_results[all_results != 0], return_counts = True) ]} ")
 		return all_results
 
 	

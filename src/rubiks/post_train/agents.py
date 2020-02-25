@@ -23,3 +23,5 @@ class RandomAgent(Agent):
 	def act(self, state: iter):
 		return self.action_space[np.random.randint(self.action_dim)]
 
+	def __str__(self):
+		return 'RandomAgent(Agent)'
