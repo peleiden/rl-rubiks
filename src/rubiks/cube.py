@@ -7,7 +7,7 @@ class RubiksCube:
 	for i in range(6):
 		assembled[i, ..., i] = 1
 
-	#Scrambling procudere saved as dict for reproducability 
+	#Scrambling procedure saved as dict for reproducability 
 	scrambling_procedure = {
 		'N_scrambles':	(5, 10), #Tuple for scrambling random # moves in uniform [low, high[
 	}
