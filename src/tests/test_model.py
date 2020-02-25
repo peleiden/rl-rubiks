@@ -14,6 +14,8 @@ class TestModel:
 		assert next(model.parameters()).device.type == device.type
 	
 	def test_save_and_load(self):
+		torch.manual_seed(42)
+		
 		config = ModelConfig()
 		model = Model(config, logger=NullLogger())
 		model_dir = "local_model_test"

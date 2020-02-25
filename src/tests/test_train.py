@@ -8,6 +8,7 @@ from src.rubiks.model import Model, ModelConfig
 class TestTrain:
 
 	def test_train(self):
+		torch.manual_seed(42)
 		net = Model(ModelConfig())
 		optim = torch.optim.Adam(net.parameters())
 		loss = torch.nn.CrossEntropyLoss()
