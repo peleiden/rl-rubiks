@@ -1,6 +1,6 @@
 import os
 
-from utils.ticktock import get_timestamp
+from src.rubiks.utils.ticktock import get_timestamp
 
 class Logger:
 
