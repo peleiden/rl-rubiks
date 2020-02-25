@@ -7,10 +7,11 @@ from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 
 from src.rubiks.cube import RubiksCube
+from src.rubiks.post_train.agents import Agent
 
 
 class Evaluator:
-	def __init__(self, agent, logger: Logger = NullLogger(),  max_moves: int = 200, scrambling_procedure: dict = None):
+	def __init__(self, agent: Agent, logger: Logger = NullLogger(),  max_moves: int = 200, scrambling_procedure: dict = None):
 
 		self.agent = agent
 		self.max_moves = max_moves
@@ -22,7 +23,7 @@ class Evaluator:
 			RubiksCube.scrambling_procedure = scrambling_procedure
 
 	
-	def eval(self, N_games, n_threads: int = cpu_count()):
+	def eval(self, N_games: int, n_threads: int = cpu_count()):
 		self.log(f"Beginning {N_games} games on {n_threads} threads with agent {self.agent}. Max moves pr. game: {self.max_moves} ")
 		self.log(f"Scrambling procedure: {RubiksCube.scrambling_procedure}")
 
@@ -40,7 +41,7 @@ class Evaluator:
 		return all_results
 
 	
-	def _run_N_games(self, N):
+	def _run_N_games(self, N: int):
 		results = np.zeros(N) #0 represents not completed 
 		cube = RubiksCube()
 
