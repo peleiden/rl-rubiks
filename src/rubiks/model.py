@@ -13,11 +13,16 @@ activation_functions = {
 	"relu": torch.nn.ReLU(),
 	"softmax": torch.nn.Softmax(),
 }
+devices = {
+	"cpu": torch.device("cpu"),
+	"cuda": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+}
 
 
 @dataclass
 class ModelConfig:
-	activation_function = "elu"
+	activation_function: str = "elu"
+	device: str = "cuda"
 	
 	@staticmethod
 	def from_dict(conf: dict):
@@ -26,14 +31,18 @@ class ModelConfig:
 
 class Model(nn.Module):
 	
-	def __init__(self, config: ModelConfig, logger: NullLogger(), *args, **kwargs):
-		super().__init__(*args, **kwargs)
+	def __init__(self, config: ModelConfig, logger=NullLogger(),):
+		super().__init__()
 		self.config = config
-		
 		self.log = logger
+		
+		# Temporary model
+		self.net = nn.Linear(6*8*6, 7)
+		
+		self.to(devices[config.device])
 	
 	def forward(self, x):
-		return x
+		return self.net(x)
 	
 	def save(self, save_dir: str):
 		"""

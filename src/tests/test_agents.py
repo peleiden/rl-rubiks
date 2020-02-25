@@ -6,13 +6,15 @@ from src.rubiks.post_train.agents import Agent, RandomAgent
 
 
 class TestAgent:
+	
 	def test_actions(self):
 		a = Agent()
 		r = RubiksCube()
-		#make sure every aciton in action space is possible
+		# Make sure every aciton in action space is possible
 		for action in a.action_space:
 			r.move(*action)
 		assert a.action_dim == 12
+		
 	def test_act(self):
 		a = Agent()
 		with pytest.raises(NotImplementedError) as e_info:
@@ -23,6 +25,7 @@ class TestAgent:
 		assert a.model_env == RubiksCube
 
 class TestRandomAgent:
+	
 	def test_init(self):
 		a = RandomAgent()
 		assert isinstance(a, Agent)
