@@ -47,7 +47,7 @@ class Model(nn.Module):
 		conf_path = os.path.join(save_dir, "config.json")
 		with open(conf_path, "w", encoding="utf-8") as conf:
 			torch.save(self.state_dict(), model_path)
-			json.dump(self.config.__dict__)
+			json.dump(self.config.__dict__, conf)
 	
 	@staticmethod
 	def load(load_dir: str):
