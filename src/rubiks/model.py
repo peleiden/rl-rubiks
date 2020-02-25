@@ -26,14 +26,17 @@ class ModelConfig:
 
 class Model(nn.Module):
 	
-	def __init__(self, config: ModelConfig, logger: NullLogger(), *args, **kwargs):
-		super().__init__(*args, **kwargs)
+	def __init__(self, config: ModelConfig, device=torch.device("cpu"), logger=NullLogger(),):
+		super().__init__()
+		self = self.to(device)
 		self.config = config
-		
 		self.log = logger
+		
+		# Temporary model
+		self.net = nn.Linear(6*8*6, 7)
 	
 	def forward(self, x):
-		return x
+		return self.net(x)
 	
 	def save(self, save_dir: str):
 		"""
