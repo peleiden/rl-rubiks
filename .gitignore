@@ -10,6 +10,7 @@
 *.DS_Store
 *.out
 **/local*/
+/docs/notes/project_description/tex/Billeder/sign_*
 
 docs/notes/project_description/tex/description.pdf
 docs/report/main.pdf
