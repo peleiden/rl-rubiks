@@ -21,11 +21,11 @@ URL: https://medium.com/datadriveninvestor/reinforcement-learning-to-solve-rubik
 * (Given by Mikkel) Szymon Matejczyk, "Learning to solve Rubik's cube",
 URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg) 
 
-* Provenza, Hannah, "GROUP THEORY AND THE RUBIK’S CUBE", URL: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.643.2667
-  *Gennemgår en række aspekter ved Rubiks terning fra et gruppeteoretisk perspektiv, mere avanceret.*
+* Provenza, Hannah, "GROUP THEORY AND THE RUBIK’S CUBE", URL: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.643.2667. *Gennemgår en række aspekter ved Rubiks terning fra et gruppeteoretisk perspektiv, mere avanceret.*
 
-* Wein, Alex, "Mathematics of the Rubik’s Cube", URL: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.433.3390
-  *Gennemgår en række aspekter ved Rubiks terning fra et gruppeteoretisk perspektiv, mere letlæseligt.*
+* Wein, Alex, "Mathematics of the Rubik’s Cube", URL: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.433.3390. *Gennemgår en række aspekter ved Rubiks terning fra et gruppeteoretisk perspektiv, mere letlæseligt.*
+
+* Korf, Richard E., "Finding Optimal Solutions to Rubik’s Cube Using Pattern Databases", URL (download): https://www.aaai.org/Papers/AAAI/1997/AAAI97-109.pdf. *Anvender iterative-deepening-A\* til at afsøge tabeller af Rubiks terninger for at finde den korteste vej til en løst tilstand.*
 
 ## Found implementations
 
