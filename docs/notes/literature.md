@@ -34,6 +34,7 @@ with deep reinforcement learning and search", URL: https://www.nature.com/articl
 
 
 
+* A Survey of Monte Carlo Tree Search Methods: https://ieeexplore.ieee.org/abstract/document/6145622 *Gennemgang af eksisterende litteratur samt den grundlæggende algoritme*
 
 ### Formidling og forsøg på reproducering
 
@@ -61,6 +62,8 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 
 * Xinrui Zhuang, Yuexiang Li, Yifan Hu, Kai Ma, Yujiu Yang, Yefeng Zheng: "Self-supervised Feature Learning for 3D Medical Images by Playing a Rubik's Cube"  https://arxiv.org/abs/1910.02241 *En interessant sidehistorie, som ikke hænger sammen med RL og diskret optimering, men kunne nævnes kort som et eksempel på sjov Rubiks + DL-forbindelse*
 
+* Large-Scale Parallel Monte Carlo Tree Search on GPU: https://ieeexplore.ieee.org/abstract/document/6009083 *Gennemgår en implementering af MCTS på GPU med udgangspunkt i Othello. Resultat: 1 GPU = 100-200 CPU-tråde*
+
 
 ### Guider og forklaringer
 * PyTorch Deep Q learning: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
@@ -79,3 +82,5 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 * Aashrey Anand: https://github.com/AashrayAnand/rubiks-cube-reinforcement-learning 
 
 * CVxTz: https://github.com/CVxTz/rubiks_cube
+
+* keon: https://github.com/keon/deep-q-learning/blob/master/dqn.py *Simpel implementering af DQN i keras (omkring 100 linjer)*
