@@ -15,15 +15,25 @@
 ### Kernestof
 
 *  Forest Agostinelli, Stephen McAleer, Alexander Shmakov and Pierre Baldi, "Solving the Rubik's cube
-with deep reinforcement learning and search", URL: https://www.nature.com/articles/s42256-019-0070-z
+with deep reinforcement learning and search", URL: https://www.nature.com/articles/s42256-019-0070-z *Hoved-artiklen*
 
 * McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube with Approximate Policy Iteration", URL: https://openreview.net/forum?id=Hyfn2jCcKm. *Introducerer autodidaktisk iteration og kombinerer med MTCS for at løse Rubiks terning i max 30 træk.*
 
 * McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge", URL: https://arxiv.org/abs/1805.07470. *Endnu en artikel fra McAleer, Agostinelli, Shmakob og Baldi. Vi må lige finde ud af, om der er relevante forskelle der gør at alle disse tre artikler skal med*
 
+
+* Robert Brunetto and Otakar Trunda: "Deep Heuristic-learning in the Rubik’s Cube Domain:an Experimental Evaluation" http://ceur-ws.org/Vol-1885/57.pdf *Interessant artikel, der ser ud til at opnå meget af det samme som McAleeret al. bruger også A\*-variant og ser problemet som et heuristik-læringsproblem*
+
 * Bowman, Jones and Guo, "Approach to Solving 2x2x2 Rubik’s Cubes Without Human Knowledge", URL (download): https://pdfs.semanticscholar.org/13d8/b58c8e6154d83c88ce28d903f2fd79e82e75.pdf. *Anvender autodidaktisk iteration til at løse en 2x2x2 Rubiks fire træk fra den løste tilstand.*
 
 * Korf, Richard E., "Finding Optimal Solutions to Rubik’s Cube Using Pattern Databases", URL (download): https://www.aaai.org/Papers/AAAI/1997/AAAI97-109.pdf. *Anvender iterative-deepening-A\* til at afsøge tabeller af Rubiks terninger for at finde den korteste vej til en løst tilstand.*
+
+* Smith, Robert: "Evolving Policies to Solve the Rubik's Cube: Experiments with Ideal and Approximate Performance Functions" http://hdl.handle.net/10222/72115 *Bruger RL i form af genetisk programmering og direkte policy-opdagelse til at løse Rubiks, men kendte algoritmer bruges i nogen omfang for at få succes her*
+
+* Alexander Irpan: "Exploring Boosted Neural Nets for Rubik’s CubeSolvin":  https://www.alexirpan.com/public/research/nips_2016.pdf *Forsøger med en version af AdaBoost + LSTM. Ser dog ikke Rubiks-problem som RL men som sekvensiel supervised learning. Succes er begrænset og AdaBoost hjælper ikke*
+
+
+
 
 ### Formidling og forsøg på reproducering
 
