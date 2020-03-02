@@ -15,6 +15,7 @@
 docs/notes/project_description/tex/description.pdf
 docs/report/main.pdf
 docs/report/sections/*.pdf
+docs/report/report.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

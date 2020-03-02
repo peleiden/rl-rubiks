@@ -66,6 +66,17 @@ Opgaver inden vejledermøde:
 * Søren: Implenetere evalueringsmodul + agentklasse, der kan modtage state af rubiks og outputte handling + implemtér randomagent
 * Asger: Påbegynd modelmodulet og træningsmodul
   
+#### 27/2-2020
+Vi aftaler at træne et værdi- og policynetværk på autodidaktisk iteration og tilføjer træsøgning til det bagefter. 
+Mandag sender vi Mikkel en liste over papers. 
+Vi mødes igen fredag i næste uge. 
+
+Opgaver inden næste møde:
+* Alle: Find referencer og skriv dem på en fælles liste. 
+* Alle: Begynd på state of the art. 
+* Anne: Begynd på gruppeteori. 
+
+
 ## Vejledermøder
  
 ### Uge 3:
@@ -93,6 +104,15 @@ Opgaver inden vejledermøde:
 ### Uge 4:
 #### 27/2-2020
 
-
-
-
+- Det giver god mening at implementere autodidaktisk iteration først
+- DFS, A*. Lav flere forskellige modeller, så vi har noget at sammenligne med. Start med DFS
+- State of the art: RL brugt på diskret optimering
+- Beskriv det brede felt, gå derefter ind på vores underfelt
+  - Se på hvilke referencer papers har
+  - Se på hvilke papers der citerer. Brug Google Scholar
+- MCTS kan bruges undervejs til at søge mens den lærer
+- Vi holder den nok på en 3x3, men 2x2 er også en mulighed
+- Send links til referencer til Mikkel
+  - Find paper, skriv et par linjer om hvad det handler om
+  - Lav liste over feltet og send til Mikkel
+- Næste møde d. 10. marts kl. 10
