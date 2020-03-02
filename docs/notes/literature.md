@@ -31,8 +31,6 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 
 * McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube with Approximate Policy Iteration", URL: https://openreview.net/forum?id=Hyfn2jCcKm. *Introducerer autodidaktisk iteration og kombinerer med MTCS for at løse Rubiks terning i max 30 træk.*
 
-* PyTorch Deep Q learning: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-
 * Introduction to A star: https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
 
@@ -41,5 +39,7 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 * Max Lapan: https://github.com/Shmuma/rl/tree/master/articles/01_rubic
 
 * Anton Bobrov: https://github.com/antbob/qub3rt
+
+* PyTorch Deep Q learning: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 
 
