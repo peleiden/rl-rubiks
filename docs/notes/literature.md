@@ -28,13 +28,19 @@ with deep reinforcement learning and search", URL: https://www.nature.com/articl
 
 * Korf, Richard E., "Finding Optimal Solutions to Rubik’s Cube Using Pattern Databases", URL (download): https://www.aaai.org/Papers/AAAI/1997/AAAI97-109.pdf. *Anvender iterative-deepening-A\* til at afsøge tabeller af Rubiks terninger for at finde den korteste vej til en løst tilstand.*
 
+
+* A Survey of Monte Carlo Tree Search Methods: https://ieeexplore.ieee.org/abstract/document/6145622 *Gennemgang af eksisterende litteratur samt den grundlæggende algoritme*
+
+* Yoshua Bengio, Andrea Lodi, Antoine Prouvost: "Machine Learning for Combinatorial Optimization: a Methodological Tour d'Horizon"  https://arxiv.org/abs/1811.06128 *Overblik over ML-metoder til kombinatoriske optimeringsproblemer*
+
+### Andre Rubiks-metoder
+
 * Smith, Robert: "Evolving Policies to Solve the Rubik's Cube: Experiments with Ideal and Approximate Performance Functions" http://hdl.handle.net/10222/72115 *Bruger RL i form af genetisk programmering og direkte policy-opdagelse til at løse Rubiks, men kendte algoritmer bruges i nogen omfang for at få succes her*
 
 * Alexander Irpan: "Exploring Boosted Neural Nets for Rubik’s CubeSolvin":  https://www.alexirpan.com/public/research/nips_2016.pdf *Forsøger med en version af AdaBoost + LSTM. Ser dog ikke Rubiks-problem som RL men som sekvensiel supervised learning. Succes er begrænset og AdaBoost hjælper ikke*
 
-
-
-* A Survey of Monte Carlo Tree Search Methods: https://ieeexplore.ieee.org/abstract/document/6145622 *Gennemgang af eksisterende litteratur samt den grundlæggende algoritme*
+* Colin G. Johnson: "Solving the Rubik’s Cubewith Learned Guidance Functions" 
+https://findit.dtu.dk/en/catalog/2465471176 *Introducerer såkalde Learned Guidance Functions og ser på Rubiks-problemet som fejlkorrigering i forhold til annoterede træningssæt af træk*
 
 ### Formidling og forsøg på reproducering
 
