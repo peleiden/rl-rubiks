@@ -31,11 +31,13 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 
 * McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube with Approximate Policy Iteration", URL: https://openreview.net/forum?id=Hyfn2jCcKm. *Introducerer autodidaktisk iteration og kombinerer med MTCS for at løse Rubiks terning i max 30 træk.*
 
-* OpenAI, Ilge Akkaya, Marcin Andrychowicz, et al.: "Solving Rubik's Cube with a Robot Hand": https://arxiv.org/abs/1910.07113  *OpenAI's store publicitetsstunt indeholdt Rubiks-terning og brugte Reinforcement Learning. Den er dog kun overskriftsmæssigt relateret til emnet, da de brugte Kociemba-algoritmen til løsning og RL blev brugt til at bevæge hånden, der løste kuben*
-
-* PyTorch Deep Q learning: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+* OpenAI, Ilge Akkaya, Marcin Andrychowicz, et al.: "Solving Rubik's Cube with a Robot Hand": https://arxiv.org/abs/1910.07113 *OpenAI's store publicitetsstunt indeholdt Rubiks-terning og brugte Reinforcement Learning. Den er dog kun overskriftsmæssigt relateret til emnet, da de brugte Kociemba-algoritmen til løsning og RL blev brugt til at bevæge hånden, der løste kuben*
 
 * Introduction to A star: https://www.redblobgames.com/pathfinding/a-star/introduction.html
+
+* A Survey of Monte Carlo Tree Search Methods: https://ieeexplore.ieee.org/abstract/document/6145622 *Gennemgang af eksisterende litteratur samt den grundlæggende algoritme*
+
+* Large-Scale Parallel Monte Carlo Tree Search on GPU: https://ieeexplore.ieee.org/abstract/document/6009083 *Gennemgår en implementering af MCTS på GPU med udgangspunkt i Othello. Resultat: 1 GPU = 100-200 CPU-tråde*
 
 
 ## Found implementations
@@ -49,3 +51,5 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 * Aashrey Anand: https://github.com/AashrayAnand/rubiks-cube-reinforcement-learning 
 
 * CVxTz: https://github.com/CVxTz/rubiks_cube
+
+* keon: https://github.com/keon/deep-q-learning/blob/master/dqn.py *Simpel implementering af DQN i keras (omkring 100 linjer)*
