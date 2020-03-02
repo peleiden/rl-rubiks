@@ -31,6 +31,10 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 
 * McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube with Approximate Policy Iteration", URL: https://openreview.net/forum?id=Hyfn2jCcKm. *Introducerer autodidaktisk iteration og kombinerer med MTCS for at løse Rubiks terning i max 30 træk.*
 
+* OpenAI, Ilge Akkaya, Marcin Andrychowicz, et al.: "Solving Rubik's Cube with a Robot Hand": https://arxiv.org/abs/1910.07113  *OpenAI's store publicitetsstunt indeholdt Rubiks-terning og brugte Reinforcement Learning. Den er dog kun overskriftsmæssigt relateret til emnet, da de brugte Kociemba-algoritmen til løsning og RL blev brugt til at bevæge hånden, der løste kuben*
+
+* PyTorch Deep Q learning: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+
 * Introduction to A star: https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
 
@@ -40,6 +44,11 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 
 * Anton Bobrov: https://github.com/antbob/qub3rt
 
+<<<<<<< HEAD
 * PyTorch Deep Q learning: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 
+=======
+* Aashrey Anand: https://github.com/AashrayAnand/rubiks-cube-reinforcement-learning 
+>>>>>>> 5a33189087285e3f8acef6de207fb8818117bd02
 
+* CVxTz: https://github.com/CVxTz/rubiks_cube
