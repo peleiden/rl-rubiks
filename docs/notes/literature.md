@@ -27,6 +27,8 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 
 * Korf, Richard E., "Finding Optimal Solutions to Rubik’s Cube Using Pattern Databases", URL (download): https://www.aaai.org/Papers/AAAI/1997/AAAI97-109.pdf. *Anvender iterative-deepening-A\* til at afsøge tabeller af Rubiks terninger for at finde den korteste vej til en løst tilstand.*
 
+* Bowman, Jones and Guo, "Approach to Solving 2x2x2 Rubik’s Cubes Without Human Knowledge", URL (download): https://pdfs.semanticscholar.org/13d8/b58c8e6154d83c88ce28d903f2fd79e82e75.pdf. *Anvender autodidaktisk iteration til at løse en 2x2x2 Rubiks fire moves fra den løste tilstand.*
+
 ## Found implementations
 
 * Max Lapan: https://github.com/Shmuma/rl/tree/master/articles/01_rubic
