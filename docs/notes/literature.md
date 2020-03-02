@@ -44,11 +44,8 @@ URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg)
 
 * Anton Bobrov: https://github.com/antbob/qub3rt
 
-<<<<<<< HEAD
 * PyTorch Deep Q learning: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 
-=======
 * Aashrey Anand: https://github.com/AashrayAnand/rubiks-cube-reinforcement-learning 
->>>>>>> 5a33189087285e3f8acef6de207fb8818117bd02
 
 * CVxTz: https://github.com/CVxTz/rubiks_cube
