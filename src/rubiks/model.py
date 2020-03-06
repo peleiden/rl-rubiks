@@ -50,7 +50,6 @@ class Model(nn.Module):
 		super().__init__()
 		self.config = config
 		self.log = logger
-		self.log(self.config)
 
 		shared_thiccness = [288, 4096, 2048]
 		policy_thiccness = [shared_thiccness[-1], 512, 12]
@@ -59,7 +58,7 @@ class Model(nn.Module):
 		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness))
 		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness))
 
-		self.log(f"Created network\n{self}")
+		self.log(f"Created network\n{self.config}\n{self}")
 
 	def _create_fc_layers(self, thiccness: list):
 		layers = []
