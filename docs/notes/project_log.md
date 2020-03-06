@@ -68,14 +68,24 @@ Opgaver inden vejledermøde:
   
 #### 27/2-2020
 Vi aftaler at træne et værdi- og policynetværk på autodidaktisk iteration og tilføjer træsøgning til det bagefter. 
-Mandag sender vi Mikkel en liste over papers. 
-Vi mødes igen fredag i næste uge. 
+Mandag sender vi Mikkel en liste over papers.
+Vi mødes igen fredag i næste uge.
 
 Opgaver inden næste møde:
-* Alle: Find referencer og skriv dem på en fælles liste. 
-* Alle: Begynd på state of the art. 
-* Anne: Begynd på gruppeteori. 
 
+* Alle: Find referencer og skriv dem på en fælles liste.
+* Alle: Begynd på state of the art.
+* Anne: Begynd på gruppeteori.
+
+### Uge 5
+
+#### 6/3-2020
+
+* Implementér agent til BFS
+* Kode til ADI og træningsløkke (tage KDK som argument, evt. understøtte KeybordInterrupt) - Søren
+* Kode til NN + konfigurationsdataklasse - Asger
+* Skrive udkast til introduktion og begynder på data
+* Skrive gruppeteoriafsnit efter stadieafkunstenafsnit - Anne
 
 ## Vejledermøder
  
@@ -116,3 +126,6 @@ Opgaver inden næste møde:
   - Find paper, skriv et par linjer om hvad det handler om
   - Lav liste over feltet og send til Mikkel
 - Næste møde d. 10. marts kl. 10
+
+
+
