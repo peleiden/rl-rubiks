@@ -50,14 +50,39 @@ class Model(nn.Module):
 		super().__init__()
 		self.config = config
 		self.log = logger
-		
-		# Temporary model
-		self.net = nn.Linear(6*8*6, 7)
+		self.log(self.config)
 
-		self.log(self)
+		shared_thiccness = [288, 4096, 2048]
+		policy_thiccness = [shared_thiccness[-1], 512, 12]
+		value_thiccness = [shared_thiccness[-1], 512, 1]
+		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness))
+		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness))
+		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness))
+
+		self.log(f"Created network\n{self}")
+
+	def _create_fc_layers(self, thiccness: list):
+		layers = []
+		for i in range(len(thiccness)-1):
+			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
+			layers.append(nn.Dropout(self.config.dropout))
+			if self.config.batchnorm:
+				layers.append(nn.BatchNorm1d(thiccness[i+1]))
+
+		return layers
 	
-	def forward(self, x):
-		return self.net(x)
+	def forward(self, x, policy = True, value = True):
+		assert policy or value
+		x = self.shared_net(x)
+		return_values = []
+		if policy:
+			policy = self.policy_net(x)
+			policy = torch.nn.functional.softmax(policy)
+			return_values.append(policy)
+		if value:
+			value = self.value_net(x)
+			return_values.append(value)
+		return return_values if len(return_values) > 1 else return_values[0]
 	
 	def save(self, save_dir: str):
 		"""
