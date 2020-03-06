@@ -9,15 +9,21 @@ class TestTrain:
 
 	def test_train(self):
 		torch.manual_seed(42)
+
+		#The standard test		
 		net = Model(ModelConfig())
-		optim = torch.optim.Adam(net.parameters())
-		loss = torch.nn.CrossEntropyLoss()
-		train = Train(optim, loss)
-		net, val_epochs, train_losses, val_losses = train.train(net, 1000, 10, 10)
+		train = Train()
+
+		# Current
+		net = train.train(net, 2, batch_size=2, rollout_games=2, rollout_depth=2, evaluation_interval=0)
 		
-		train.plot_training(val_epochs, train_losses, val_losses, "local_tests/local_train_test")
+		train.plot_training("local_tests/local_train_test")
 		assert os.path.exists("local_tests/local_train_test/training.png")
 		
 
 
 
+
+		# optim = torch.optim.Adam
+		# policy_loss = torch.nn.CrossEntropyLoss
+		# val_loss = torch.nn.MSE

@@ -21,7 +21,7 @@ class TestAgent:
 			a.act(None)
 
 	def test_model(self):
-		a = Agent(model_based=True)
+		a = Agent(model_needed=True)
 		assert a.model_env == RubiksCube
 
 class TestRandomAgent:
@@ -29,7 +29,7 @@ class TestRandomAgent:
 	def test_init(self):
 		a = RandomAgent()
 		assert isinstance(a, Agent)
-		assert hasattr(a, 'model_based')
+		assert hasattr(a, 'model_needed')
 		assert a.model_env is None
 
 	def test_act(self):
