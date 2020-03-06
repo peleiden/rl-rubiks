@@ -28,6 +28,10 @@ class RubiksCube:
 		[0, 1, 2],
 	])
 
+	action_space = list()
+	for i in range(6): action_space.extend( [(i, True), (i, False)] )
+	action_dim = len(action_space)
+
 	def __init__(self):
 
 		"""
@@ -103,6 +107,24 @@ class RubiksCube:
 		
 		return faces, dirs
 	
+	def sequence_scrambler(self, n: int):
+		'''
+		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
+		'''
+		scrambled_states = np.empty((n+1, *self.assembled.shape))
+
+		faces = np.random.randint(6, size = (n, ))
+		dirs = np.random.randint(2, size = (n, )).astype(bool)
+
+		scrambled_states[0] = self.assembled
+		for i, face, d in zip(range(n), faces, dirs):
+			scrambled_states[i+1] = self.rotate(scrambled_states[i], face, d)
+		
+		return faces, dirs, scrambled_states
+
+
+
+
 	def is_assembled(self):
 		
 		return (self.state == self.assembled).all()
