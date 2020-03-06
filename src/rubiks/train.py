@@ -1,72 +1,109 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 
-from src.rubiks.utils.logger import Logger, NullLogger
-from src.rubiks.cube import RubiksCube
-
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
+
+from src.rubiks.cube import RubiksCube
+from src.rubiks.post_train.agents import DeepCube
+from src.rubiks.post_train.evaluation import Evaluator
+from src.rubiks.utils.logger import Logger, NullLogger
+
 
 class Train:
 
-	def __init__(self, optim, loss_fn, logger = NullLogger()):
-		self.optim = optim
-		self.loss_fn = loss_fn
+	def __init__(self, 
+			optim_fn				= torch.optim.RMSprop,
+			lr: float				= 1e-2,
+			policy_criterion		= torch.nn.CrossEntropyLoss,
+			value_criterion			= torch.nn.MSELoss,
+			logger: Logger			= NullLogger(),
+			eval_scrambling: dict 	= None,
+			eval_max_moves: int		= None,
+		):
+
+		self.optim 	= optim_fn
+		self.lr		= lr
+
+		self.policy_criterion = policy_criterion(reduction = 'none')
+		self.value_criterion  = value_criterion(reduction = 'none')
+
+
 		self.log = logger
-		self.log("Created trainer with", f"Optimizer: {self.optim}", f"Loss function: {self.loss_fn}\n")
-		
-	def train(self, net, rollouts: int, batch_size: int = 50, rollout_games: int = 100, rollout_depth: int = 10,  evaluation_interval: int = 2, learning_rate = 1e-2):
+		self.log(f"Created trainer with optimizer: {self.optim}, policy and value criteria: {self.policy_criterion}, {self.value_criterion}. Learning rate: {self.lr}")
+
+		agent = DeepCube(net = None)
+		self.evaluator = Evaluator(agent, max_moves = eval_max_moves, scrambling_procedure = eval_scrambling, verbose = False, logger = self.log)
+
+	def train(self,
+			net,
+	 		rollouts: int,
+			batch_size: int				= 50,
+			rollout_games: int 			= 100,
+			rollout_depth: int 			= 10,
+			evaluation_interval: int 	= 2,
+			evaluation_length: int		= 20,
+			verbose: bool				= True,
+		):
 		'''
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`. 
+		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation af the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		'''
-		self.log(f"Beginning training")
-		self.log(f"Rollouts: {rollouts} each consisting of {rollout_games} games with a depth of {rollout_depth}. Every {evaluation_interval}, the model is evaluated.")
-		
-		optimizer = torch.optim.RMSprop(net.parameters(), lr=learning_rate)
-		policy_criterion = torch.nn.CrossEntropyLoss(reduction = 'none')
-		value_criterion  = torch.nn.MSELoss(reduction = 'none')
-		
-		self.log(f"Optimizer: {optimizer}, policy and value criterions: {policy_criterion}, {value_criterion}")
-		train_losses = np.empty(rollouts)
+		self.moves_per_rollout = rollout_depth*rollout_games
+		self.log(f"Beginning training.")
+		self.log(f"Rollouts: {rollouts} each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
 
-
-		eval_rollouts = list()
-		eval_rewards = list()
+		optimizer = self.optim(net.parameters(), lr=self.lr)
+		self.train_losses = np.empty(rollouts)
+		
+		self.eval_rollouts = list()
+		self.eval_rewards = list()
 		for rollout in range(rollouts):
 			net.train()
+
 			training_data, targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
-			training_data, loss_weights = torch.Tensor(training_data), torch.Tensor(loss_weights)
+			torch.cuda.empty_cache()
+			training_data, loss_weights = torch.Tensor(training_data), torch.Tensor(loss_weights) #TODO: handle devicing
 
-			for batch in self._gen_batches_idcs(batch_size):
-				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
-				losses = policy_criterion(policy_pred, targets[batch][0])
-				losses += value_criterion(value_pred, targets[batch][1])
-				losses *= loss_weights[batch]
-
-				loss = losses.mean()
+			for batch in self._gen_batches_idcs(rollout_games, batch_size):
+				policy_pred, value_pred = net(training_data[batch].flatten(), policy = True, value = True)
+				#Use loss on both policy and value
+				losses = self.policy_criterion(policy_pred, targets[batch][0])
+				losses += self.value_criterion(value_pred, targets[batch][1])
+				
+				#Weighteing of losses according to move importance
+				loss = ( losses * loss_weights[batch] ).mean()
+				
 				loss.backward()
 				optimizer.step()
 
-				train_losses[rollout] = float(loss)
+				self.train_losses[rollout] = float(loss)
 				torch.cuda.empty_cache()		
 
-			if (rollout + 1) % evaluation_interval == 0:
+			if evaluation_interval and (rollout + 1) % evaluation_interval == 0:
 				net.eval()
-				eval_reward = NotImplementedError
-				eval_rollouts.append(rollout)
-				eval_rewards.append(eval_reward)
+				self.evaluator.agent.update_net(net)
+				eval_results = self.evaluator.eval(evaluation_length)
+				eval_reward = (eval_results != 0).mean() #TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
+				
+				self.eval_rollouts.append(rollout)
+				self.eval_rewards.append(eval_reward)
 		
-		return net, train_losses, eval_rollouts, eval_rewards
-	
-	def ADI_traindata(self, net, games: int, sequence_length: int):
+		return net
+
+	@staticmethod
+	def ADI_traindata(net, games: int, sequence_length: int):
 		'''
-		Implements Autodidactic iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
-		Returns games * sequence_length number of data points in three arrays. 
+		Implements Autodidactic Iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
+		
+		Returns games * sequence_length number of observations divided in three arrays:
+		
 		np.array: `states` contains the rubiks state for each data point
 		np.array: `targets` contains optimal value and policy targets for each training point
-		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection)
+		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
 		'''
 		with torch.no_grad():
+			#TODO Parallize and consider cpu/gpu conversion (probably move net to cpu and parrallelize)
 			cube = RubiksCube()
 
 			states  		= np.empty((games*sequence_length, *cube.assembled.shape))
@@ -76,7 +113,7 @@ class Train:
 			#Plays a number of games
 			for i in range(games):
 				scrambled_cubes = cube.sequence_scrambler(sequence_length)
-				states[i:i+sequence_length] = scrambled_cubes
+				states[i:i+sequence_length+1] = scrambled_cubes
 
 				#For all states in the scrambled game
 				for j, scrambled_state in enumerate(scrambled_cubes):
@@ -84,27 +121,54 @@ class Train:
 					
 					#Explore 12 substates
 					for k, action in enumerate(cube.action_space):
-						substate = cube.rotate(scrambled_state, *action)
-
+						substate = torch.Tensor(
+							cube.rotate(scrambled_state, *action)
+						).flatten()
 						value = float(
 							net(substate, policy = False, value = True)
 						)
-
 						value += 1 if (substate == cube.assembled).all() else -1
 						subvalues[k] = value
-
 					policy = subvalues.argmax()
 
 					targets[i+j, 0] 	= policy
 					targets[i+j, 1] 	= subvalues[policy]
 					loss_weights[i+j]	= 1/(sequence_length-j)
-				
 		return states, targets, loss_weights 
-	
+
+	def plot_training(self, save_dir: str, title="", show=False):
+		'''
+		Visualizes training by showing training loss + evaluation reward in same plot
+		'''
+		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8)) 
+		loss_ax.set_xlabel(f"Rollout of {self.moves_per_rollout} moves")
+
+		color = 'red'
+		loss_ax.set_ylabel("Cross Entropy + MSE, weighted", color = color)
+		loss_ax.plot(self.train_losses, label="Training loss", color = color)
+		loss_ax.tick_params(axis='y', labelcolor = color)
+
+		color = 'blue'
+		reward_ax = loss_ax.twinx()
+		reward_ax.set_ylabel("Cross Entropy + MSE, weighted", color=color)
+		reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color,  label="Evaluation reward")
+		reward_ax.tick_params(axis='y', labelcolor=color)
+
+
+		fig.tight_layout()
+		fig.title(title if title else "Training")
+		
+		os.makedirs(save_dir, exist_ok=True)
+		plt.savefig(os.path.join(save_dir, "training.png"))
+		
+		if show: plt.show()
+
+
 	@staticmethod
 	def _gen_batches_idcs(size: int, bsize: int):
-		# Genererer batches
-		# Batch = antal billeder den træner på før modellen opdateres
+		'''
+		Generates indices for batch 
+		'''
 		nbatches = size // bsize
 		idcs = np.arange(size)
 		np.random.shuffle(idcs)
@@ -112,16 +176,11 @@ class Train:
 			yield idcs[batch * bsize:(batch + 1) * bsize]
 
 
-	@staticmethod
-	def plot_training(val_epochs, train_losses, val_losses, save_dir: str, title="", show=False):
-		
-		plt.figure(figsize=(19.2, 10.8))
-		plt.plot(val_epochs, train_losses, "b", label="Training loss")
-		plt.plot(val_epochs, val_losses, "r-", label="Validation loss")
-		plt.title(title if title else "Training loss")
-		plt.xlabel("Epoch")
-		plt.ylabel("Loss")
-		os.makedirs(save_dir, exist_ok=True)
-		plt.savefig(os.path.join(save_dir, "training.png"))
-		if show:
-			plt.show()
+if __name__ == "__main__":
+	from src.rubiks.model import Model, ModelConfig
+	net = Model(ModelConfig())
+	logger = Logger("local_tests/local_train_test", "Training loop")
+	train = Train(logger=logger)
+
+	net = train.train(net, 2, batch_size=20, rollout_games=2, rollout_depth=5, evaluation_interval=0)
+	train.plot_training("local_tests/local_train", show=True)

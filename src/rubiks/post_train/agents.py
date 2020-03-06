@@ -5,23 +5,39 @@ from src.rubiks.cube import RubiksCube
 
 
 class Agent:
-	action_space = list()
-	for i in range(6): action_space.extend( [(i, True), (i, False)] )
-	action_dim = len(action_space)
+	action_space, action_dim = RubiksCube.action_space, RubiksCube.action_dim
 
-	def __init__(self, model_based: bool = True):
-		self.model_based = model_based
-		self.model_env = RubiksCube if model_based else None
+	def __init__(self, model_needed: bool = True):
+		self.model_needed = model_needed
+		self.model_env = RubiksCube if model_needed else None
 
-	def act(self, state: iter):
+	def act(self, state: np.array):
 		raise NotImplementedError
-	
-class RandomAgent(Agent):
-	def __init__(self, **kwargs):
-		super().__init__(model_based=False, **kwargs)
-		
-	def act(self, state: iter):
-		return self.action_space[np.random.randint(self.action_dim)]
 
 	def __str__(self):
-		return 'RandomAgent(Agent)'
+		return f"{self.__class__.__name__}(Agent)"
+
+class RandomAgent(Agent):
+	def __init__(self, **kwargs):
+		super().__init__(model_needed=False, **kwargs)
+		
+	def act(self, state: np.array):
+		return self.action_space[np.random.randint(self.action_dim)]
+
+class SimpleBFS(Agent):
+	def __init__(self, **kwargs):
+		super().__init__(model_needed=True, **kwargs)
+
+	def act(self, state: np.array):
+		return NotImplementedError
+
+
+class DeepCube(Agent):
+	def __init__(self, net = None, **kwargs):
+		super().__init__(model_needed=False, **kwargs)
+
+	def act(self, state: np.array):
+		return NotImplementedError
+
+	def update_net(self, net):
+		raise NotImplementedError
