@@ -120,7 +120,7 @@ class RubiksCube:
 		for i, face, d in zip(range(n), faces, dirs):
 			scrambled_states[i+1] = self.rotate(scrambled_states[i], face, d)
 		
-		return faces, dirs, scrambled_states
+		return scrambled_states
 
 
 
