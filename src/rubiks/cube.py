@@ -42,16 +42,16 @@ class RubiksCube:
 		
 
 	def move(self, face: int, pos_rev: bool):
-		'''
+		"""
 		Performs rotation, mutates state and returns whether cube is completed
-		'''
+		"""
 		self.state = self.rotate(self.state, face, pos_rev)
 		return self.is_assembled()
 		 
 	def reset(self):
-		'''
+		"""
 		Resets cube by random scramblings in accordance with self.scrambling_procedure
-		'''
+		"""
 		self.state = self.assembled.copy()		
 		N_resets = np.random.randint(*self.scrambling_procedure["N_scrambles"])
 		self.scramble(N_resets)
@@ -108,9 +108,9 @@ class RubiksCube:
 		return faces, dirs
 	
 	def sequence_scrambler(self, n: int):
-		'''
+		"""
 		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
-		'''
+		"""
 		scrambled_states = np.empty((n+1, *self.assembled.shape))
 
 		faces = np.random.randint(6, size = (n, ))
@@ -145,7 +145,7 @@ class RubiksCube:
 if __name__ == "__main__":
 	
 	# Benchmarking example
-	from utils.benchmark import Benchmark
+	from src.rubiks.utils.benchmark import Benchmark
 	def test_scramble(games):
 		# Function is weird, as it is designed to work for both single and multithreaded benchmarks
 		if hasattr(games, "__iter__"):

@@ -5,12 +5,18 @@ import numpy as np
 import torch
 
 from src.rubiks.cube import RubiksCube
+from src.rubiks.data.data_generation import ADI_traindata
 from src.rubiks.post_train.agents import DeepCube
 from src.rubiks.post_train.evaluation import Evaluator
 from src.rubiks.utils.logger import Logger, NullLogger
 
 
 class Train:
+	
+	moves_per_rollout: int
+	train_losses: np.ndarray
+	eval_rollouts: list
+	eval_rewards: list
 
 	def __init__(self, 
 			optim_fn				= torch.optim.RMSprop,
@@ -45,11 +51,11 @@ class Train:
 			evaluation_length: int		= 20,
 			verbose: bool				= True,
 		):
-		'''
-		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`. 
+		"""
+		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation af the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
-		'''
-		self.moves_per_rollout = rollout_depth*rollout_games
+		"""
+		self.moves_per_rollout = rollout_depth * rollout_games
 		self.log(f"Beginning training.")
 		self.log(f"Rollouts: {rollouts} each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
 
@@ -61,7 +67,7 @@ class Train:
 		for rollout in range(rollouts):
 			net.train()
 
-			training_data, targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
+			training_data, targets, loss_weights = ADI_traindata(net, rollout_games, rollout_depth)
 			torch.cuda.empty_cache()
 			training_data, loss_weights = torch.Tensor(training_data), torch.Tensor(loss_weights) #TODO: handle devicing
 
@@ -84,62 +90,17 @@ class Train:
 				net.eval()
 				self.evaluator.agent.update_net(net)
 				eval_results = self.evaluator.eval(evaluation_length)
-				eval_reward = (eval_results != 0).mean() #TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
+				eval_reward = (eval_results != 0).mean()  # TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
 				
 				self.eval_rollouts.append(rollout)
 				self.eval_rewards.append(eval_reward)
 		
 		return net
 
-	@staticmethod
-	def ADI_traindata(net, games: int, sequence_length: int):
-		'''
-		Implements Autodidactic Iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
-		
-		Returns games * sequence_length number of observations divided in three arrays:
-		
-		np.array: `states` contains the rubiks state for each data point
-		np.array: `targets` contains optimal value and policy targets for each training point
-		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
-		'''
-		with torch.no_grad():
-			#TODO Parallize and consider cpu/gpu conversion (probably move net to cpu and parrallelize)
-			cube = RubiksCube()
-
-			states  		= np.empty((games*sequence_length, *cube.assembled.shape))
-			targets			= np.empty((games*sequence_length, 2))
-			loss_weights	= np.empty(games*sequence_length)
-			
-			#Plays a number of games
-			for i in range(games):
-				scrambled_cubes = cube.sequence_scrambler(sequence_length)
-				states[i:i+sequence_length+1] = scrambled_cubes
-
-				#For all states in the scrambled game
-				for j, scrambled_state in enumerate(scrambled_cubes):
-					subvalues = np.empty(cube.action_dim)
-					
-					#Explore 12 substates
-					for k, action in enumerate(cube.action_space):
-						substate = torch.Tensor(
-							cube.rotate(scrambled_state, *action)
-						).flatten()
-						value = float(
-							net(substate, policy = False, value = True)
-						)
-						value += 1 if (substate == cube.assembled).all() else -1
-						subvalues[k] = value
-					policy = subvalues.argmax()
-
-					targets[i+j, 0] 	= policy
-					targets[i+j, 1] 	= subvalues[policy]
-					loss_weights[i+j]	= 1/(sequence_length-j)
-		return states, targets, loss_weights 
-
 	def plot_training(self, save_dir: str, title="", show=False):
-		'''
+		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
-		'''
+		"""
 		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8)) 
 		loss_ax.set_xlabel(f"Rollout of {self.moves_per_rollout} moves")
 

@@ -41,9 +41,6 @@ class ModelConfig:
 			return [x for x in afs if type(afs[x]) == type(val)][0]
 
 
-
-
-
 class Model(nn.Module):
 	
 	def __init__(self, config: ModelConfig, logger=NullLogger(),):
