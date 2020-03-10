@@ -12,41 +12,46 @@ def ADI_traindata(net, games: int, sequence_length: int):
 	Returns games * sequence_length number of observations divided in three arrays:
 
 	np.array: `states` contains the rubiks state for each data point
-	np.array: `targets` contains optimal value and policy targets for each training point
+	np.arrays: `policy_targets` and `value_targets` contains optimal value and policy targets for each training point
 	np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
 	"""
 	with torch.no_grad():
 		# TODO Parallize and consider cpu/gpu conversion (probably move net to cpu and parrallelize)
+		net.eval() 
 		cube = RubiksCube()
-		
-		states = np.empty((games * sequence_length, *cube.assembled.shape))
-		targets = np.empty((games * sequence_length, 2))
-		loss_weights = np.empty(games * sequence_length)
-		
-		# Generates scrambled states
-		scrambled_states = []#multi_exec(cube.sequence_scrambler, games, sequence_length)
 
-		net.eval()
+		N_data = games * sequence_length
+		states = np.empty(( N_data,  *cube.assembled.shape ), dtype=np.float32)
+		policy_targets, value_targets = np.empty(N_data, dtype=np.int64), np.empty(games * sequence_length, dtype=np.float32)
+		loss_weights = np.empty(N_data)
+
 		# Plays a number of games
 		for i in range(games):
-			scrambled_states.append(cube.sequence_scrambler(sequence_length))
-			scrambled_cubes = scrambled_states[i]
-			states[i:i + sequence_length + 1] = scrambled_cubes
+			scrambled_cubes = cube.sequence_scrambler(sequence_length)
+			states[i:i + sequence_length] = scrambled_cubes
 			
 			# For all states in the scrambled game
 			for j, scrambled_state in enumerate(scrambled_cubes):
-				subvalues = np.empty(cube.action_dim)
-				
+
 				# Explore 12 substates
-				for k, action in enumerate(cube.action_space):
-					substate = torch.Tensor(cube.rotate(scrambled_state, *action)).flatten().unsqueeze(0)
-					value = float(net(substate, policy=False, value=True))
-					value += 1 if (substate == torch.Tensor(cube.assembled).flatten().unsqueeze(0)).all() else -1
-					subvalues[k] = value
-				policy = subvalues.argmax()
+				substates = np.empty( (cube.action_dim, *cube.assembled.shape) )
+				for k, action in enumerate(cube.action_space): 
+					substates[k] = cube.rotate(scrambled_state, *action)
 				
-				targets[i + j, 0] = policy
-				targets[i + j, 1] = subvalues[policy]
-				loss_weights[i + j] = 1 / (j+1)  # TODO
+				rewards = torch.Tensor( [ 1 if (substate == cube.assembled).all() else -1 for substate in substates ] ) 
+				substates = torch.Tensor( substates.reshape(cube.action_dim, -1) ) #TODO: Handle device
+
+				values = net(substates, policy=False, value=True).squeeze()
+				values += rewards				
+
+				policy = values.argmax()
+
+				current_idx = i*sequence_length + j
+				policy_targets[current_idx] = policy
+				value_targets[current_idx] = values[policy]
+
+
+				loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
 	
-	return states, targets, loss_weights
+	states = states.reshape(N_data, -1)
+	return states, policy_targets, value_targets, loss_weights
