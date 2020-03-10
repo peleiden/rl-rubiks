@@ -72,9 +72,9 @@ class Train:
 			training_data, loss_weights = torch.Tensor(training_data), torch.Tensor(loss_weights) #TODO: handle devicing
 
 			for batch in self._gen_batches_idcs(rollout_games, batch_size):
-				policy_pred, value_pred = net(training_data[batch].flatten(), policy = True, value = True)
+				policy_pred, value_pred = net(training_data[batch].flatten(1, -1), policy = True, value = True)
 				#Use loss on both policy and value
-				losses = self.policy_criterion(policy_pred, targets[batch][0])
+				losses = self.policy_criterion(policy_pred, targets[batch][0])  # TODO: Mangler akse
 				losses += self.value_criterion(value_pred, targets[batch][1])
 				
 				#Weighteing of losses according to move importance

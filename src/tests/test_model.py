@@ -22,6 +22,11 @@ class TestModel:
 		config = ModelConfig()
 		model = Model(config)
 		assert next(model.parameters()).device.type == device.type
+		model.eval()
+		x = torch.randn(2, 288)
+		model(x)
+		model.train()
+		model(x)
 	
 	def test_save_and_load(self):
 		torch.manual_seed(42)

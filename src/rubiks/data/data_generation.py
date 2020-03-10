@@ -24,10 +24,12 @@ def ADI_traindata(net, games: int, sequence_length: int):
 		loss_weights = np.empty(games * sequence_length)
 		
 		# Generates scrambled states
-		scrambled_states = multi_exec(cube.sequence_scrambler, games, sequence_length)
-		
+		scrambled_states = []#multi_exec(cube.sequence_scrambler, games, sequence_length)
+
+		net.eval()
 		# Plays a number of games
 		for i in range(games):
+			scrambled_states.append(cube.sequence_scrambler(sequence_length))
 			scrambled_cubes = scrambled_states[i]
 			states[i:i + sequence_length + 1] = scrambled_cubes
 			
@@ -37,14 +39,14 @@ def ADI_traindata(net, games: int, sequence_length: int):
 				
 				# Explore 12 substates
 				for k, action in enumerate(cube.action_space):
-					substate = torch.Tensor(cube.rotate(scrambled_state, *action)).flatten()
+					substate = torch.Tensor(cube.rotate(scrambled_state, *action)).flatten().unsqueeze(0)
 					value = float(net(substate, policy=False, value=True))
-					value += 1 if (substate == cube.assembled).all() else -1
+					value += 1 if (substate == torch.Tensor(cube.assembled).flatten().unsqueeze(0)).all() else -1
 					subvalues[k] = value
 				policy = subvalues.argmax()
 				
 				targets[i + j, 0] = policy
 				targets[i + j, 1] = subvalues[policy]
-				loss_weights[i + j] = 1 / (sequence_length - j)
+				loss_weights[i + j] = 1 / (j+1)  # TODO
 	
 	return states, targets, loss_weights
