@@ -48,7 +48,7 @@ def ADI_traindata(net, games: int, sequence_length: int):
 
 				current_idx = i*sequence_length + j
 				policy_targets[current_idx] = policy
-				value_targets[current_idx] = values[policy]
+				value_targets[current_idx] = values[policy] if not (scrambled_state == cube.assembled).all() else 0  #Max Lapan convergence fix
 
 
 				loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
