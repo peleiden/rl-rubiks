@@ -111,15 +111,14 @@ class RubiksCube:
 		"""
 		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
 		"""
-		scrambled_states = np.empty((n+1, *self.assembled.shape))
+		scrambled_states = np.empty((n, *self.assembled.shape))
 
 		faces = np.random.randint(6, size = (n, ))
 		dirs = np.random.randint(2, size = (n, )).astype(bool)
 
 		scrambled_states[0] = self.assembled
-		for i, face, d in zip(range(n), faces, dirs):
+		for i, face, d in zip(range(n-1), faces, dirs):
 			scrambled_states[i+1] = self.rotate(scrambled_states[i], face, d)
-		
 		return scrambled_states
 
 
