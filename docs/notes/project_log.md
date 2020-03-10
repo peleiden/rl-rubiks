@@ -128,4 +128,13 @@ Opgaver inden næste møde:
 - Næste møde d. 10. marts kl. 10
 
 
+### Uge 6:
+
+#### 10/3-2020
+
+- Anbefaling at skrive teoretisk afsnit i nemmere termer 
+- Anbefaling at fokusere på ADI + træafsøgning og så følger nærmere optimering af læringsproces senere
+- Gennemgang af ADI
+
+
 
