@@ -20,7 +20,7 @@ class Train:
 
 	def __init__(self, 
 			optim_fn				= torch.optim.RMSprop,
-			lr: float				= 1e-2,
+			lr: float				= 1e-5,
 			policy_criterion		= torch.nn.CrossEntropyLoss,
 			value_criterion			= torch.nn.MSELoss,
 			logger: Logger			= NullLogger(),
@@ -45,8 +45,8 @@ class Train:
 			net,
 	 		rollouts: int,
 			batch_size: int				= 50, #Required to be > 1 when training with batchnorm
-			rollout_games: int 			= 100,
-			rollout_depth: int 			= 10,
+			rollout_games: int 			= 10000,
+			rollout_depth: int 			= 200,
 			evaluation_interval: int 	= 2,
 			evaluation_length: int		= 20,
 			verbose: bool				= True,
@@ -57,7 +57,7 @@ class Train:
 		"""
 		self.moves_per_rollout = rollout_depth * rollout_games
 		self.log(f"Beginning training.")
-		self.log(f"Rollouts: {rollouts} each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
+		self.log(f"Rollouts: {rollouts}. Each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		self.train_losses = np.zeros(rollouts)
@@ -88,7 +88,7 @@ class Train:
 
 				self.train_losses[rollout] += float(loss)
 
-			self.train_losses[rollout] /= batch_size
+			self.train_losses[rollout] /= self.moves_per_rollout
 			
 			torch.cuda.empty_cache()
 			
@@ -152,5 +152,5 @@ if __name__ == "__main__":
 	logger = Logger("local_train/training_loop.log", "Training loop")
 	train = Train(logger=logger)
 
-	net = train.train(net, 40, batch_size=10, rollout_games=20, rollout_depth=5, evaluation_interval=0)
+	net = train.train(net, 40, batch_size=5, rollout_games=50, rollout_depth=10, evaluation_interval=0)
 	train.plot_training("local_tests/local_train", show=True)
