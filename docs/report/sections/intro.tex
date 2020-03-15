@@ -30,10 +30,10 @@ Rubiks terning er et lille, kombinatorisk legetøj opfundet af den ungarske bill
 	\caption{Illustration of de seks farvede sider i en 3x3 Rubiks terning.\protect\footnotemark}
 \end{figure}
 \footnotetext{Billede: Wikimedia Commons på \url{https://en.wikipedia.org/wiki/File:Rubik\%27s_cube_colors.svg}}
-Målet er at få alle siderne til at være ens som på billedet. 
-Har man selv sat sig ned med en sådan terning, virkede problemet måske meget enkelt til at starte med, men men opdager hurtigt, at det er overraskende svært.
-Dette er fordi der kun er én måltilstand og et utroligt stort tilstandsrum (mere om dette senere).
-Uden en algoritme vil det formentlig tage et gennemsnitligt menneske utroligt lang tid at finde en måde at løse Rubiks terning på (det tog Rubik selv en måned at komme op med en løsningsalgoritme til problemet). 
+\noindent Målet er at få alle siderne til at være ens som på billedet. 
+Har man selv sat sig ned med en sådan terning, virkede problemet måske meget enkelt til at starte med, men man opdager hurtigt, at det er overraskende svært.
+Dette skyldes, at der kun er én måltilstand og et utroligt stort tilstandsrum (mere om det senere).
+Uden en algoritme vil det formentlig tage et gennemsnitligt menneske utroligt lang tid at finde en måde at løse Rubiks terning på (det tog Rubik selv en måned at finde en løsningsalgoritme til problemet). 
 Mennesker kan spille i en time uden at lære særligt meget, men en maskine kan spille mange tusinder af spil og lære på samme måde som et menneske men på meget kortere tid. 
 
 
@@ -55,5 +55,42 @@ I \cite{SolvingNature} anvendes databaser af specifikke mønstre til at løse Ru
 \cite{RubiksMedium} er et eksempel på anvendelse af reinforcement learning inde for kombinatorisk optimering, hvilket også inkluderer problemer såsom traveling salesman, ressource-allokering og simulering af proteinfoldning. 
 
 \subsection{DeepCubeA}
-DeepCubeA \cite{SolvingNature} kombinerer dyb læring med approksimativ værdiiteration og \emph{batch}-vægtet A*-afsøgning. Netværket ser kun ét skridt fremad, fordi at se flere skridt fremad eller anvende Monte Carlo-træafsøgning (MCTS) ikke blev fundet til at være bedre. DeepCubeA bygger på en anden implementation baseret på policy og MCTS. Den lærte kostfunktion bruges derefter som en heuristik til at finde vejen til løsningstilstanden ved brug af vægtet A*-afsøgning.  
+DeepCubeA \cite{SolvingNature} kombinerer dyb læring med approksimativ værdiiteration og \emph{batch}-vægtet A*-afsøgning.
+Netværket ser kun ét skridt fremad, fordi at se flere skridt fremad eller anvende Monte Carlo-træafsøgning (MCTS) ikke blev fundet til at være bedre.
+DeepCubeA bygger på en anden implementation baseret på policy og MCTS.
+Den lærte kostfunktion bruges derefter som en heuristik til at finde vejen til løsningstilstanden ved brug af vægtet A*-afsøgning.
+
+
+\section{Forskningsspørgsmål}
+I denne rapport vil vi undersøge reinforcement learning som et redskab til at løse Rubiks terning.
+Først vil problemet analyseres med udgangspunkt i gruppeteori.
+Det skal give et bedre overblik over problemets kombinatoriske størrelse og dertil hørende sværhedsgrad.
+
+Fra litteraturen hesker der ingen tvivl om, hvorvidt det kan lade sig gøre at løse Rubiks terning med reinforcement learning.
+Vi ønsker derfor at genskabe de anvendte metoder og se, hvor mange tilfældige træk fra en løst terning det er muligt for algoritmen at løse.
+Det vil blive undersøgt for metoder fra litteraturen: Autodidaktisk iteration \cite{HumansBeGone} og A*-søgning med autodidaktisk iteration som heurestik.
+
+ 
 \end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
