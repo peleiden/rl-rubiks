@@ -61,14 +61,26 @@ DeepCubeA bygger på en anden implementation baseret på policy og MCTS.
 Den lærte kostfunktion bruges derefter som en heuristik til at finde vejen til løsningstilstanden ved brug af vægtet A*-afsøgning.
 
 
-\section{Forskningsspørgsmål}
+\section{Rapportens mål og opbygning}BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN 
+BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN 
+
 I denne rapport vil vi undersøge reinforcement learning som et redskab til at løse Rubiks terning.
-Først vil problemet analyseres med udgangspunkt i gruppeteori.
+Der v med udgangspunkt i gruppeteori.
 Det skal give et bedre overblik over problemets kombinatoriske størrelse og dertil hørende sværhedsgrad.
 
 Fra litteraturen hesker der ingen tvivl om, hvorvidt det kan lade sig gøre at løse Rubiks terning med reinforcement learning.
 Vi ønsker derfor at genskabe de anvendte metoder og se, hvor mange tilfældige træk fra en løst terning det er muligt for algoritmen at løse.
 Det vil blive undersøgt for metoder fra litteraturen: Autodidaktisk iteration \cite{HumansBeGone} og A*-søgning med autodidaktisk iteration som heurestik.
+
+Konkret er målet med rapporten er at svare på følgende spørgsmål:
+\begin{itemize}
+	\item Hvor god kan en Reinforcement Learning-algoritme blive til at løse Rubiks terning uden at have adgang til menneskelige heuristikker? Med \textit{god} menes antallet af træk væk fra den løste tilstand, som algoritmen fast kan løse.
+	\item Hvilke forhold er optimale i forhold til en stabil konvergens af værdifunktionen, det neurale netværk, i autodidaktisk iteration? Her tænkes på datarepræsentationen og design af træningsproceduren.
+	\item Hvilken fremgangsmåde giver bedste resultater: At forbedre strukturen af det neurale netværk eller at forbedre træsøgningsmetoden?
+	\item Hvor tidseffektiv kan løsning og træning af RL i et problem med så stort udfaldsrum være? Her er både fokus på  at lære den bedst mulige værdi-approkismation, så løsningstid minimeres, men også på at softwaredesign i træningsfasen gør det muligt for agenten at udforske så meget som muligt af udfaldsrummet indenfor overskuelig tid.
+\end{itemize}
+I afsnit yada diskuter vi yadda og i afsnit yolo fyrer vi bolo.
+
 
  
 \end{document}
