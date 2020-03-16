@@ -6,15 +6,51 @@
 De undersøgt dybe Reinformcent Learning-modeller basererde sig alle på modellen DeepCube fra \cite{HumansBeGone} med nogle undtagelser, der beskrives i de følgende afsnit. Løsningsmodellen består af et neuralt netværk, der trænes med en Reinforcement Learning-procedure kaldet autodidaktisk iteration til at vurdere den værdien af og den optimale handling til enhver tilstand for Rubiks terning. Dette netværk bliver så brugt som heuristisk for en Monte Carlo træsøgning som løsningsstrategi til terningen.
 
 For at undersøge, hvad der er vigtigt for at få gode resultater, udføres der sammenlignende eksperimenterer, hvor der ændres på detaljer i trænignsparadigmet, det neurale netværks struktur samt parametre for træsøgningsmodellen.
+\section{Rubiks Terning}\label{sec:environment}
 
-\section{Reinforcement Learning: Træning af DNN}
-
+\section{Den lærende agent}
+Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da det formaliseres som at følge Reinforcement Learning-opsætningen ved at have følgende aspekter:
 \begin{itemize}
-	\item Kort intro af RL-opsætning og reward
-	\item Forskel på politik og værdi; her bruges begge dele
-	\item Det neurale netværks struktur
+	\item \textit{Agent}: Løsningsmodellen -- som her kaldes DeepCube, selvom den også afprøves med ændringer i forhold til DeepCube i \cite{HumansBeGone} -- har rollen som lærende agent, der interagerer miljøet. Den består af det dybe neurale netværk (DNN) samt træafsøgningen og beskrives i løbet af dette kapitel. Agenten er model-baseret, da den har en indre repræsentation af Rubiks terning for at træ-afsøge tilstande.  \\
+	Agenten er implementeret i  \texttt{src/rubiks/post\_train/agents.py}.
+	\item \textit{Miljø}: Rubiks terning, der modtaget handlinger \(a\) og returnerer tilstand \(\mathbf s\). Er en fuldt-observerbar, deterministisk Markov beslutningsproces, da al information om ny tilstand \(\mathbf s_{k+1}\) kun er afhængig af foregående tilstand og foregående handling \(a_k\):
+	\[
+		\mathbf s _ {k+1} = f(\mathbf s _k, a_k)
+	\] 
+	og da agentens observation indeholder al information om tilstanden. Miljøet har én afsluttende tilstand \(\mathbf s_T\). Miljøet er  beskrevet i afsnit \ref{sec:environment} og implementeret i \texttt{src/rubiks/cube.py} 
+	\item  \textit{Handlinger}: Handlingsrummet \(A\) bestående af de tolv handlinger beskrevet i afsnit \ref{sec:environment} er uafhængigt af tilstanden og tidsskridtet.
+	\item \textit{Belønning}: Belønningsfunktionen \( R(\mathbf s_k)\) er kun afhængig af tilstanden \(\mathbf s\) og returnerer skalarbelønningen på følgende måde:
+	\[
+		R (\mathbf s_k) = 
+		\begin{cases}
+			1  &: \mathbf s_k = \mathbf{s_T}\\
+			-1 &: \mathbf s_k \neq \mathbf{s_T}
+		\end{cases}
+	\] 
+	Belønningen er således valgt for at være i overenstemmelse med \cite{HumansBeGone} og for at give minimal information om problemet til agenten, der så testes uafhængigt af menneskeudviklet heuristik.
 \end{itemize}
+\paragraph{Politik og værdi} Målet med træning af Reinforcement Learning-agenten DeepCube er så godt som muligt at approksimere den optimale politik \(\pi^*\), der maksimerer akkumuleret belønning \(v\), til hvilken der opnås den optimale akkumulerede belønning \(v^*\):
+\begin{equation}\label{eq:maxprob}
+\pi^* = \argmaxi_{\pi}\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
+v^* = \maxi_\pi\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
+N = \operatorname{min}\{k_T, k_{\text{max}}-1\}
+\end{equation}
 
+hvor \(k_T\) er tidsskridtet, når agenten løser terningen og \(k_{\text{max}}\) er en grænse på antal skridt,  som defineres i eksperimentet. 
+
+Til at bestemme \(\widetilde {\pi ^*} \approx 	\pi^*\) blev to sammenhængende afbildninger implementeret i DeepCube. Den ene komponent er en lært afbildning, der direkte approksimerer \(\widetilde {\pi ^*}\) ved at afbillede fra tilstanden \(\mathbf s_k\) til en diskret sandsynlighedsfordeling, der approksimativt tilskriver hver mulig handling en sandsynlighed for at denne er den optimale . Denne funktion kaldes \textit{politik-netværket} og repræsenteres fremover med symbolet \(\bm \pi\):
+\[
+\bm \pi(\mathbf s_k)_i \approx \mathbb P (i = \pi^*(\mathbf s_k)_i),\quad i \in \{0,1, ..., 11\}
+\]
+Desuden læres en funktion, der approksimerer \textit{værdien} til hver tilstand forstået som den akkumulerede belønning der fås ved at følge politikken \(\pi\) herfra. Denne kaldes \textit{værdi-netværket} og repræsenteres som \(v\):
+\[
+v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j))\big)
+\]
+\paragraph{Neurale netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller i træningsproceduren og i løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til minimeringsproblemet \eqref{eq:maxprob}, udtrykkes de i det samme neurale netværk, der så konstrueres med en todelt outputstruktur.
+
+<BESKRIVELSE AF DET NEURALE NETVÆRK>
+
+ 
 \subsection{Træningsdata: Autodidaktisk Iteration}
 
 

@@ -8,11 +8,7 @@
 \usepackage{texfiles/Blastoise}
 
 \usepackage{subfiles}
-
-
-
-
-
+\usepackage{bm} %Fede symboler
 
 
 
@@ -21,6 +17,8 @@
 \titlespacing*{\chapter}{0pt}{0pt}{40pt}
 
 
+\DeclareMathOperator*{\maxi}{max}
+\DeclareMathOperator*{\argmaxi}{argmax}
 
 
 
@@ -41,7 +39,7 @@
 
 \chead{}
 \rhead{}
-\rfoot{Page \thepage{} of \pageref{LastPage}}
+\rfoot{Side \thepage{} af \pageref{LastPage}}
 
 \graphicspath{{imgs/}{../imgs/}}
 \linespread{1.15}
