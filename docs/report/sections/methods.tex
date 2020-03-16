@@ -6,7 +6,7 @@
 De undersøgt dybe Reinformcent Learning-modeller basererde sig alle på modellen DeepCube fra \cite{HumansBeGone} med nogle undtagelser, der beskrives i de følgende afsnit. Løsningsmodellen består af et neuralt netværk, der trænes med en Reinforcement Learning-procedure kaldet autodidaktisk iteration til at vurdere den værdien af og den optimale handling til enhver tilstand for Rubiks terning. Dette netværk bliver så brugt som heuristisk for en Monte Carlo træsøgning som løsningsstrategi til terningen.
 
 For at undersøge, hvad der er vigtigt for at få gode resultater, udføres der sammenlignende eksperimenterer, hvor der ændres på detaljer i trænignsparadigmet, det neurale netværks struktur samt parametre for træsøgningsmodellen.
-\section{Rubiks Terning}\label{sec:environment}
+\section{Rubiks terning}\label{sec:environment}
 
 \section{Den lærende agent}
 Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da det formaliseres som at følge Reinforcement Learning-opsætningen ved at have følgende aspekter:
@@ -15,7 +15,7 @@ Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da 
 	Agenten er implementeret i  \texttt{src/rubiks/post\_train/agents.py}.
 	\item \textit{Miljø}: Rubiks terning, der modtaget handlinger \(a\) og returnerer tilstand \(\mathbf s\). Er en fuldt-observerbar, deterministisk Markov beslutningsproces, da al information om ny tilstand \(\mathbf s_{k+1}\) kun er afhængig af foregående tilstand og foregående handling \(a_k\):
 	\[
-		\mathbf s _ {k+1} = f(\mathbf s _k, a_k)
+		\mathbf s _ {k+1} = \mathbf f(\mathbf s _k, a_k)
 	\] 
 	og da agentens observation indeholder al information om tilstanden. Miljøet har én afsluttende tilstand \(\mathbf s_T\). Miljøet er  beskrevet i afsnit \ref{sec:environment} og implementeret i \texttt{src/rubiks/cube.py} 
 	\item  \textit{Handlinger}: Handlingsrummet \(A\) bestående af de tolv handlinger beskrevet i afsnit \ref{sec:environment} er uafhængigt af tilstanden og tidsskridtet.
@@ -30,7 +30,7 @@ Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da 
 	Belønningen er således valgt for at være i overenstemmelse med \cite{HumansBeGone} og for at give minimal information om problemet til agenten, der så testes uafhængigt af menneskeudviklet heuristik.
 \end{itemize}
 \paragraph{Politik og værdi} Målet med træning af Reinforcement Learning-agenten DeepCube er så godt som muligt at approksimere den optimale politik \(\pi^*\), der maksimerer akkumuleret belønning \(v\), til hvilken der opnås den optimale akkumulerede belønning \(v^*\):
-\begin{equation}\label{eq:maxprob}
+\begin{equation}\label{eq:maximization}
 \pi^* = \argmaxi_{\pi}\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
 v^* = \maxi_\pi\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
 N = \operatorname{min}\{k_T, k_{\text{max}}-1\}
@@ -46,19 +46,37 @@ Desuden læres en funktion, der approksimerer \textit{værdien} til hver tilstan
 \[
 v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j))\big)
 \]
-\paragraph{Neurale netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller i træningsproceduren og i løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til minimeringsproblemet \eqref{eq:maxprob}, udtrykkes de i det samme neurale netværk, der så konstrueres med en todelt outputstruktur.
+\paragraph{Neurale netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller i træningsproceduren og i løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til minimeringsproblemet \eqref{eq:maximization}, udtrykkes de i det samme neurale netværk, der så konstrueres med en todelt outputstruktur.
 
 <BESKRIVELSE AF DET NEURALE NETVÆRK>
 
+
  
-\subsection{Træningsdata: Autodidaktisk Iteration}
+\subsection*{Læring af værdi: Autodidaktisk iteration}
+At opnå et politik/værdi-netværk med gode approksimationer, kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
+På trods af problemets determinisme og Markov-egenskab er der dog en stor udfordring i udforskningen af disse tilstande.
+Som beskrevet i afsnit \ref{sec:grouptheory}, gør de mange mulige permutationer, at tilstandsrummet når en størrelse på \(|S|\approx 4,3\ctp {19}\), hvilket gør, at enhver systematisk løsning af maksimeringsproblemet \ref{eq:maximization} kun kan kun kan tilskrive optimal værdi og politik til en forsvindende lille andel af tilstandsrummet.
+Der er derfor behov for et læringsparadigme, der kan observere approksimativ optimal politik og værdi til tilstande på kort tid samt vælge at udforske tilstande, der giver et brugbart billede af tilstandsrummet.
+
+Til træningen af politik/værdi-netværket blev en iterativ metode, der tilskriver tilstande værdi ud fra den til hver tid nyeste version af netværket brugt. 
+Metoden er præsenteret i \cite[4.1]{HumansBeGone}, hvor den kaldes \textit{Autodidaktisk iteration} (ADI) og tager udgangspunkt i den løste Rubiks terning \(\mathbf s_T\).
+For denne terning tages \(K\) tilfældige træk og for hvert træk gemmes tilstanden opnået ved disse træk samt antallet af tilfældige træk hørende til tilstanden. 
+
+Der er altså nu skabt \(K\) tilstande \(\mathbf{s}_{i}, i\in\{0..K-1\}\). For hver af disse skal der tilskrives de bedst mulige observationer for tilstandens værdi \(y_v\) og politik \(y_{\bm \pi }\), som det ønskes at politik/værdi-netværket skal approksimere.
+For at finde disse, udføres nu alle tolv mulige handlinger til den pågældende tilstand. For hver af disse tolv subtilstande \(\mathbf f(\mathbf s_i, a), a\in A\), der her fremkommer, evalueres det nyeste \textit{værdi}-netværk og tolv subværdier \(v(a), a\in A\) haves nu for den pågældende tilstand.
+Disse tolv subværdier bruges nu til at tilskrive værdi og politik til forældertilstanden \(\mathbf s _i\).	 
+
+Til tilstanden \(\mathbf s _i\) tilskrives nu værdi og politik ved følgende formler:
+\begin{align}
+	&y_{v_i}= \maxi_{a\in A}\  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a)\label{eq:targetval}
+	\\
+	& y_{\bm \pi } = \argmaxi_{a\in A} \  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a) \label{eq:targetpi}
+\end{align}
+Der gemmes altså \(K\) observationer af værdi/politik-par til, der skal tilnærme sig den optimale værdi og handling til hver af dem ved at bruge værdinetværket for den følgende tilstand og belønningsfunktionen \(R\). 
+Der genereres et større antal observationer ved at spille \(L\) spil, så der opnås \(L\cdot K\) træningseksempler. 
 
 
-\begin{itemize}
-	\item Gennemgang af algoritmen
-\end{itemize}
-
-\subsection{Optimering af model}
+\subsection*{Optimering af model}
 
 
 
