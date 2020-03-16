@@ -85,8 +85,7 @@ Endeligt er tilstande one-hot encodede, hvilket gør det anvendeligt til neurale
 Samlet set vurderes denne repræsentation til bedre at opfylde kravene, hvorfor den anvendes.
 
 \section{Træningsdata}
-
-For at træne det neurale netværk simuleres et datasæt af terningetilstande, $ X $.
+For at træne det neurale netværk simuleres et datasæt af terningetilstande, $ X=\{x_i\}_{i=1}^N $. For $ l $ terninger i det løste stadie, $ \mathbf{s}_T $, foretages $ k $ tilfældige rotationer, så datasættets samlet set består af $ N=l\cdot k $ tilstande. For hver tilstand gemmes foruden selve tilstanden også antallet af rotationer, der er foretaget for at nå tilstanden, $ D(x_i) $, som bruges til at vægte dataene under træning. Som for ethvert andet neuralt netværk skal der være et mål at optimere efter. Disse generes løbende under træningen og vil blive nærmere beskrevet i afsnit \ref{sec:learnADI}.
 
 
 \end{document}

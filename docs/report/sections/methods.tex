@@ -8,7 +8,7 @@ De undersøgt dybe Reinformcent Learning-modeller basererde sig alle på modelle
 For at undersøge, hvad der er vigtigt for at få gode resultater, udføres der sammenlignende eksperimenterer, hvor der ændres på detaljer i trænignsparadigmet, det neurale netværks struktur samt parametre for træsøgningsmodellen.
 \section{Rubiks Terning}\label{sec:environment}
 
-\section{Den lærende agent}
+\section{Den lærende agent}\label{sec:learnADI}
 Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da det formaliseres som at følge Reinforcement Learning-opsætningen ved at have følgende aspekter:
 \begin{itemize}
 	\item \textit{Agent}: Løsningsmodellen -- som her kaldes DeepCube, selvom den også afprøves med ændringer i forhold til DeepCube i \cite{HumansBeGone} -- har rollen som lærende agent, der interagerer miljøet. Den består af det dybe neurale netværk (DNN) samt træafsøgningen og beskrives i løbet af dette kapitel. Agenten er model-baseret, da den har en indre repræsentation af Rubiks terning for at træ-afsøge tilstande.  \\
