@@ -63,6 +63,7 @@ På det tolvdimensionelle politikoutput blev softmax-aktiveringen brugt for at f
 \[
 \pi(\mathbf s_k)_i = \sigma(\mathbf z)_i = \frac{\eul {z_i}}{\sum_{j=0}^{11} \eul{z_j}} \text{, hvor \(\mathbf z=(z_0, ..., z_i, ..., z_{11})\) er output fra politiknetværket.}
 \]
+Det neurale netværk er implementeret i \texttt{src/rubiks/model.py}
 \subsection*{Læring af værdi: Autodidaktisk iteration}
 At opnå et politik/værdi-netværk med gode approksimationer, kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
 På trods af problemets determinisme og Markov-egenskab er der dog en stor udfordring i udforskningen af disse tilstande.
@@ -71,7 +72,7 @@ Der er derfor behov for et læringsparadigme, der kan observere approksimativ op
 
 Til træningen af politik/værdi-netværket blev en iterativ metode, der tilskriver tilstande værdi ud fra den til hver tid nyeste version af netværket brugt. 
 Metoden er præsenteret i \cite[4.1]{HumansBeGone}, hvor den kaldes \textit{Autodidaktisk iteration} (ADI) og tager udgangspunkt i den løste Rubiks terning \(\mathbf s_T\).
-For denne terning tages \(K\) tilfældige træk og for hvert træk gemmes tilstanden opnået ved disse træk samt antallet af tilfældige træk hørende til tilstanden. 
+For denne terning tages \(K\) tilfældige træk og for hvert træk gemmes tilstanden opnået ved disse træk samt antallet af tilfældige træk hørende til tilstanden \(D(\mathbf s_i)\). 
 
 Der er altså nu skabt \(K\) tilstande \(\mathbf{s}_{i}, i\in\{0..K-1\}\). For hver af disse skal der tilskrives de bedst mulige observationer for tilstandens værdi \(y_v\) og politik \(y_{\bm \pi }\), som det ønskes at politik/værdi-netværket skal approksimere.
 For at finde disse, udføres nu alle tolv mulige handlinger til den pågældende tilstand. For hver af disse tolv subtilstande \(\mathbf f(\mathbf s_i, a), a\in A\), der her fremkommer, evalueres det nyeste \textit{værdi}-netværk og tolv subværdier \(v(a), a\in A\) haves nu for den pågældende tilstand.
@@ -79,15 +80,29 @@ Disse tolv subværdier bruges nu til at tilskrive værdi og politik til forælde
 
 Til tilstanden \(\mathbf s _i\) tilskrives nu værdi og politik ved følgende formler:
 \begin{align}
-	&y_{v_i}= \maxi_{a\in A}\  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a)\label{eq:targetval}
+	&{y_{v}}_i= \maxi_{a\in A}\  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a)\label{eq:targetval}
 	\\
-	& y_{\bm \pi } = \argmaxi_{a\in A} \  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a) \label{eq:targetpi}
+	& {y_{\bm \pi }}_i = \argmaxi_{a\in A} \  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a) \label{eq:targetpi}
 \end{align}
 Der gemmes altså \(K\) observationer af værdi/politik-par til, der skal tilnærme sig den optimale værdi og handling til hver af dem ved at bruge værdinetværket for den følgende tilstand og belønningsfunktionen \(R\). 
 Der genereres et større antal observationer ved at spille \(L\) spil, så der opnås \(L\cdot K\) træningseksempler. 
 
+Ovenover er autodidaktisk iteration beskrevet, som præsenteret i \cite{HumansBeGone}. En alternativ regel for tilskrivelse af værdi er dog foreslået af Max Lapan \cite{RubiksMedium} for at forbedre stabiliteten af træningen. Denne ændrer formel \eqref{eq:targetval} til at være
+\begin{equation}\label{eq:lapantargeval}
+y_{v_i}= 
+\begin{cases}
+0 & \text{hvis \(\mathbf s_i\) er den vindende tilstand}\\
+\maxi_{a\in A}\  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a) &\text{ellers}
+\end{cases}
+\end{equation}
 
-\subsection*{Optimering af model}
+
+\subsection*{Opdatering af model}
+
+Ovenfor blev en procedure til at generere \(L\cdot K\) datapunkter, der hver indeholder en tilstand \(\mathbf s_i\), tilsigtede observationer af værdi og politik \(\left({y_{v}}_i, {y_{\bm \pi }}_i \right)\) samt antallet af tilfældige træk taget for at nå frem til tilstanden \(D(\mathbf s_i)\). Disse blev  brugt til at opdatere modellen i et Supervised Learning-paradigme, hvor værdinetværket løser et regressionsproblem med \({y_{v}}_i\) som mål og politiknetværket løser et klassifikationsproblem med \({y_{\bm \pi }}_i\) som mål. 
+
+Til det neurale netværk blev brugt minibatch læring med batches på størrelse 50 hvortil 
+
 
 
 
