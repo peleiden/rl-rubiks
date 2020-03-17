@@ -73,7 +73,6 @@ class Model(nn.Module):
 		return_values = []
 		if policy:
 			policy = self.policy_net(x)
-			policy = torch.nn.functional.softmax(policy, dim=1)
 			return_values.append(policy)
 		if value:
 			value = self.value_net(x)
