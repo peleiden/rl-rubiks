@@ -48,7 +48,7 @@ class Train:
 			rollout_depth: int 			= 200,
 			evaluation_interval: int 	= 2,
 			evaluation_length: int		= 20,
-			verbose: bool				= True,
+#			verbose: bool				= True,
 		):
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
@@ -60,7 +60,7 @@ class Train:
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		self.train_losses = np.zeros(rollouts)
-		
+
 		self.eval_rollouts = list()
 		self.eval_rewards = list()
 		for rollout in range(rollouts):
@@ -199,13 +199,14 @@ class Train:
 
 if __name__ == "__main__":
 	from src.rubiks.model import Model, ModelConfig
-	logger = Logger("local_train/training_loop.log", "Training loop")
+	train_logger = Logger("local_train/training_loop.log", "Training loop")
 
 	modelconfig = ModelConfig(
 		batchnorm=False,
 	)
-	net = Model(modelconfig, logger=logger)
+	model = Model(modelconfig, logger=train_logger)
 
-	train = Train(logger=logger, lr=1e-5)
-	net = train.train(net, 40, batch_size=5, rollout_games=50, rollout_depth=20, evaluation_interval=False)
+	train = Train(logger=train_logger, lr=1e-5)
+	model = train.train(model, 40, batch_size=5, rollout_games=50, rollout_depth=20, evaluation_interval=False)
+
 	train.plot_training("local_tests/local_train", show=True)
