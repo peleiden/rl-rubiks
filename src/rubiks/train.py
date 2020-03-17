@@ -125,7 +125,7 @@ class Train:
 			# Plays a number of games
 			for i in range(games):
 				scrambled_cubes = cube.sequence_scrambler(sequence_length)
-				states[i:i + sequence_length] = scrambled_cubes
+				states[i*sequence_length:i*sequence_length + sequence_length] = scrambled_cubes
 				
 				# For all states in the scrambled game
 				for j, scrambled_state in enumerate(scrambled_cubes):
@@ -149,7 +149,7 @@ class Train:
 
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
-		
+
 		states = states.reshape(N_data, -1)
 		return states, policy_targets, value_targets, loss_weights
 
@@ -203,6 +203,6 @@ if __name__ == "__main__":
 	model = Model(modelconfig, logger=train_logger)
 
 	train = Train(logger=train_logger, lr=1e-5)
-	model = train.train(model, 40, batch_size=50, rollout_games=10, rollout_depth=10, evaluation_interval=False)
+	model = train.train(model, 40, batch_size=50, rollout_games=100, rollout_depth=20, evaluation_interval=False)
 
 	train.plot_training("local_tests/local_train", show=True)
