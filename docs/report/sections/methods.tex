@@ -46,11 +46,15 @@ Desuden læres en funktion, der approksimerer \textit{værdien} til hver tilstan
 \[
 v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j))\big)
 \]
-\paragraph{Neurale netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller i træningsproceduren og i løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til minimeringsproblemet \eqref{eq:maximization}, udtrykkes de i det samme neurale netværk, der så konstrueres med en todelt outputstruktur.
-
-<BESKRIVELSE AF DET NEURALE NETVÆRK>
+\paragraph{Dybt neurale netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller som dybde- og breddestyrende heuristikker i  løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til minimeringsproblemet \eqref{eq:maximization}, blev de udtrykt i det samme neurale netværk, der defor blev konstrueret med en todelt outputstruktur. 
 
 
+\begin{figure}[H]
+	\centering
+\input{imgs/NNtikz.tex}
+\caption{Det todelte neurale netværk brugt i \textit{DeepCube}, hvor to skjulte lag skal resultere i hierakisk vidensopbygning brugbart for at repræsenterer løsningsstrategier.}
+\end{figure}
+\noindent Netværket består af fuldt-forbudne, lineære lag med bias. Imellem hvert af dem, er den ulineære ELu-aktiveringsfunktion placeret.
  
 \subsection*{Læring af værdi: Autodidaktisk iteration}
 At opnå et politik/værdi-netværk med gode approksimationer, kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
