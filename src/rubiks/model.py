@@ -57,7 +57,7 @@ class Model(nn.Module):
 
 		self.log(f"Created network\n{self.config}\n{self}")
 
-	def _create_fc_layers(self, thiccness: list):
+	def _create_fc_layers(self, thiccness: list, final: bool):
 		layers = []
 		for i in range(len(thiccness)-2):
 			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
@@ -66,6 +66,11 @@ class Model(nn.Module):
 			if self.config.batchnorm:
 				layers.append(nn.BatchNorm1d(thiccness[i+1]))
 		layers.append(nn.Linear(thiccness[-2], thiccness[-1]))
+		if not final:
+			layers.append(self.config.activation_function)
+			layers.append(nn.Dropout(self.config.dropout))
+			if self.config.batchnorm:
+				layers.append(nn.BatchNorm1d(thiccness[i+1]))
 
 		return layers
 	
