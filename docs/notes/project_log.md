@@ -1,12 +1,10 @@
 # 02466 Projektarbejde i Kunstig Intelligens og Data LOGBOOG
-
 * Søren Winkel Holm s183911@student.dtu.dk
 * Asger Laurits Schultz s183912@student.dtu.dk 
 * Anne Agathe Pedersen s174300@student.dtu.dk
 
 
 ## Projektmøder
-
 ### Uge 1:  
 #### 6/2-2020
 Mødtes og valgte projektprioriteter.
@@ -60,7 +58,6 @@ Opgaver inden næste møde (fredag):
 #### 21/2-2020
 Der blev aftalt at finde ressourcer på DQ-læring og afsøgning og diskuteret omstændigheder for agent-, træning- og model-struktur
 
-
 Opgaver inden vejledermøde:
 * VIGTIGT: Alle: Læs op på og find materiale til Dyb Q-læring og afsøgning
 * Søren: Implenetere evalueringsmodul + agentklasse, der kan modtage state af rubiks og outputte handling + implemtér randomagent
@@ -72,26 +69,30 @@ Mandag sender vi Mikkel en liste over papers.
 Vi mødes igen fredag i næste uge.
 
 Opgaver inden næste møde:
-
 * Alle: Find referencer og skriv dem på en fælles liste.
 * Alle: Begynd på state of the art.
 * Anne: Begynd på gruppeteori.
 
 ### Uge 5
-
 #### 6/3-2020
-
 * Implementér agent til BFS
 * Kode til ADI og træningsløkke (tage KDK som argument, evt. understøtte KeybordInterrupt) - Søren
 * Kode til NN + konfigurationsdataklasse - Asger
 * Skrive udkast til introduktion og begynder på data
 * Skrive gruppeteoriafsnit efter stadieafkunstenafsnit - Anne
 
+### Uge 7
+#### 17/3-2020
+Hvad vi skal skrive på rapporten: 
+* Asger: Terningemiljøet (3.1) og fix 2.3. Opdatér terningemiljøet i koden, så den bruger den nye repræstentaion (lavprioritet). DeepCube (1.2.1)
+* Søren: 3.2, 3.4, 1.3
+* Anne: MCTS (3.3). Guds tal i data
+
+
+
 ## Vejledermøder
- 
 ### Uge 3:
 #### 19/2-2020
-
 - Relater til andre diskrete kombinatoriske problemer, fx proteinfoldning og solcelleoptimering
 - Projekt kan gå i flere retninger
 - God adgang til flere GPU'er på Compute, men ellers bare skaler problemet ned
@@ -113,7 +114,6 @@ Opgaver inden næste møde:
 
 ### Uge 4:
 #### 27/2-2020
-
 - Det giver god mening at implementere autodidaktisk iteration først
 - DFS, A*. Lav flere forskellige modeller, så vi har noget at sammenligne med. Start med DFS
 - State of the art: RL brugt på diskret optimering
@@ -129,12 +129,18 @@ Opgaver inden næste møde:
 
 
 ### Uge 6:
-
 #### 10/3-2020
-
 - Anbefaling at skrive teoretisk afsnit i nemmere termer 
 - Anbefaling at fokusere på ADI + træafsøgning og så følger nærmere optimering af læringsproces senere
 - Gennemgang af ADI
 
 
-
+### Uge 7: 
+#### 17/03-2020
+- Vi har skrevet en del, men er også begyndt at træne policy- og værdi-netværk
+- Det virker ret dårligt. Det har en kraftig tendens til at divergere
+  - Prøv at træne ét eller to moves fra goal state. Det hjælper til at kunne se om de får de rigtige værdier
+  - Lad være med at bruge RMSprop, lav det om til almindelig gradientnedstigning
+  - Del kode for kostfunktion med Mikkel, så han kan se på det 
+- Brug forskningsspørgsmål til at skrive udkastet til metodeafnitttet - hvilke metoder vil vi bruge til at undersøge spørgsmålene?
+- Det er bedre at undersøge færre ting og så komme til bunds i det, i stedet for at undersøge en masse forskellige ting på overfladen
