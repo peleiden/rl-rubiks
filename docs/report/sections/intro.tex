@@ -47,18 +47,19 @@ De forskellige algoritmer har forskellige fordele og ulemper;
 nogle skal være lette for mennesker at løse, mens andre er designet til såkaldte speed cubers, der skal løse terningen med så få træk som muligt;
 nogle er optimerede til lavt hukommelsesforbrug og andre til at kunne løses hurtigt af computere. 
 
-En ny tilgang til løsningsalgoritmer og diskrete problemer generelt er dyb reinforcement learning. 
+En ny tilgang til løsningsalgoritmer og diskrete problemer generelt er dyb reinforcement learning.
+Et forskerhold fra University of California Irvine har de sidste år gjort store fremskridt med netop denne fremgangsmåde som beskrevet i \textit{Solving the Rubik's Cube Without Human Knowledge} (maj 2018) \cite{HumansBeGone} og senest \textit{Solving the Rubik’s cube with deep reinforcement learning and search} (juli 2019) \cite{SolvingNature}.
 
+DeepCube, der introduceres i \cite{HumansBeGone}, er et dybt neuralt netværk, der bruges som heurestik til at styre en Monte Carlo-træafsøgning, så den kombinatoriske eksplosion undgås.
+DeepCube trænes med en approximate policy iteration-algoritme, som forskerne betegner autodidaktisk iteration.
+I den løsningsgrafen fra træafsøgningen anvendes breadth first search (BFS) til at finde den korteste løsning.
+Metoden formår at løse samtlige tilfældige testtilstande med en medianløsningslængde på 30 træk, hvilket er mindre end eller svarende til løsningsalgoritmer, der er baserede på domæneviden.
 
-I \cite{SolvingNature} anvendes databaser af specifikke mønstre til at løse Rubiks terning. DeepCubeA formår at løse alle testkonfigurationer og generaliserer til andre diskrete spil. En korteste vej-løser er iterativt dybende A*-afsøgning med en heuristik fra Rubiks mønsterdatabase og bruger store databaser og gruppeteori. 
- 
-\cite{RubiksMedium} er et eksempel på anvendelse af reinforcement learning inde for kombinatorisk optimering, hvilket også inkluderer problemer såsom traveling salesman, ressource-allokering og simulering af proteinfoldning. 
-
-\subsection{DeepCubeA}
 DeepCubeA \cite{SolvingNature} kombinerer dyb læring med approksimativ værdiiteration og \emph{batch}-vægtet A*-afsøgning.
 Netværket ser kun ét skridt fremad, fordi at se flere skridt fremad eller anvende Monte Carlo-træafsøgning (MCTS) ikke blev fundet til at være bedre.
 DeepCubeA bygger på en anden implementation baseret på policy og MCTS.
 Den lærte kostfunktion bruges derefter som en heuristik til at finde vejen til løsningstilstanden ved brug af vægtet A*-afsøgning.
+DeepCubeA formår at løse alle testkonfigurationer og generaliserer til andre diskrete spil.
 
 
 \section{Rapportens mål}

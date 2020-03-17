@@ -50,7 +50,7 @@ $$\frac{8!\cdot3^8\cdot12!\cdot2^{12}}{2\cdot3\cdot2}=43.252.003.274.489.856.000
 
 lovlige permutationer. Dette er ligeledes størrelsen på tilstandsrummet for problemet.
 
-\section{Repræsentation af terninger}
+\section{Repræsentation af terninger}\label{sec:repr}
 Der findes en lang række måder at repræsentere tilstanden af en terning på.
 For at opnå de bedste resultater, skal den valgte repræsentation
 \begin{itemize}
@@ -83,9 +83,6 @@ Denne repræsentation kan repræsentere $ 24^{20}\approx 4,02\ctp{27} $ tilstand
 Til gengæld kræver det $ 20\times 24\times 4=1920 $ bytes at gemme en tilstand, men rotationer kan foretages hurtigt.
 Endeligt er tilstande one-hot encodede, hvilket gør det anvendeligt til neurale netværk.
 Samlet set vurderes denne repræsentation til bedre at opfylde kravene, hvorfor den anvendes.
-
-\section{Træningsdata}
-For at træne det neurale netværk simuleres et datasæt af terningetilstande, $ X=\{x_i\}_{i=1}^N $. For $ l $ terninger i det løste stadie, $ \mathbf{s}_T $, foretages $ k $ tilfældige rotationer, så datasættets samlet set består af $ N=l\cdot k $ tilstande. For hver tilstand gemmes foruden selve tilstanden også antallet af rotationer, der er foretaget for at nå tilstanden, $ D(x_i) $, som bruges til at vægte dataene under træning. Som for ethvert andet neuralt netværk skal der være et mål at optimere efter. Disse generes løbende under træningen og vil blive nærmere beskrevet i afsnit \ref{sec:learnADI}.
 
 
 \end{document}

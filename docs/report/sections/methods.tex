@@ -3,10 +3,24 @@
 \begin{document}
 \chapter{Metode}
 \lhead{Metode}
-De undersøgt dybe Reinformcent Learning-modeller basererde sig alle på modellen DeepCube fra \cite{HumansBeGone} med nogle undtagelser, der beskrives i de følgende afsnit. Løsningsmodellen består af et neuralt netværk, der trænes med en Reinforcement Learning-procedure kaldet autodidaktisk iteration til at vurdere den værdien af og den optimale handling til enhver tilstand for Rubiks terning. Dette netværk bliver så brugt som heuristisk for en Monte Carlo træsøgning som løsningsstrategi til terningen.
+De undersøgt dybe Reinformcent Learning-modeller basererde sig alle på modellen DeepCube fra \cite{HumansBeGone} med nogle undtagelser, der beskrives i de følgende afsnit.
+Løsningsmodellen består af et neuralt netværk, der trænes med en Reinforcement Learning-procedure kaldet autodidaktisk iteration til at vurdere den værdien af og den optimale handling til enhver tilstand for Rubiks terning.
+Dette netværk bliver så brugt som heuristisk for en Monte Carlo træsøgning som løsningsstrategi til terningen.
 
 For at undersøge, hvad der er vigtigt for at få gode resultater, udføres der sammenlignende eksperimenterer, hvor der ændres på detaljer i trænignsparadigmet, det neurale netværks struktur samt parametre for træsøgningsmodellen.
-\section{Rubiks terning}\label{sec:environment}
+
+\section{Rubiks terning som miljø}\label{sec:environment}
+En af de definerende karaktestikker ved reinforcement learning er agentens og miljøets interageren.
+Det er derfor nødvendigt at have en velfungerende repræsentation af miljøet, på hvilken agenten kan interagere.
+Miljøet implementeres som en klasse, der kan ses i \texttt{src/rubiks/cube.py}, hvis centrale egenskab er rubiksterningens tilstand som beskrevet i afsnit \ref{sec:repr}.
+Miljøet initialiseres med den løste tilstand, hvorefter indbyggede metoder bruges til at foretage givne eller tilfældige rotationer.
+Derudover indeholder miljøklassen en metode til at teste for, om den pågældende tilstand er løst, samt en metode, der giver tilstanden i et mere læsevenligt format.
+
+I designet af miljøklassen har der været fokus på optimering under forventningen om adskillige millioner, hvis ikke milliarder, simuleringer under træningen af agenten.
+Især rotationsmetoden har været tildelt særligt fokus, da rotationer udgør al interaktion med miljøet, hvorfor det er favorabelt, at de kan foretages hurtigt.
+
+Med miljøet fastlagt er det nu muligt at påbegynde træningen af en agent, der kan interagere intelligent med miljøet og nærme sig eller finde den løste tilstand.
+
 
 \section{Den lærende agent}\label{sec:learnADI}
 Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da det formaliseres som at følge Reinforcement Learning-opsætningen ved at have følgende aspekter:
@@ -46,7 +60,7 @@ Desuden læres en funktion, der approksimerer \textit{værdien} til hver tilstan
 \[
 v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j))\big)
 \]
-\paragraph{Dybt neurale netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller som dybde- og breddestyrende heuristikker i  løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til  \eqref{eq:maximization}, blev de udtrykt i det samme neurale netværk, der defor blev konstrueret med en todelt outputstruktur. 
+\paragraph{Dybt neuralt netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller som dybde- og breddestyrende heuristikker i  løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til  \eqref{eq:maximization}, blev de udtrykt i det samme neurale netværk, der defor blev konstrueret med en todelt outputstruktur. 
 
 
 \begin{figure}[H]
@@ -61,9 +75,12 @@ v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j
 \]
 På det tolvdimensionelle politikoutput blev softmax-aktiveringen brugt for at fortolke den som en diskret sandsynlighedsfordeling:
 \[
-\pi(\mathbf s_k)_i = \sigma(\mathbf z)_i = \frac{\eul {z_i}}{\sum_{j=0}^{11} \eul{z_j}} \text{, hvor \(\mathbf z=(z_0, ..., z_i, ..., z_{11})\) er output fra politiknetværket.}
+\pi(\mathbf s_k)_i = \sigma(\mathbf z)_i = \frac{\eul {z_i}}{\sum_{j=0}^{11} \eul{z_j}}
 \]
+hvor \(\mathbf z=(z_0, ..., z_i, ..., z_{11})\) er output fra politiknetværket.
+
 Det neurale netværk er implementeret i \texttt{src/rubiks/model.py}
+
 \subsection*{Læring af værdi: Autodidaktisk iteration}
 At opnå et politik/værdi-netværk med gode approksimationer, kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
 På trods af problemets determinisme og Markov-egenskab er der dog en stor udfordring i udforskningen af disse tilstande.
@@ -85,7 +102,8 @@ Til tilstanden \(\mathbf s _i\) tilskrives nu værdi og politik ved følgende fo
 	& {y_{\bm \pi }}_i = \argmaxi_{a\in A} \  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a) \label{eq:targetpi}
 \end{align}
 Der gemmes altså \(K\) observationer af værdi/politik-par til, der skal tilnærme sig den optimale værdi og handling til hver af dem ved at bruge værdinetværket for den følgende tilstand og belønningsfunktionen \(R\). 
-Der genereres et større antal observationer ved at spille \(L\) spil, så der opnås \(L\cdot K\) træningseksempler. 
+Der genereres et større antal observationer ved at spille \(L\) spil, så der opnås \(N=L\cdot K\) træningseksempler.
+Træningssættet $ X $ siges at bestå af alle opnåede tilstande $ x_i $, således at $ X=\{x_i\}_{i=1}^N $
 
 Ovenover er autodidaktisk iteration beskrevet, som præsenteret i \cite{HumansBeGone}. En alternativ regel for tilskrivelse af værdi er dog foreslået af Max Lapan \cite{RubiksMedium} for at forbedre stabiliteten af træningen. Denne ændrer formel \eqref{eq:targetval} til at være
 \begin{equation}\label{eq:lapantargeval}

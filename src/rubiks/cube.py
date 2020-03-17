@@ -7,9 +7,9 @@ class RubiksCube:
 	for i in range(6):
 		assembled[i, ..., i] = 1
 
-	#Scrambling procedure saved as dict for reproducability 
+	# Scrambling procedure saved as dict for reproducability 
 	scrambling_procedure = {
-		'N_scrambles':	(5, 10), #Tuple for scrambling random # moves in uniform [low, high[
+		'N_scrambles':	(5, 10),  # Tuple for scrambling random # moves in uniform [low, high[
 	}
 
 	# The i'th index contain the neighbors of the i'th side in positive direction
@@ -35,7 +35,7 @@ class RubiksCube:
 	def __init__(self):
 
 		"""
-		Shape: 6 x 8 x 6 one hot of coding as method three here: https://stackoverflow.com/a/55505784 
+		Shape: 6 x 8 x 6 one hot encoding - method three here: https://stackoverflow.com/a/55505784 
 		"""
 
 		self.state = self.assembled.copy()
@@ -103,7 +103,7 @@ class RubiksCube:
 		dirs = np.random.randint(2, size = (n, )).astype(bool)
 
 		for face, d in zip(faces, dirs):
-			self.state = self.rotate(self.state, face, d) #Uses rotate instead of move as checking for victory is not needed here
+			self.state = self.rotate(self.state, face, d)  # Uses rotate instead of move as checking for victory is not needed here
 		
 		return faces, dirs
 	
@@ -120,8 +120,6 @@ class RubiksCube:
 		for i, face, d in zip(range(n-1), faces, dirs):
 			scrambled_states[i+1] = self.rotate(scrambled_states[i], face, d)
 		return scrambled_states
-
-
 
 
 	def is_assembled(self):
