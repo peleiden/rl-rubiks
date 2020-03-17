@@ -13,9 +13,12 @@ from src.rubiks.utils.logger import Logger, NullLogger
 class Train:
 	
 	moves_per_rollout: int
-	train_losses: np.ndarray
-	eval_rollouts: list
-	eval_rewards: list
+	
+	train_losses = list()
+	train_rollouts = list()
+	eval_rollouts = list()
+	eval_rewards = list()
+
 
 	def __init__(self, 
 			optim_fn				= torch.optim.RMSprop,
@@ -48,29 +51,26 @@ class Train:
 			rollout_depth: int 			= 200,
 			evaluation_interval: int 	= 2,
 			evaluation_length: int		= 20,
-			verbose: bool				= True,
+#			verbose: bool				= True,
 		):
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
 		self.moves_per_rollout = rollout_depth * rollout_games
+		batch_size = self.moves_per_rollout if not batch_size else batch_size 
 		self.log(f"Beginning training. Optimization is performed in batches of {batch_size}")
 		self.log(f"Rollouts: {rollouts}. Each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
-		self.train_losses = np.zeros(rollouts)
 		
-		self.eval_rollouts = list()
-		self.eval_rewards = list()
 		for rollout in range(rollouts):
 			torch.cuda.empty_cache()
 
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
 			training_data, value_targets, policy_targets,  loss_weights = torch.from_numpy(training_data), torch.from_numpy(value_targets), torch.from_numpy(policy_targets), torch.from_numpy(loss_weights) #TODO: handle devicing
-			
 			net.train()
-			for batch in self._gen_batches_idcs(rollout_games, batch_size):
+			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
 				optimizer.zero_grad()
 
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
@@ -79,19 +79,15 @@ class Train:
 				losses = self.policy_criterion(policy_pred, policy_targets[batch]) 
 				losses += self.value_criterion(value_pred.squeeze(), value_targets[batch])
 					
-
 				#Weighteing of losses according to move importance
 				loss = ( losses * loss_weights[batch] ).mean()
 				loss.backward()
 				optimizer.step()
 
-				self.train_losses[rollout] += float(loss)
-
-			self.train_losses[rollout] /= self.moves_per_rollout
+				self.train_losses.append(float(loss)); self.train_rollouts.append(rollout)
 			
 			torch.cuda.empty_cache()
-			
-			self.log(f"Rollout {rollout} completed with loss {self.train_losses[rollout]}.")
+			self.log(f"Rollout {rollout} completed with mean loss {np.mean(self.train_losses[-(self.moves_per_rollout // batch_size):])}.")
 
 			if evaluation_interval and (rollout + 1) % evaluation_interval == 0:
 				net.eval()
@@ -166,7 +162,7 @@ class Train:
 
 		color = 'red'
 		loss_ax.set_ylabel("Cross Entropy + MSE, weighted", color = color)
-		loss_ax.plot(self.train_losses, label="Training loss", color = color)
+		loss_ax.plot(self.train_rollouts, self.train_losses, label="Training loss", color = color)
 		loss_ax.tick_params(axis='y', labelcolor = color)
 
 		if self.eval_rollouts:
@@ -199,13 +195,14 @@ class Train:
 
 if __name__ == "__main__":
 	from src.rubiks.model import Model, ModelConfig
-	logger = Logger("local_train/training_loop.log", "Training loop")
+	train_logger = Logger("local_train/training_loop.log", "Training loop")
 
 	modelconfig = ModelConfig(
 		batchnorm=False,
 	)
-	net = Model(modelconfig, logger=logger)
+	model = Model(modelconfig, logger=train_logger)
 
-	train = Train(logger=logger, lr=1e-5)
-	net = train.train(net, 40, batch_size=5, rollout_games=50, rollout_depth=20, evaluation_interval=False)
+	train = Train(logger=train_logger, lr=1e-5)
+	model = train.train(model, 40, batch_size=50, rollout_games=10, rollout_depth=10, evaluation_interval=False)
+
 	train.plot_training("local_tests/local_train", show=True)
