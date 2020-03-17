@@ -52,7 +52,7 @@ class Train:
 		):
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
-		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation af the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
+		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
 		self.moves_per_rollout = rollout_depth * rollout_games
 		self.log(f"Beginning training.")
@@ -104,33 +104,6 @@ class Train:
 		
 		return net
 
-	def plot_training(self, save_dir: str, title="", show=False):
-		"""
-		Visualizes training by showing training loss + evaluation reward in same plot
-		"""
-		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8)) 
-		loss_ax.set_xlabel(f"Rollout of {self.moves_per_rollout} moves")
-
-		color = 'red'
-		loss_ax.set_ylabel("Cross Entropy + MSE, weighted", color = color)
-		loss_ax.plot(self.train_losses, label="Training loss", color = color)
-		loss_ax.tick_params(axis='y', labelcolor = color)
-
-		if self.eval_rollouts:
-			color = 'blue'
-			reward_ax = loss_ax.twinx()
-			reward_ax.set_ylabel("Number of games won", color=color)
-			reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color,  label="Evaluation reward")
-			reward_ax.tick_params(axis='y', labelcolor=color)
-
-
-		fig.tight_layout()
-		plt.title(title if title else "Training")
-		
-		os.makedirs(save_dir, exist_ok=True)
-		plt.savefig(os.path.join(save_dir, "training.png"))
-		
-		if show: plt.show()
 
 	@staticmethod 
 	def ADI_traindata(net, games: int, sequence_length: int):
@@ -184,6 +157,34 @@ class Train:
 		states = states.reshape(N_data, -1)
 		return states, policy_targets, value_targets, loss_weights
 
+	def plot_training(self, save_dir: str, title="", show=False):
+		"""
+		Visualizes training by showing training loss + evaluation reward in same plot
+		"""
+		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8)) 
+		loss_ax.set_xlabel(f"Rollout of {self.moves_per_rollout} moves")
+
+		color = 'red'
+		loss_ax.set_ylabel("Cross Entropy + MSE, weighted", color = color)
+		loss_ax.plot(self.train_losses, label="Training loss", color = color)
+		loss_ax.tick_params(axis='y', labelcolor = color)
+
+		if self.eval_rollouts:
+			color = 'blue'
+			reward_ax = loss_ax.twinx()
+			reward_ax.set_ylabel("Number of games won", color=color)
+			reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color,  label="Evaluation reward")
+			reward_ax.tick_params(axis='y', labelcolor=color)
+
+
+		fig.tight_layout()
+		plt.title(title if title else "Training")
+		
+		os.makedirs(save_dir, exist_ok=True)
+		plt.savefig(os.path.join(save_dir, "training.png"))
+		
+		if show: plt.show()
+
 	@staticmethod
 	def _gen_batches_idcs(size: int, bsize: int):
 		'''
@@ -205,6 +206,6 @@ if __name__ == "__main__":
 	)
 	net = Model(modelconfig, logger=logger)
 
-	train = Train(logger=logger, lr=1e-7)
-	net = train.train(net, 40, batch_size=5, rollout_games=50, rollout_depth=2, evaluation_interval=0)
+	train = Train(logger=logger, lr=1e-5)
+	net = train.train(net, 40, batch_size=5, rollout_games=50, rollout_depth=10, evaluation_interval=0)
 	train.plot_training("local_tests/local_train", show=True)
