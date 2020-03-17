@@ -55,7 +55,7 @@ class Train:
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
 		self.moves_per_rollout = rollout_depth * rollout_games
-		self.log(f"Beginning training.")
+		self.log(f"Beginning training. Optimization is performed in batches of {batch_size}")
 		self.log(f"Rollouts: {rollouts}. Each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
@@ -207,5 +207,5 @@ if __name__ == "__main__":
 	net = Model(modelconfig, logger=logger)
 
 	train = Train(logger=logger, lr=1e-5)
-	net = train.train(net, 40, batch_size=5, rollout_games=50, rollout_depth=10, evaluation_interval=0)
+	net = train.train(net, 40, batch_size=5, rollout_games=50, rollout_depth=20, evaluation_interval=False)
 	train.plot_training("local_tests/local_train", show=True)
