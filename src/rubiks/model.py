@@ -59,18 +59,13 @@ class Model(nn.Module):
 
 	def _create_fc_layers(self, thiccness: list, final: bool):
 		layers = []
-		for i in range(len(thiccness)-2):
+		for i in range(len(thiccness)-1):
 			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
-			layers.append(self.config.activation_function)
-			layers.append(nn.Dropout(self.config.dropout))
-			if self.config.batchnorm:
-				layers.append(nn.BatchNorm1d(thiccness[i+1]))
-		layers.append(nn.Linear(thiccness[-2], thiccness[-1]))
-		if not final:
-			layers.append(self.config.activation_function)
-			layers.append(nn.Dropout(self.config.dropout))
-			if self.config.batchnorm:
-				layers.append(nn.BatchNorm1d(thiccness[i+1]))
+			if not final or i < len(thiccness) - 1:
+				layers.append(self.config.activation_function)
+				layers.append(nn.Dropout(self.config.dropout))
+				if self.config.batchnorm:
+					layers.append(nn.BatchNorm1d(thiccness[i+1]))
 
 		return layers
 	
