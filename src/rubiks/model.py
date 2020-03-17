@@ -51,9 +51,9 @@ class Model(nn.Module):
 		shared_thiccness = [288, 4096, 2048]
 		policy_thiccness = [shared_thiccness[-1], 512, 12]
 		value_thiccness = [shared_thiccness[-1], 512, 1]
-		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness))
-		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness))
-		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness))
+		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
+		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
+		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness, True))
 
 		self.log(f"Created network\n{self.config}\n{self}")
 
