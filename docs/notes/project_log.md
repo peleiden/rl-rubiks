@@ -144,3 +144,6 @@ Hvad vi skal skrive på rapporten:
   - Del kode for kostfunktion med Mikkel, så han kan se på det 
 - Brug forskningsspørgsmål til at skrive udkastet til metodeafnitttet - hvilke metoder vil vi bruge til at undersøge spørgsmålene?
 - Det er bedre at undersøge færre ting og så komme til bunds i det, i stedet for at undersøge en masse forskellige ting på overfladen
+
+
+
