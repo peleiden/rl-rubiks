@@ -40,22 +40,29 @@ hvor \(k_T\) er tidsskridtet, når agenten løser terningen og \(k_{\text{max}}\
 
 Til at bestemme \(\widetilde {\pi ^*} \approx 	\pi^*\) blev to sammenhængende afbildninger implementeret i DeepCube. Den ene komponent er en lært afbildning, der direkte approksimerer \(\widetilde {\pi ^*}\) ved at afbillede fra tilstanden \(\mathbf s_k\) til en diskret sandsynlighedsfordeling, der approksimativt tilskriver hver mulig handling en sandsynlighed for at denne er den optimale . Denne funktion kaldes \textit{politik-netværket} og repræsenteres fremover med symbolet \(\bm \pi\):
 \[
-\bm \pi(\mathbf s_k)_i \approx \mathbb P (i = \pi^*(\mathbf s_k)_i),\quad i \in \{0,1, ..., 11\}
+\pi(\mathbf s_k)_i \approx \mathbb P (\pi^*(\mathbf s_k)_i = i ),\quad i \in \{0,1, ..., 11\}
 \]
 Desuden læres en funktion, der approksimerer \textit{værdien} til hver tilstand forstået som den akkumulerede belønning der fås ved at følge politikken \(\pi\) herfra. Denne kaldes \textit{værdi-netværket} og repræsenteres som \(v\):
 \[
 v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j))\big)
 \]
-\paragraph{Dybt neurale netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller som dybde- og breddestyrende heuristikker i  løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til minimeringsproblemet \eqref{eq:maximization}, blev de udtrykt i det samme neurale netværk, der defor blev konstrueret med en todelt outputstruktur. 
+\paragraph{Dybt neurale netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller som dybde- og breddestyrende heuristikker i  løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til  \eqref{eq:maximization}, blev de udtrykt i det samme neurale netværk, der defor blev konstrueret med en todelt outputstruktur. 
 
 
 \begin{figure}[H]
 	\centering
 \input{imgs/NNtikz.tex}
-\caption{Det todelte neurale netværk brugt i \textit{DeepCube}, hvor to skjulte lag skal resultere i hierakisk vidensopbygning brugbart for at repræsenterer løsningsstrategier.}
+\caption{Illustration af det todelte neurale netværk brugt i \textit{DeepCube}, hvor to skjulte lag skal resultere i hierakisk vidensopbygning brugbart for at repræsenterer løsningsstrategier.}
+\label{fig:DNN}
 \end{figure}
-\noindent Netværket består af fuldt-forbudne, lineære lag med bias. Imellem hvert af dem, er den ulineære ELu-aktiveringsfunktion placeret.
- 
+\noindent Netværket består af lineære lag med bias.  Arkitekturen, som er illustreret på figur \ref{fig:DNN}, består af et 480-dimensionelt inputlag efterfulgt af to fuldt-forbundne skjulte lag på hhv. 4096 og 2048 neuroner. Derefter opdeles netværket i værdi-netværket og politiknetværket, begge med et skjult lag på 512 neuroner. Værdinetværket returnerer en skalarværdi \(v(\mathbf s_k)\) og politiknetværket returnerer den tolvdimensionelle vektor \(\bm \pi (\mathbf s_k)\). Denne struktur medfører ca. 25 millioner vægte og bias-værdier i det dybe neurale netværk. Mellem hvert lag blev den elementvise ikkelineære aktiveringsfunktion \textit{Eksponentiel lineær enhed} (eng: \textit{Exponential Linear Unit}, ELU) placeret, som i nogle læringsproblemer er vist at accelerere læringen bl.a. ved at have en normaliserende effekt på aktiveringerne \cite{ELU} 
+\[
+\operatorname{ELU}(x) = \maxi\{0, x\} + \operatorname{min}\{0, \eul{x} -1\}
+\]
+På det tolvdimensionelle politikoutput blev softmax-aktiveringen brugt for at fortolke den som en diskret sandsynlighedsfordeling:
+\[
+\pi(\mathbf s_k)_i = \sigma(\mathbf z)_i = \frac{\eul {z_i}}{\sum_{j=0}^{11} \eul{z_j}} \text{, hvor \(\mathbf z=(z_0, ..., z_i, ..., z_{11})\) er output fra politiknetværket.}
+\]
 \subsection*{Læring af værdi: Autodidaktisk iteration}
 At opnå et politik/værdi-netværk med gode approksimationer, kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
 På trods af problemets determinisme og Markov-egenskab er der dog en stor udfordring i udforskningen af disse tilstande.
