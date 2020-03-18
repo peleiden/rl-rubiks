@@ -7,7 +7,7 @@ De undersøgt dybe Reinformcent Learning-modeller basererde sig alle på modelle
 Løsningsmodellen består af et neuralt netværk, der trænes med en Reinforcement Learning-procedure kaldet autodidaktisk iteration til at vurdere den værdien af og den optimale handling til enhver tilstand for Rubiks terning.
 Dette netværk bliver så brugt som heuristisk for en Monte Carlo træsøgning som løsningsstrategi til terningen.
 
-For at undersøge, hvad der er vigtigt for at få gode resultater, udføres der sammenlignende eksperimenterer, hvor der ændres på detaljer i trænignsparadigmet, det neurale netværks struktur samt parametre for træsøgningsmodellen.
+For at undersøge, hvad der er vigtigt for at få gode resultater, udføres der sammenlignende lærings-eksperimenterer og evalueringseksperimenter, hvor der ændres på detaljer i træningsparadigmet og tiden for træsøgningsmodellen. 
 
 \section{Rubiks terning som miljø}\label{sec:environment}
 En af de definerende karaktestikker ved reinforcement learning er agentens og miljøets interageren.
@@ -81,7 +81,7 @@ hvor \(\mathbf z=(z_0, ..., z_i, ..., z_{11})\) er output fra politiknetværket.
 
 Det neurale netværk er implementeret i \texttt{src/rubiks/model.py}
 
-\subsection*{Læring af værdi: Autodidaktisk iteration}
+\subsection*{Læring af værdi og politik: Autodidaktisk iteration}
 At opnå et politik/værdi-netværk med gode approksimationer, kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
 På trods af problemets determinisme og Markov-egenskab er der dog en stor udfordring i udforskningen af disse tilstande.
 Som beskrevet i afsnit \ref{sec:grouptheory}, gør de mange mulige permutationer, at tilstandsrummet når en størrelse på \(|S|\approx 4,3\ctp {19}\), hvilket gør, at enhver systematisk løsning af maksimeringsproblemet \ref{eq:maximization} kun kan kun kan tilskrive optimal værdi og politik til en forsvindende lille andel af tilstandsrummet.
@@ -113,18 +113,52 @@ y_{v_i}=
 \maxi_{a\in A}\  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a) &\text{ellers}
 \end{cases}
 \end{equation}
-
-
+I træningen blev der spillet \(L=10000\) spil i autodidaktisk iteration. Dybden \(K\) blev undersøgt i eksperimenter.
 \subsection*{Opdatering af model}
 
 Ovenfor blev en procedure til at generere \(L\cdot K\) datapunkter, der hver indeholder en tilstand \(\mathbf s_i\), tilsigtede observationer af værdi og politik \(\left({y_{v}}_i, {y_{\bm \pi }}_i \right)\) samt antallet af tilfældige træk taget for at nå frem til tilstanden \(D(\mathbf s_i)\). Disse blev  brugt til at opdatere modellen i et Supervised Learning-paradigme, hvor værdinetværket løser et regressionsproblem med \({y_{v}}_i\) som mål og politiknetværket løser et klassifikationsproblem med \({y_{\bm \pi }}_i\) som mål. 
 
-Til det neurale netværk blev brugt minibatch læring med batches på størrelse 50 hvortil 
+Som kost-funktion på netværkets forudsigelse af værdi og politik
+\(\left(v(\mathbf s_i), \bm \pi (\mathbf s_i)\right)\)
+blev følgende funktion brugt:
+\begin{equation}\label{eq:loss}
+	\mathcal L(x_i) =
+	\underbrace{\vphantom{\sum_{i}}
+		\frac {1} {D(\mathbf s _i)}
+	}
+	_{\mathclap{
+		\text{Antal træk}
+		}	
+ }
+	 \bigg(
+		\underbrace{\vphantom{\sum_{i}}
+		({x_{v}}_i-{y_{v}}_i )^2
+		}
+		_{\text{Kvadreret afvigelse}}	
+			\underbrace{\vphantom{\sum_{i}}
+		- 
+		\log 
+			\frac{
+					\eul{{\bm \pi(\mathbf s_i)}_j
+				}
+				}
+				{
+					\sum_{k=0}^{11}
+					\eul{{\bm \pi(\mathbf s_i)}_k}
+				}
+			}
+			_\text{Krydsentropi-kost}
+	\bigg)
+	\text{, hvor } j = {y_{\bm \pi }}_i
+\end{equation}
+Kosten til hvert datapunkt består altså en sum af kvadreret afvigelse for regressionsproblemet på værdien og 12-klasse krydsentropikost (eng: \textit{Cross Entropy Cost}) for klassifikationsproblemet på politikken.
+Denne sum blev dog vægtet med \(\nicefrac 1 {D(\mathbf s _i)}\), som giver højere betydning til tilstande, som blev genereret få træk væk fra måltilstanden og lavere vægt til tilstande langt fra målstadiet.
+Dette er indført af \cite{HumansBeGone} for konvergensstabilitet ved at vægte tilstande, hvor udfaldsrummet er mindre komplekst.
 
+Til at minimere denne kostfunktion, blev der brugt minibatchlæring på det dybe neurale netværk med batches på størrelse 50. Optimeringen foregik med algoritmen RMSProp, der tilpasser læringsraten ved at dividere den med et rullende gennemsnit af gradientmagnituden \cite{RMSProp}.
 
-
-
-
+Træningen af det dybe neurale netværk foregik ved at udføre autodidaktisk iteration til at generere de \(L\cdot K\) træningseksempler efterfulgt af træning på dette datasæt. 
+En sådan træning kaldes en \textit{udrulning} af netværket og der blev gennemført 5000 udrulninger.
 \section{Løsningsalgoritme og Monte Carlo Træsøgning}
 Efter at have trænet det neurale netværk anvendtes Monte Carlo Træsøgning (MCTS) for at kunne løse en terning fra en \emph{scrambled} tilstand $s_0$. MCTS er en heuristisk søgealgoritme. Som det ligger i navnet, bygger MCTS et træ af tilstande, hvor roden er $s_0$ og dens børneknuder er de resulterende tilstande efter hver af de 12 mulige handlinger. MCTS er en effektiv søgealgoritme, fordi den sørger for at ekspandere den mest lovende bladknude først. 
 
@@ -140,8 +174,13 @@ hvor $N_s(a)$ er antallet af gange a er blevet taget fra s, $W_s(a)$ er den maks
   
 
 \section{Eksperimenter}
+Der blev trænet to forskellige agenter. Én, hvor dybden af tilfældige træk i autodidaktisk iteration \(K\) var 10 og én hvor dybden var 100. 
 
-
+For hver af disse agenter blev gennemført to evalueringseksperimenter:
+\begin{itemize}
+	\item \textbf{Terningedybde}: Afsøgningstiden med MCTS blev holdt konstant på 10 minutter og for hver dybde \(d\in \{1,2,...,20\}\) blev der spillet 100 spil, som hver blev generet ved \(d\) tilfældige træk. Der blev så gemt andelen af spil, der blev løst på denne tid samt længden af løsningerne.
+	\item \textbf{Afsøgningstid}: Antallet af tilfældige træk blev holdt konstant \(d=10\) og for hver tidsgrænse \(t\in \{2\unit{min}, 4\unit{min}, ..., 10\unit{min}\}\) blev der spillet 100 spil, hvor MCTS blev afbrudt efter \(t\) og andelen af løste spil og længden af løsningerne blev gemt.
+\end{itemize}
 
 
 \end{document}
