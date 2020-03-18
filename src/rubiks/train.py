@@ -205,4 +205,4 @@ if __name__ == "__main__":
 	train = Train(logger=train_logger, lr=1e-5)
 	model = train.train(model, 40, batch_size=50, rollout_games=100, rollout_depth=20, evaluation_interval=False)
 
-	train.plot_training("local_tests/local_train", show=True)
+	train.plot_training("local_train/local_train", show=True)
