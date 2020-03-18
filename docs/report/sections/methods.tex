@@ -126,6 +126,18 @@ Til det neurale netværk blev brugt minibatch læring med batches på størrelse
 
 
 \section{Løsningsalgoritme og Monte Carlo Træsøgning}
+Efter at have trænet det neurale netværk anvendtes Monte Carlo Træsøgning (MCTS) for at kunne løse en terning fra en \emph{scrambled} tilstand $s_0$. MCTS er en heuristisk søgealgoritme. Som det ligger i navnet, bygger MCTS et træ af tilstande, hvor roden er $s_0$ og dens børneknuder er de resulterende tilstande efter hver af de 12 mulige handlinger. MCTS er en effektiv søgealgoritme, fordi den sørger for at ekspandere den mest lovende bladknude først. 
+
+En måde at vælge en knude at ekspandere er ved brug af den øvre konfidensgrænse en øvre konfidensgrænse (\emph{upper confidence bound}, UCB), introduceret af \cite{Kocsis06banditbased}. For hver bladknude t beregnes UCB
+$$UCB(t)=\frac{r_t}{n_t}+\sqrt{\frac{2\ln n_s}{n_t}}$$
+og bladknuden med den højeste UCB vælges til at blive ekspanderet. $s$ er forælderknuden til $t$, og $\frac{r_t}{n_t}$ er belønningen for $t$. $n_t$ og $n_s$ er hvor mange gange henholdsvis $t$ og $s$ er blevet spillet. Første led af formlen korresponderer med udnyttelse, da den vil være høj for træk, der leder til den løste tilstand. Andet led korresponderer med udforskning, da den vil være høj for træk, der kun er blevet simuleret få gange. 
+
+Efter at have valgt en bladknude, genereres en barneknude til denne. Derefter genereres en række tilfældige træk, der enten resulterer i, at terningen løses, eller at den ikke løses (\emph{rollout}). Resultatet af \emph{rollout}'en tilbagepropageres ved at opdatere informationen i knuderne på stien fra barneknuden tilbage til $s_0$. 
+
+Der findes også andre, mere specialiserede, politikker for at udvælge en bladknude. I \cite{HumansBeGone} og \cite{mcaleer2018solving} vælges en handling a til tiden t fra tilstand s ud fra politikken
+$$A_t=\text{argmax}_a\frac{cP_{st}(a)\sqrt{\sum_{a'}N_{st}(a')}}{1+N_{st}(a)} + W_{st}(a) - L_{st}(a)$$
+hvor $N_s(a)$ er antallet af gange a er blevet taget fra s, $W_s(a)$ er den maksimale værdi af a fra s, $L_s(a)$ er det nuværende virtuelle tab for a fra s, $P_s(a)$ er en prior-sandsynlighed af a fra s og c er en udforsknings-hyperparameter. 
+  
 
 \section{Eksperimenter}
 

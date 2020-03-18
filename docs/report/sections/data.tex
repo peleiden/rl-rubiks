@@ -7,7 +7,7 @@
 \lhead{Data}
 \section{Matematikken bag tilstandsrummet}\label{sec:grouptheory}
 For at motivere sværhedsgraden af problemet, vil aspekter ved Rubiks terning blive beskrevet ud fra et gruppeteoretisk perspektiv. Dette afsnit bygger hovedsageligt på \cite{GroupTheory}, men er tilpasset vores egen repræsentation og implementation af Rubiks terning. 
-\subsection{Permutationer}
+\subsection*{Permutationer}
 
 Rubiks terning har seks sider og 26 cubies i alt; seks midtercubies med én udadvendt overflade, 12 kantcubies med to flader og otte hjørnecubies med tre flader. Hver side kan roteres $\frac{\pi}{2}$ radianer med eller mod urets retning. Fastholdes orientationen af Rubiks terning, vil positionen af alle centercubies også holdes fast, uafhængigt af hvordan siderne roteres. Således vil man kunne navngive hver side ud fra dens orientation, og vi har nu front F, bag B, op O, ned N, højre H og venstre V. De otte omkringliggende cubies på hver side nummereres som vist på Figur \ref{RubiksImplementation}. Bemærk, at lige numre svarer til en kantcubie og ulige numre svarer til en hjørnecubie.
 
@@ -31,7 +31,7 @@ $$F:(\begin{matrix}f_1 & f_7 & f_5 & f_3\end{matrix})
 Ligeledes kan resten af permutationerne F', B, B', O, O', N, N', H, H', V og V' hver skrives som en kombination af fem disjunkte 4-cykler. Ikke at foretage en rotation navngives I.
 
 
-\subsection{Rubiks terning som en gruppe}
+\subsection*{Rubiks terning som en gruppe}
 Mængden $\{F, F', B, B', O, O', N, N', H, H', V, V', I\}$ er en permutationsgruppe $(\mathbb{G}, *)$ med gruppeoperatoren $*$ defineret som følger; $X*Y$ er udførelsen af handling X efterfulgt af handling Y. $\mathbb{G}$ opfylder forudsætningerne for en permutationsgruppe: 
 \begin{itemize}
 	%\item $\mathbb{G}$ er lukket, så hvis $X*Y=Z$ er Z også et element i $\mathbb{G}$. 
@@ -49,6 +49,11 @@ permutationer. Der skal dog tages højde for ulovlige permutationer. Af disse er
 $$\frac{8!\cdot3^8\cdot12!\cdot2^{12}}{2\cdot3\cdot2}=43.252.003.274.489.856.000=4,3\cdot10^{19}$$
 
 lovlige permutationer. Dette er ligeledes størrelsen på tilstandsrummet for problemet.
+
+\subsection*{Guds tal}
+Inde for Rubiks terning betegnes det mindste antal træk der skal til for at løse en terning som Guds tal. Betegnelsen \emph{Guds tal} kommer af, at man er nødt til at være et altvidende væsen for at kunne løse enhver af de $4,3\cdot10^{19}$ permutationer på dette antal træk eller færre. Dette tal er 26 eller færre i kvart-drejnings-semantik og blev fundet tilbage i 2014 ved essensielt at bevise, at alle permutationer af Rubiks terning kan løses på 26 eller færre træk \cite{10.4169/college.math.j.45.4.242}. Fremgangsmåden var at dele alle permutationer op i $2,2\cdot10^9$ sæt med $2,0\cdot10^{10}$ permutationer i hver, som derefter vha. symmetri og sætdækning kunne reduceres til i alt $5,6\cdot10^7$ sæt, der skulle løses. For hvert sæt fandt de (ved brug af særligt stor computerkraft) løsninger på længden 26 træk eller mindre, og Guds tal er derfor nu 26. 
+
+
 
 \section{Repræsentation af terninger}\label{sec:repr}
 Der findes en lang række måder at repræsentere tilstanden af en terning på.
