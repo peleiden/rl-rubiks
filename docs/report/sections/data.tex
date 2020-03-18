@@ -21,13 +21,12 @@ Rubiks terning har seks sider og 26 cubies i alt; seks midtercubies med én udad
 Ud fra kvart-drejnings-semantikken kan man foretage 12 forskellige handlinger på Rubiks terning (13 hvis man medtager handlingen ikke at foretage nogen handling); hver side kan roteres én gang enten med eller mod uret. Notationsmæssigt betyder rotationen F, at frontsiden set fra observatørens perpektiv roteres $\frac{\pi}{2}$ radianer i urets retning. 2F svarer til en rotation af fronten på $\pi$ radianer, og 3F = F' svarer til én rotation mod urets retning. 
 
 En rotation kan ses som en permutation af Rubiks terning. En permutation $f:A\rightarrow A$ en afbildning af mængden A på sig selv. En rotation kan skrives som en permutation bestående af fem disjunkte 4-cykler. Ud fra navngivningen i Figur \ref{RubiksImplementation} vil rotationen F kunne skrives som
-
 $$F:(\begin{matrix}f_1 & f_7 & f_5 & f_3\end{matrix})
 (\begin{matrix}f_2 & f_8 & f_6 & f_4\end{matrix})
 (\begin{matrix}v_1 & o_3 & h_7 & n_5\end{matrix})
 (\begin{matrix}o_2 & h_6 & n_4 & v_8\end{matrix})
 (\begin{matrix}o_1 & h_5 & n_3 & v_7\end{matrix})$$
-
+\noindent
 Ligeledes kan resten af permutationerne F', B, B', O, O', N, N', H, H', V og V' hver skrives som en kombination af fem disjunkte 4-cykler. Ikke at foretage en rotation navngives I.
 
 
@@ -39,19 +38,16 @@ Mængden $\{F, F', B, B', O, O', N, N', H, H', V, V', I\}$ er en permutationsgru
 	\item $\mathbb{G}$ har et identitetselement I (ikke at foretage en handling), eftersom $I*X = X = X*I$. 
 	\item Hvis X er et element i $\mathbb{G}$ har X en invers $X^{-1}$ således at $X*X^{-1}=I$. Dette er opfyldt, eftersom  $X^{-1}=X'$.  
 \end{itemize} 
-
-Med denne viden om $\mathbb{G}$ og Rubiks terning kan vi nu beregne antallet af permutationer (ordenen af $\mathbb{G}$). Først beregnes alle permutationer, både lovlige og ulovlige. Dette svarer til alle kombinationer, hvor man fysisk tager en cubie og placerer den, som man vil. Der er otte pladser til hjørnecubies, som hver har tre måder at blive orienteret på. Der er 12 pladser til kantcubies, som hver har to måder at blive orienteret på. Eftersom midtercubies er fikserede, fås 
-
-$$8!\cdot3^8\cdot12!\cdot2^{12}=519.024.039.293.878.272.000=5,2\cdot10^{20}$$
-
+Med denne viden om $\mathbb{G}$ og Rubiks terning kan vi nu beregne antallet af permutationer (ordenen af $\mathbb{G}$). Først beregnes alle permutationer, både lovlige og ulovlige. Dette svarer til alle kombinationer, hvor man fysisk tager en cubie og placerer den, som man vil. Der er otte pladser til hjørnecubies, som hver har tre måder at blive orienteret på. Der er 12 pladser til kantcubies, som hver har to måder at blive orienteret på. Eftersom midtercubies er fikserede, fås
+\begin{equation*}
+	8!\cdot3^8\cdot12!\cdot2^{12}=519.024.039.293.878.272.000=5,2\cdot10^{20}
+\end{equation*}
 permutationer. Der skal dog tages højde for ulovlige permutationer. Af disse er kun halvdelen af kantcubies placeret lovligt og en tredjedel af hjørnecubies placeret lovligt. Endvidere er der i halvdelen af permutationerne blevet udskiftet et ulige antal cubies, hvilket er umuligt. Derfor her vi
-
 $$\frac{8!\cdot3^8\cdot12!\cdot2^{12}}{2\cdot3\cdot2}=43.252.003.274.489.856.000=4,3\cdot10^{19}$$
-
 lovlige permutationer. Dette er ligeledes størrelsen på tilstandsrummet for problemet.
 
 \subsection*{Guds tal}
-Inde for Rubiks terning betegnes det mindste antal træk der skal til for at løse en terning som Guds tal. Betegnelsen \emph{Guds tal} kommer af, at man er nødt til at være et altvidende væsen for at kunne løse enhver af de $4,3\cdot10^{19}$ permutationer på dette antal træk eller færre. Dette tal er 26 eller færre i kvart-drejnings-semantik og blev fundet tilbage i 2014 ved essensielt at bevise, at alle permutationer af Rubiks terning kan løses på 26 eller færre træk \cite{10.4169/college.math.j.45.4.242}. Fremgangsmåden var at dele alle permutationer op i $2,2\cdot10^9$ sæt med $2,0\cdot10^{10}$ permutationer i hver, som derefter vha. symmetri og sætdækning kunne reduceres til i alt $5,6\cdot10^7$ sæt, der skulle løses. For hvert sæt fandt de (ved brug af særligt stor computerkraft) løsninger på længden 26 træk eller mindre, og Guds tal er derfor nu 26. 
+Inde for Rubiks terning betegnes det mindste antal træk, der skal til for at løse en terning, som Guds tal. Betegnelsen \emph{Guds tal} kommer af, at man er nødt til at være et altvidende væsen for at kunne løse enhver af de $4,3\cdot10^{19}$ permutationer på dette antal træk eller færre. Dette tal er 26 eller færre i kvart-drejnings-semantik og blev fundet tilbage i 2014 ved essensielt at bevise, at alle permutationer af Rubiks terning kan løses på 26 eller færre træk \cite{10.4169/college.math.j.45.4.242}. Fremgangsmåden var at dele alle permutationer op i $2,2\cdot10^9$ sæt med $2,0\cdot10^{10}$ permutationer i hver, som derefter vha. symmetri og sætdækning kunne reduceres til i alt $5,6\cdot10^7$ sæt, der skulle løses. For hvert sæt fandt de (ved brug af særligt stor computerkraft) løsninger på længden 26 træk eller mindre, og Guds tal er derfor nu 26. 
 
 
 
@@ -79,11 +75,11 @@ Hjørnekuberne kan sidde 8 steder og have tre forskellige orienteringer, hvilket
 Tilsvarende kan sidekuberne sidde 12 steder med to orienteringer, hvorfor de også har 24 mulige tilstande.
 Kvadraterne på hver kube har en unik farvekombination,\footnote{Det er muligt at overbevise sig selv om det ved at forestille sig den løste terning.} og det er derfor muligt at repræsentere hver kube ved blot ét af dens kvadrater.
 Repræsentationen er visualiseret på figur \ref{fig:kuberepr} og følger direkte repræsentationen i \cite{HumansBeGone}, hvorfra illustrationen også er taget.
-\begin{figure}
+\begin{figure}[H]
 	\centering
 	\includegraphics[width=\textwidth]{repr}
 	\caption{Repræsentation af Rubiks terning. Der holdes styr på de hvide kvadrater på (c) og (d). \cite{HumansBeGone}}\label{fig:kuberepr}
-\end{figure}
+\end{figure}\noindent
 Denne repræsentation kan repræsentere $ 24^{20}\approx 4,02\ctp{27} $ tilstande -- et stykke over tilstandsrummets størrelse, men stadig langt bedre end det omtalte alternativ.
 Til gengæld kræver det $ 20\times 24\times 4=1920 $ bytes at gemme en tilstand, men rotationer kan foretages hurtigt.
 Endeligt er tilstande one-hot encodede, hvilket gør det anvendeligt til neurale netværk.

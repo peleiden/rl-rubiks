@@ -45,11 +45,10 @@ Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da 
 \end{itemize}
 \paragraph{Politik og værdi} Målet med træning af Reinforcement Learning-agenten DeepCube er så godt som muligt at approksimere den optimale politik \(\pi^*\), der maksimerer akkumuleret belønning \(v\), til hvilken der opnås den optimale akkumulerede belønning \(v^*\):
 \begin{equation}\label{eq:maximization}
-\pi^* = \argmaxi_{\pi}\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
-v^* = \maxi_\pi\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
-N = \operatorname{min}\{k_T, k_{\text{max}}-1\}
+	\pi^* = \argmaxi_{\pi}\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
+	v^* = \maxi_\pi\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
+	N = \operatorname{min}\{k_T, k_{\text{max}}-1\}
 \end{equation}
-
 hvor \(k_T\) er tidsskridtet, når agenten løser terningen og \(k_{\text{max}}\) er en grænse på antal skridt,  som defineres i eksperimentet. 
 
 Til at bestemme \(\widetilde {\pi ^*} \approx 	\pi^*\) blev to sammenhængende afbildninger implementeret i DeepCube. Den ene komponent er en lært afbildning, der direkte approksimerer \(\widetilde {\pi ^*}\) ved at afbillede fra tilstanden \(\mathbf s_k\) til en diskret sandsynlighedsfordeling, der approksimativt tilskriver hver mulig handling en sandsynlighed for at denne er den optimale . Denne funktion kaldes \textit{politik-netværket} og repræsenteres fremover med symbolet \(\bm \pi\):
@@ -78,7 +77,6 @@ På det tolvdimensionelle politikoutput blev softmax-aktiveringen brugt for at f
 \pi(\mathbf s_k)_i = \sigma(\mathbf z)_i = \frac{\eul {z_i}}{\sum_{j=0}^{11} \eul{z_j}}
 \]
 hvor \(\mathbf z=(z_0, ..., z_i, ..., z_{11})\) er output fra politiknetværket.
-
 Det neurale netværk er implementeret i \texttt{src/rubiks/model.py}
 
 \subsection*{Læring af værdi og politik: Autodidaktisk iteration}
