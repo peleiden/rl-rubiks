@@ -61,12 +61,12 @@ class Model(nn.Module):
 		layers = []
 		for i in range(len(thiccness)-1):
 			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
-			if not final or i < len(thiccness) - 1:
+			if not (final and i == len(thiccness) - 2):
 				layers.append(self.config.activation_function)
 				layers.append(nn.Dropout(self.config.dropout))
 				if self.config.batchnorm:
 					layers.append(nn.BatchNorm1d(thiccness[i+1]))
-
+		
 		return layers
 	
 	def forward(self, x, policy = True, value = True):
@@ -110,3 +110,6 @@ class Model(nn.Module):
 		model = Model(config)
 		model.load_state_dict(state_dict)
 		return model
+
+
+

@@ -3,8 +3,8 @@ from shutil import rmtree
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import numpy as np
-from utils.ticktock import TickTock
-from utils.logger import Logger
+from src.rubiks.utils.ticktock import TickTock
+from src.rubiks.utils.logger import Logger
 
 class Benchmark:
 

@@ -14,8 +14,8 @@ class Train:
 	
 	moves_per_rollout: int
 	
-	train_losses = list()
-	train_rollouts = list()
+	train_losses: np.ndarray
+	train_rollouts: np.ndarray
 	eval_rollouts = list()
 	eval_rewards = list()
 
@@ -63,13 +63,18 @@ class Train:
 		self.log(f"Rollouts: {rollouts}. Each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
+		self.train_rollouts, self.train_losses = np.arange(rollouts), np.empty(rollouts)
 		
 		for rollout in range(rollouts):
 			torch.cuda.empty_cache()
 
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
-			training_data, value_targets, policy_targets,  loss_weights = torch.from_numpy(training_data), torch.from_numpy(value_targets), torch.from_numpy(policy_targets), torch.from_numpy(loss_weights) #TODO: handle devicing
+			training_data, value_targets, policy_targets, loss_weights = torch.from_numpy(training_data),\
+																		 torch.from_numpy(value_targets),\
+																		 torch.from_numpy(policy_targets),\
+																		 torch.from_numpy(loss_weights)
 			net.train()
+			batch_losses = list()
 			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
 				optimizer.zero_grad()
 
@@ -83,11 +88,12 @@ class Train:
 				loss = ( losses * loss_weights[batch] ).mean()
 				loss.backward()
 				optimizer.step()
-
-				self.train_losses.append(float(loss)); self.train_rollouts.append(rollout)
+				
+				batch_losses.append(float(loss))
+			self.train_losses[rollout] = np.mean(batch_losses)
 			
 			torch.cuda.empty_cache()
-			self.log(f"Rollout {rollout} completed with mean loss {np.mean(self.train_losses[-(self.moves_per_rollout // batch_size):])}.")
+			self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}.")
 
 			if evaluation_interval and (rollout + 1) % evaluation_interval == 0:
 				net.eval()
@@ -113,7 +119,7 @@ class Train:
 		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
 		"""
 		with torch.no_grad():
-			# TODO Parallize and consider cpu/gpu conversion (probably move net to cpu and parrallelize)
+			# TODO Parallize and consider cpu/gpu conversion (probably move net to cpu and parallelize)
 			net.eval() 
 			cube = RubiksCube()
 
@@ -146,7 +152,6 @@ class Train:
 					current_idx = i*sequence_length + j
 					policy_targets[current_idx] = policy
 					value_targets[current_idx] = values[policy] if not (scrambled_state == cube.assembled).all() else 0  #Max Lapan convergence fix
-
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
 
