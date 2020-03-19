@@ -160,8 +160,8 @@ if __name__ == "__main__":
 	title = f"Scramble bench: {games.size} cubes each with {n} scrambles"
 	bm = Benchmark(test_scramble, "local_benchmarks/scramble_example", title)
 	bm.singlethreaded("Using old 6 x 8 x 6 representation", games)
-	threads, times = bm.multithreaded(nt, games)
-	bm.plot_mt_results(threads, times, "Using old 6 x 8 x 6 representation")
+	threads, times = bm.multithreaded(nt, games, "Using old 6 x 8 x 6 representation")
+	bm.plot_mt_results(threads, times, f"{title} using 6 x 8 x 6")
 
 	
 	
