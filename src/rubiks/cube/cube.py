@@ -155,7 +155,7 @@ if __name__ == "__main__":
 	bm = Benchmark(test_scramble, "local_benchmarks/scramble_2024", title)
 	bm.singlethreaded("Using 20 x 24 representation", games)
 	threads, times = bm.multithreaded(nt, games, "Using 20 x 24 representation")
-	bm.plot_mt_results(threads, times, f"{title} using 20 x 24 representation")
+	bm.plot_mt_results(threads, times, f"{title} using 20 x 24")
 
 	
 	
