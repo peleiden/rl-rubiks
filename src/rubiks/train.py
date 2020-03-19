@@ -21,13 +21,13 @@ class Train:
 
 
 	def __init__(self, 
-			optim_fn				= torch.optim.RMSprop,
-			lr: float				= 1e-5,
-			policy_criterion		= torch.nn.CrossEntropyLoss,
-			value_criterion			= torch.nn.MSELoss,
-			logger: Logger			= NullLogger(),
+			optim_fn		= torch.optim.RMSprop,
+			lr: float		= 1e-5,
+			policy_criterion	= torch.nn.CrossEntropyLoss,
+			value_criterion		= torch.nn.MSELoss,
+			logger: Logger		= NullLogger(),
 			eval_scrambling: dict 	= None,
-			eval_max_moves: int		= None,
+			eval_max_moves: int	= None,
 		):
 
 		self.optim 	= optim_fn
@@ -46,12 +46,12 @@ class Train:
 	def train(self,
 			net,
 	 		rollouts: int,
-			batch_size: int				= 50, #Required to be > 1 when training with batchnorm
-			rollout_games: int 			= 10000,
-			rollout_depth: int 			= 200,
-			evaluation_interval: int 	= 2,
+			batch_size: int			= 50, #Required to be > 1 when training with batchnorm
+			rollout_games: int		= 10000,
+			rollout_depth: int		= 200,
+			evaluation_interval: int	= 2,
 			evaluation_length: int		= 20,
-#			verbose: bool				= True,
+#			verbose: bool			= True,
 		):
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
