@@ -1,12 +1,12 @@
 import numpy as np
 import multiprocessing as mp
 
-from os import cpu_count, makedirs
+from os import cpu_count
 
 from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 
-from src.rubiks.cube import RubiksCube
+from src.rubiks.cube.cube import Cube
 from src.rubiks.post_train.agents import Agent
 
 
@@ -26,9 +26,9 @@ class Evaluator:
 		self.log = logger
 		self.verbose = verbose
 		if scrambling_procedure is not None:
-			RubiksCube.scrambling_procedure = scrambling_procedure
+			Cube.scrambling_procedure = scrambling_procedure
 
-		self.log(f"Creating evaluator: Scrambling procedure: {RubiksCube.scrambling_procedure}, max_moves: {self.max_moves}, agent: {self.agent} ")
+		self.log(f"Creating evaluator: Scrambling procedure: {Cube.scrambling_procedure}, max_moves: {self.max_moves}, agent: {self.agent} ")
 
 	
 	def eval(self, N_games: int, n_threads: int = cpu_count()):
@@ -51,7 +51,7 @@ class Evaluator:
 	
 	def _run_N_games(self, N: int):
 		results = np.zeros(N) #0 represents not completed 
-		cube = RubiksCube()
+		cube = Cube()
 
 		for i in range(N):
 			cube.reset()

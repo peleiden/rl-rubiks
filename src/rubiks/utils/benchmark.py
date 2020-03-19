@@ -9,17 +9,18 @@ from src.rubiks.utils.logger import Logger
 class Benchmark:
 
 	def __init__(self, fun, outdir: str, title: str = ""):
-		rmtree(f"{outdir}/", ignore_errors=True)
-		makedirs(outdir)
-		self.title = title if title else outdir
+		self.outdir = outdir
+		rmtree(f"{self.outdir}/", ignore_errors=True)
+		makedirs(self.outdir)
+		self.title = title if title else self.outdir
 		self.tt = TickTock()
-		self.log = Logger(f"{outdir}/benchmark.log", title)
+		self.log = Logger(f"{self.outdir}/benchmark.log", title)
 		self.fun = fun
 	
-	def singlethreaded(self, data_desc = "", *args, **kwargs):
+	def singlethreaded(self, desc ="", *args, **kwargs):
 		self.log(f"Beginning single threaded benchmark of function {self.fun.__name__}")
-		if data_desc:
-			self.log(f"Data description:\n{data_desc}\n")
+		if desc:
+			self.log(f"Data description:\n{desc}\n")
 		try:
 			self.tt.tick()
 			self.fun(*args, **kwargs)
@@ -30,12 +31,12 @@ class Benchmark:
 			self.log(f"Test crashed with exception\n{e}\n")
 			return 0
 	
-	def multithreaded(self, threads: range, data: list, data_desc = ""):
+	def multithreaded(self, threads: range, data: list, desc =""):
 		threads = np.array(threads)
 		times = np.empty(len(threads))
 		self.log(f"Beginning multi threaded benchmark of function {self.fun.__name__}")
-		if data_desc:
-			self.log(f"Data description:\n{data_desc}\n")
+		if desc:
+			self.log(f"Data description:\n{desc}\n")
 		self.log("Benchmark results")
 		try:
 			for i, n_treads in enumerate(threads):
@@ -57,6 +58,7 @@ class Benchmark:
 		if title:
 			plt.title(title)
 		plt.grid(True)
+		plt.savefig(f"{self.outdir}/mt_results.png")
 		plt.show()
 
 

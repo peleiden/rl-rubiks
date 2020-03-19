@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from src.rubiks.cube import RubiksCube
+from src.rubiks.cube.cube import Cube
 from src.rubiks.post_train.agents import DeepCube
 from src.rubiks.post_train.evaluation import Evaluator
 from src.rubiks.utils.logger import Logger, NullLogger
@@ -121,10 +121,10 @@ class Train:
 		with torch.no_grad():
 			# TODO Parallize and consider cpu/gpu conversion (probably move net to cpu and parallelize)
 			net.eval() 
-			cube = RubiksCube()
+			cube = Cube()
 
 			N_data = games * sequence_length
-			states = np.empty(( N_data,  *cube.assembled.shape ), dtype=np.float32)
+			states = np.empty(( N_data,  *cube._assembled.shape), dtype=np.float32)
 			policy_targets, value_targets = np.empty(N_data, dtype=np.int64), np.empty(games * sequence_length, dtype=np.float32)
 			loss_weights = np.empty(N_data)
 
@@ -137,11 +137,11 @@ class Train:
 				for j, scrambled_state in enumerate(scrambled_cubes):
 
 					# Explore 12 substates
-					substates = np.empty( (cube.action_dim, *cube.assembled.shape) )
+					substates = np.empty((cube.action_dim, *cube._assembled.shape))
 					for k, action in enumerate(cube.action_space): 
 						substates[k] = cube.rotate(scrambled_state, *action)
 					
-					rewards = torch.Tensor( [ 1 if (substate == cube.assembled).all() else -1 for substate in substates ] ) 
+					rewards = torch.Tensor([1 if (substate == cube._assembled).all() else -1 for substate in substates])
 					substates = torch.Tensor( substates.reshape(cube.action_dim, -1) ) #TODO: Handle device
 
 					values = net(substates, policy=False, value=True).squeeze()
@@ -151,7 +151,7 @@ class Train:
 
 					current_idx = i*sequence_length + j
 					policy_targets[current_idx] = policy
-					value_targets[current_idx] = values[policy] if not (scrambled_state == cube.assembled).all() else 0  #Max Lapan convergence fix
+					value_targets[current_idx] = values[policy] if not (scrambled_state == cube._assembled).all() else 0  #Max Lapan convergence fix
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
 
