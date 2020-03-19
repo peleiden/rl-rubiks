@@ -17,8 +17,8 @@ Rubiks terning har seks sider og 26 cubies i alt; seks midtercubies med én udad
 	\caption{Repræsentation af Rubiks terning.}
 	\label{RubiksImplementation}
 \end{figure}
-
-Ud fra kvart-drejnings-semantikken kan man foretage 12 forskellige handlinger på Rubiks terning (13 hvis man medtager handlingen ikke at foretage nogen handling); hver side kan roteres én gang enten med eller mod uret. Notationsmæssigt betyder rotationen F, at frontsiden set fra observatørens perpektiv roteres $\frac{\pi}{2}$ radianer i urets retning. 2F svarer til en rotation af fronten på $\pi$ radianer, og 3F = F' svarer til én rotation mod urets retning. 
+Ud fra kvart-drejnings-semantikken kan man foretage 12 forskellige handlinger på Rubiks terning (13 hvis man medtager handlingen ikke at foretage nogen handling);
+hver side kan roteres én gang enten med eller mod uret. Notationsmæssigt betyder rotationen F, at frontsiden set fra observatørens perpektiv roteres $\frac{\pi}{2}$ radianer i urets retning. 2F svarer til en rotation af fronten på $\pi$ radianer, og 3F = F' svarer til én rotation mod urets retning. 
 
 En rotation kan ses som en permutation af Rubiks terning. En permutation $f:A\rightarrow A$ en afbildning af mængden A på sig selv. En rotation kan skrives som en permutation bestående af fem disjunkte 4-cykler. Ud fra navngivningen i Figur \ref{RubiksImplementation} vil rotationen F kunne skrives som
 $$F:(\begin{matrix}f_1 & f_7 & f_5 & f_3\end{matrix})
@@ -42,12 +42,12 @@ Med denne viden om $\mathbb{G}$ og Rubiks terning kan vi nu beregne antallet af 
 \begin{equation*}
 	8!\cdot3^8\cdot12!\cdot2^{12}=519.024.039.293.878.272.000=5,2\cdot10^{20}
 \end{equation*}
-permutationer. Der skal dog tages højde for ulovlige permutationer. Af disse er kun halvdelen af kantcubies placeret lovligt og en tredjedel af hjørnecubies placeret lovligt. Endvidere er der i halvdelen af permutationerne blevet udskiftet et ulige antal cubies, hvilket er umuligt. Derfor her vi
+permutationer. Der skal dog tages højde for ulovlige permutationer. Af disse er kun halvdelen af kantcubies placeret lovligt og en tredjedel af hjørnecubies placeret lovligt \cite{GroupTheory}. Endvidere er der i halvdelen af permutationerne blevet udskiftet et ulige antal cubies, hvilket er umuligt. Derfor her vi
 $$\frac{8!\cdot3^8\cdot12!\cdot2^{12}}{2\cdot3\cdot2}=43.252.003.274.489.856.000=4,3\cdot10^{19}$$
 lovlige permutationer. Dette er ligeledes størrelsen på tilstandsrummet for problemet.
 
 \subsection*{Guds tal}
-Inde for Rubiks terning betegnes det mindste antal træk, der skal til for at løse en terning, som Guds tal. Betegnelsen \emph{Guds tal} kommer af, at man er nødt til at være et altvidende væsen for at kunne løse enhver af de $4,3\cdot10^{19}$ permutationer på dette antal træk eller færre. Dette tal er 26 eller færre i kvart-drejnings-semantik og blev fundet tilbage i 2014 ved essensielt at bevise, at alle permutationer af Rubiks terning kan løses på 26 eller færre træk \cite{10.4169/college.math.j.45.4.242}. Fremgangsmåden var at dele alle permutationer op i $2,2\cdot10^9$ sæt med $2,0\cdot10^{10}$ permutationer i hver, som derefter vha. symmetri og sætdækning kunne reduceres til i alt $5,6\cdot10^7$ sæt, der skulle løses. For hvert sæt fandt de (ved brug af særligt stor computerkraft) løsninger på længden 26 træk eller mindre, og Guds tal er derfor nu 26. 
+Inde for Rubiks terning betegnes det mindste antal træk, der skal til for at løse en terning, som Guds tal. Betegnelsen \emph{Guds tal} kommer af, at man er nødt til at være et alvidende væsen for at kunne løse enhver af de $4,3\cdot10^{19}$ permutationer på dette antal træk eller færre. Dette tal er 26 eller færre i kvart-drejnings-semantik og blev fundet tilbage i 2014 ved essensielt at bevise, at alle permutationer af Rubiks terning kan løses på 26 eller færre træk \cite{10.4169/college.math.j.45.4.242}. Fremgangsmåden var at dele alle permutationer op i $2,2\cdot10^9$ sæt med $2,0\cdot10^{10}$ permutationer i hver, som derefter vha. symmetri og sætdækning kunne reduceres til i alt $5,6\cdot10^7$ sæt, der skulle løses. For hvert sæt blev fundet (ved brug af særligt stor computerkraft) løsninger på længden 26 træk eller mindre, og Guds tal er derfor nu 26. 
 
 
 
@@ -65,15 +65,15 @@ Det er dog ikke nødvendigt at modellere det midterste kvadrat, så længe terni
 Denne repræsentation bruger kun $ 6\cdot 8\cdot 4=192 $ bytes, når tallene gemmes som 32 bit floating points.
 Det er også muligt at foretage rotationer hurtigt, men det er muligt at repræsentere en lang række tilstande, der ikke ligger i tilstandsrummet -- fx at alle kvadrater på alle sider har samme farve.
 Med seks farver består det repræsenterbare tilstandsrum af $ 6^{6\cdot 8}\approx 2,25\ctp{37} $ tilstande, langt større end de $ 4,3\ctp{19} $ lovlige tilstande.
-Repræsentationen er heller ikke velfungerende med neurale netværk, hvor one-hot encoding er at foretrække.
-Ved at tilføje en ekstra akse til tensoren er one-hot muligt, men det kræver $ 6\cdot 8\cdot 6\cdot 4=1152 $ bytes og løser stadig ikke overflødighedsproblemet.\\
+Repræsentationen er heller ikke velfungerende med neurale netværk, hvor én ud af \(6\)-kodning er at foretrække.
+Ved at tilføje en ekstra akse til tensoren er en ud af \(6\)-kodning muligt, men det kræver $ 6\cdot 8\cdot 6\cdot 4=1152 $ bytes og løser stadig ikke overflødighedsproblemet.\\
 \\
 En anden, mindre intuitiv repræsentation er en $ 20\times 24 $-tensor.
-Forestiller man sig Rubiks terning som bestående af 26 mindre kuber (foruden den i midten af terningen) og fjerner de seks midterkuber, fås 20 kuber, der skal repræsenteres.
-Disse inkluderer 8 hjørnekuber og 12 sidekuber.
+Den tager udgangspunkt i Rubiks terning som bestående af de 26 cubies, hvorefter man fjerner de seks midtercubies og har 20 kuber, der skal repræsenteres.
+Disse inkluderer 8 hjørnecubies og 12 sidecubies.
 Hjørnekuberne kan sidde 8 steder og have tre forskellige orienteringer, hvilket giver 24 mulige tilstande.
 Tilsvarende kan sidekuberne sidde 12 steder med to orienteringer, hvorfor de også har 24 mulige tilstande.
-Kvadraterne på hver kube har en unik farvekombination,\footnote{Det er muligt at overbevise sig selv om det ved at forestille sig den løste terning.} og det er derfor muligt at repræsentere hver kube ved blot ét af dens kvadrater.
+Klistermærkerne på hver cubie har en unik farvekombination,\footnote{Det er muligt at overbevise sig selv om det ved at forestille sig den løste terning.} og det er derfor muligt at repræsentere hver kube ved blot ét af dens klistermærker.
 Repræsentationen er visualiseret på figur \ref{fig:kuberepr} og følger direkte repræsentationen i \cite{HumansBeGone}, hvorfra illustrationen også er taget.
 \begin{figure}[H]
 	\centering
@@ -82,8 +82,8 @@ Repræsentationen er visualiseret på figur \ref{fig:kuberepr} og følger direkt
 \end{figure}\noindent
 Denne repræsentation kan repræsentere $ 24^{20}\approx 4,02\ctp{27} $ tilstande -- et stykke over tilstandsrummets størrelse, men stadig langt bedre end det omtalte alternativ.
 Til gengæld kræver det $ 20\times 24\times 4=1920 $ bytes at gemme en tilstand, men rotationer kan foretages hurtigt.
-Endeligt er tilstande one-hot encodede, hvilket gør det anvendeligt til neurale netværk.
-Samlet set vurderes denne repræsentation til bedre at opfylde kravene, hvorfor den anvendes.
+Endeligt er tilstande én af \(24\)-kodede, hvilket gør det anvendeligt til neurale netværk.
+Samlet set vurderes denne repræsentation til bedre at opfylde kravene og det er den, der anvendes som datagrundlag i rapporten.
 
 
 \end{document}

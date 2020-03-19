@@ -3,16 +3,17 @@
 \begin{document}
 \chapter{Metode}\label{chp:methods}
 \lhead{Metode}
-De undersøgt dybe Reinformcent Learning-modeller basererde sig alle på modellen DeepCube fra \cite{HumansBeGone} med nogle undtagelser, der beskrives i de følgende afsnit.
-Løsningsmodellen består af et neuralt netværk, der trænes med en Reinforcement Learning-procedure kaldet autodidaktisk iteration til at vurdere den værdien af og den optimale handling til enhver tilstand for Rubiks terning.
+\textit{Al kode er tilgængelig på} \url{https://github.com/sorenmulli/rl-rubiks}\\
+De implementerede dybe Reinformcent Learning-modeller  er alle implementationer af DeepCube fra \cite{HumansBeGone} med nogle undtagelser, der beskrives i de følgende afsnit.
+Løsningsmodellen består af et neuralt netværk, der trænes med en Reinforcement Learning-procedure kaldet autodidaktisk iteration til at vurdere værdien af og den optimale handling til enhver tilstand for Rubiks terning.
 Dette netværk bliver så brugt som heuristisk for en Monte Carlo træsøgning som løsningsstrategi til terningen.
 
 For at undersøge, hvad der er vigtigt for at få gode resultater, udføres der sammenlignende lærings-eksperimenterer og evalueringseksperimenter, hvor der ændres på detaljer i træningsparadigmet og tiden for træsøgningsmodellen. 
 
 \section{Rubiks terning som miljø}\label{sec:environment}
-En af de definerende karaktestikker ved reinforcement learning er agentens og miljøets interageren.
+En af de definerende karaktestikker ved reinforcement learning er agentens og miljøets interaktion.
 Det er derfor nødvendigt at have en velfungerende repræsentation af miljøet, på hvilken agenten kan interagere.
-Miljøet implementeres som en klasse, der kan ses i \texttt{src/rubiks/cube.py}, hvis centrale egenskab er rubiksterningens tilstand som beskrevet i afsnit \ref{sec:repr}.
+Miljøet implementeres i \texttt{python} som en klasse, hvis centrale egenskab er rubiksterningens tilstand som beskrevet i afsnit \ref{sec:repr}.
 Miljøet initialiseres med den løste tilstand, hvorefter indbyggede metoder bruges til at foretage givne eller tilfældige rotationer.
 Derudover indeholder miljøklassen en metode til at teste for, om den pågældende tilstand er løst, samt en metode, der giver tilstanden i et mere læsevenligt format.
 
@@ -25,9 +26,9 @@ Med miljøet fastlagt er det nu muligt at påbegynde træningen af en agent, der
 \section{Den lærende agent}\label{sec:learnADI}
 Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da det formaliseres som at følge Reinforcement Learning-opsætningen ved at have følgende aspekter:
 \begin{itemize}
-	\item \textit{Agent}: Løsningsmodellen -- som her kaldes DeepCube, selvom den også afprøves med ændringer i forhold til DeepCube i \cite{HumansBeGone} -- har rollen som lærende agent, der interagerer miljøet. Den består af det dybe neurale netværk (DNN) samt træafsøgningen og beskrives i løbet af dette kapitel. Agenten er model-baseret, da den har en indre repræsentation af Rubiks terning for at træ-afsøge tilstande.  \\
+	\item \textit{Agent}: Løsningsmodellen -- som her kaldes DeepCube, selvom den også afprøves med ændringer i forhold til DeepCube i \cite{HumansBeGone} -- har rollen som lærende agent, der interagerer med miljøet. Den består af det dybe neurale netværk (DNN) samt træafsøgningen og beskrives i løbet af dette kapitel. Agenten er model-baseret, da den har en indre repræsentation af Rubiks terning for at træ-afsøge tilstande.  \\
 	Agenten er implementeret i  \texttt{src/rubiks/post\_train/agents.py}.
-	\item \textit{Miljø}: Rubiks terning, der modtaget handlinger \(a\) og returnerer tilstand \(\mathbf s\). Er en fuldt-observerbar, deterministisk Markov beslutningsproces, da al information om ny tilstand \(\mathbf s_{k+1}\) kun er afhængig af foregående tilstand og foregående handling \(a_k\):
+	\item \textit{Miljø}: Rubiks terning, der modtaget handlinger \(a\) og returnerer tilstand \(\mathbf s\). Miljøet er en fuldt-observerbar, deterministisk Markov beslutningsproces, da al information om ny tilstand \(\mathbf s_{k+1}\) kun er afhængig af foregående tilstand og foregående handling \(a_k\):
 	\[
 		\mathbf s _ {k+1} = \mathbf f(\mathbf s _k, a_k)
 	\] 
@@ -46,12 +47,11 @@ Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da 
 \paragraph{Politik og værdi} Målet med træning af Reinforcement Learning-agenten DeepCube er så godt som muligt at approksimere den optimale politik \(\pi^*\), der maksimerer akkumuleret belønning \(v\), til hvilken der opnås den optimale akkumulerede belønning \(v^*\):
 \begin{equation}\label{eq:maximization}
 	\pi^* = \argmaxi_{\pi}\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
-	v^* = \maxi_\pi\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
-	N = \operatorname{min}\{k_T, k_{\text{max}}-1\}
+	v^* = \maxi_\pi\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big)
 \end{equation}
-hvor \(k_T\) er tidsskridtet, når agenten løser terningen og \(k_{\text{max}}\) er en grænse på antal skridt,  som defineres i eksperimentet. 
+hvor \(	N = \operatorname{min}\{k_T, k_{\text{max}}-1\}\), \(k_T\) er tidsskridtet, når agenten løser terningen og \(k_{\text{max}}\) er en grænse på antal skridt,  som defineres i eksperimentet. 
 
-Til at bestemme \(\widetilde {\pi ^*} \approx 	\pi^*\) blev to sammenhængende afbildninger implementeret i DeepCube. Den ene komponent er en lært afbildning, der direkte approksimerer \(\widetilde {\pi ^*}\) ved at afbillede fra tilstanden \(\mathbf s_k\) til en diskret sandsynlighedsfordeling, der approksimativt tilskriver hver mulig handling en sandsynlighed for at denne er den optimale . Denne funktion kaldes \textit{politik-netværket} og repræsenteres fremover med symbolet \(\bm \pi\):
+Til at bestemme \(\widetilde {\pi ^*} \approx 	\pi^*\) blev to sammenhængende afbildninger implementeret i DeepCube. Den ene komponent er en lært afbildning, der direkte approksimerer \(\widetilde {\pi ^*}\) ved at afbillede fra tilstanden \(\mathbf s_k\) til en diskret sandsynlighedsfordeling, der approksimativt tilskriver hver mulig handling en sandsynlighed for at denne er den optimale. Denne funktion kaldes \textit{politik-netværket} og repræsenteres fremover med symbolet \(\bm \pi\):
 \[
 \pi(\mathbf s_k)_i \approx \mathbb P (\pi^*(\mathbf s_k)_i = i ),\quad i \in \{0,1, ..., 11\}
 \]
@@ -68,7 +68,7 @@ v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j
 \caption{Illustration af det todelte neurale netværk brugt i \textit{DeepCube}, hvor to skjulte lag skal resultere i hierakisk vidensopbygning brugbart for at repræsenterer løsningsstrategier.}
 \label{fig:DNN}
 \end{figure}
-\noindent Netværket består af lineære lag med bias.  Arkitekturen, som er illustreret på figur \ref{fig:DNN}, består af et 480-dimensionelt inputlag efterfulgt af to fuldt-forbundne skjulte lag på hhv. 4096 og 2048 neuroner. Derefter opdeles netværket i værdi-netværket og politiknetværket, begge med et skjult lag på 512 neuroner. Værdinetværket returnerer en skalarværdi \(v(\mathbf s_k)\) og politiknetværket returnerer den tolvdimensionelle vektor \(\bm \pi (\mathbf s_k)\). Denne struktur medfører ca. 25 millioner vægte og bias-værdier i det dybe neurale netværk. Mellem hvert lag blev den elementvise ikkelineære aktiveringsfunktion \textit{Eksponentiel lineær enhed} (eng: \textit{Exponential Linear Unit}, ELU) placeret, som i nogle læringsproblemer er vist at accelerere læringen bl.a. ved at have en normaliserende effekt på aktiveringerne \cite{ELU} 
+\noindent Netværket består af lineære lag med bias.  Arkitekturen, som er illustreret på figur \ref{fig:DNN}, består af et 480-dimensionelt inputlag efterfulgt af to fuldt-forbundne skjulte lag på hhv. 4096 og 2048 neuroner. Derefter opdeles netværket i værdi-netværket og politiknetværket, begge med et skjult lag på 512 neuroner. Værdinetværket returnerer en skalarværdi \(v(\mathbf s_k)\) og politiknetværket returnerer den tolvdimensionelle vektor \(\bm \pi (\mathbf s_k)\). Denne struktur medfører ca. 25 millioner parametre i det dybe neurale netværk. Mellem hvert lag blev den elementvise ikkelineære aktiveringsfunktion \textit{Eksponentiel lineær enhed} (eng: \textit{Exponential Linear Unit}, ELU) placeret, som i nogle læringsproblemer er vist at accelerere læringen bl.a. ved at have en normaliserende effekt på aktiveringerne \cite{ELU} 
 \[
 \operatorname{ELU}(x) = \maxi\{0, x\} + \operatorname{min}\{0, \eul{x} -1\}
 \]
@@ -83,21 +83,21 @@ Det neurale netværk er implementeret i \texttt{src/rubiks/model.py}
 At opnå et politik/værdi-netværk med gode approksimationer, kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
 På trods af problemets determinisme og Markov-egenskab er der dog en stor udfordring i udforskningen af disse tilstande.
 Som beskrevet i afsnit \ref{sec:grouptheory}, gør de mange mulige permutationer, at tilstandsrummet når en størrelse på \(|S|\approx 4,3\ctp {19}\), hvilket gør, at enhver systematisk løsning af maksimeringsproblemet \ref{eq:maximization} kun kan kun kan tilskrive optimal værdi og politik til en forsvindende lille andel af tilstandsrummet.
-Der er derfor behov for et læringsparadigme, der kan observere approksimativ optimal politik og værdi til tilstande på kort tid samt vælge at udforske tilstande, der giver et brugbart billede af tilstandsrummet.
+Der er derfor behov for et læringsprocedure, der kan observere approksimativ optimal politik og værdi til tilstande på kort tid samt vælge at udforske tilstande, der giver et brugbart billede af tilstandsrummet.
 
 Til træningen af politik/værdi-netværket blev en iterativ metode, der tilskriver tilstande værdi ud fra den til hver tid nyeste version af netværket brugt. 
 Metoden er præsenteret i \cite[4.1]{HumansBeGone}, hvor den kaldes \textit{Autodidaktisk iteration} (ADI) og tager udgangspunkt i den løste Rubiks terning \(\mathbf s_T\).
 For denne terning tages \(K\) tilfældige træk og for hvert træk gemmes tilstanden opnået ved disse træk samt antallet af tilfældige træk hørende til tilstanden \(D(\mathbf s_i)\). 
 
 Der er altså nu skabt \(K\) tilstande \(\mathbf{s}_{i}, i\in\{0..K-1\}\). For hver af disse skal der tilskrives de bedst mulige observationer for tilstandens værdi \(y_v\) og politik \(y_{\bm \pi }\), som det ønskes at politik/værdi-netværket skal approksimere.
-For at finde disse, udføres nu alle tolv mulige handlinger til den pågældende tilstand. For hver af disse tolv subtilstande \(\mathbf f(\mathbf s_i, a), a\in A\), der her fremkommer, evalueres det nyeste \textit{værdi}-netværk og tolv subværdier \(v(a), a\in A\) haves nu for den pågældende tilstand.
+For at finde disse, udføres nu alle tolv mulige handlinger til den pågældende tilstand. For hver af disse tolv subtilstande \(f(\mathbf s_i, a), a\in A\), der her fremkommer, evalueres det nyeste \textit{værdi}-netværk og tolv subværdier \(v(a), a\in A\) haves nu for den pågældende tilstand.
 Disse tolv subværdier bruges nu til at tilskrive værdi og politik til forældertilstanden \(\mathbf s _i\).	 
 
 Til tilstanden \(\mathbf s _i\) tilskrives nu værdi og politik ved følgende formler:
 \begin{align}
-	&{y_{v}}_i= \maxi_{a\in A}\  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a)\label{eq:targetval}
+	&{y_{v}}_i= \maxi_{a\in A}\  R\big( f(\mathbf s_i, a)\big)+v(a)\label{eq:targetval}
 	\\
-	& {y_{\bm \pi }}_i = \argmaxi_{a\in A} \  R\big(\mathbf f(\mathbf s_i, a)\big)+v(a) \label{eq:targetpi}
+	& {y_{\bm \pi }}_i = \argmaxi_{a\in A} \  R\big( f(\mathbf s_i, a)\big)+v(a) \label{eq:targetpi}
 \end{align}
 Der gemmes altså \(K\) observationer af værdi/politik-par til, der skal tilnærme sig den optimale værdi og handling til hver af dem ved at bruge værdinetværket for den følgende tilstand og belønningsfunktionen \(R\). 
 Der genereres et større antal observationer ved at spille \(L\) spil, så der opnås \(N=L\cdot K\) træningseksempler.
@@ -114,7 +114,7 @@ y_{v_i}=
 I træningen blev der spillet \(L=10000\) spil i autodidaktisk iteration. Dybden \(K\) blev undersøgt i eksperimenter.
 \subsection*{Opdatering af model}
 
-Ovenfor blev en procedure til at generere \(L\cdot K\) datapunkter, der hver indeholder en tilstand \(\mathbf s_i\), tilsigtede observationer af værdi og politik \(\left({y_{v}}_i, {y_{\bm \pi }}_i \right)\) samt antallet af tilfældige træk taget for at nå frem til tilstanden \(D(\mathbf s_i)\). Disse blev  brugt til at opdatere modellen i et Supervised Learning-paradigme, hvor værdinetværket løser et regressionsproblem med \({y_{v}}_i\) som mål og politiknetværket løser et klassifikationsproblem med \({y_{\bm \pi }}_i\) som mål. 
+Ovenfor blev en procedure til at generere \(N\) datapunkter, der hver indeholder en tilstand \(\mathbf s_i\), tilsigtede observationer af værdi og politik \(\left({y_{v}}_i, {y_{\bm \pi }}_i \right)\) samt antallet af tilfældige træk taget for at nå frem til tilstanden \(D(\mathbf s_i)\). Disse blev  brugt til at opdatere modellen i et Supervised Learning-paradigme, hvor værdinetværket løser et regressionsproblem med \({y_{v}}_i\) som mål og politiknetværket løser et klassifikationsproblem med \({y_{\bm \pi }}_i\) som mål. 
 
 Som kost-funktion på netværkets forudsigelse af værdi og politik
 \(\left(v(\mathbf s_i), \bm \pi (\mathbf s_i)\right)\)
@@ -153,9 +153,9 @@ Kosten til hvert datapunkt består altså en sum af kvadreret afvigelse for regr
 Denne sum blev dog vægtet med \(\nicefrac 1 {D(\mathbf s _i)}\), som giver højere betydning til tilstande, som blev genereret få træk væk fra måltilstanden og lavere vægt til tilstande langt fra målstadiet.
 Dette er indført af \cite{HumansBeGone} for konvergensstabilitet ved at vægte tilstande, hvor udfaldsrummet er mindre komplekst.
 
-Til at minimere denne kostfunktion, blev der brugt minibatchlæring på det dybe neurale netværk med batches på størrelse 50. Optimeringen foregik med algoritmen RMSProp, der tilpasser læringsraten ved at dividere den med et rullende gennemsnit af gradientmagnituden \cite{RMSProp}.
+Til at minimere denne kostfunktion, blev der brugt minibatchlæring på det dybe neurale netværk med batches på størrelse 50. Optimeringen foregik med algoritmen RMSProp, der tilpasser læringsraten ved at dividere den med et rullende gennemsnit af gradientmagnituden \cite{RMSProp}. Til optimeringen blev brugt \texttt{pyTorch} hvis indbyggede \texttt{autograd}-modul foretog denne gradientbaserede parameteropdatering.
 
-Træningen af det dybe neurale netværk foregik ved at udføre autodidaktisk iteration til at generere de \(L\cdot K\) træningseksempler efterfulgt af træning på dette datasæt. 
+Træningen af det dybe neurale netværk foregik ved at udføre autodidaktisk iteration til at generere de \(N\) træningseksempler efterfulgt af træning på dette datasæt. 
 En sådan træning kaldes en \textit{udrulning} af netværket og der blev gennemført 5000 udrulninger.
 \section{Løsningsalgoritme og Monte Carlo Træsøgning}
 Efter at have trænet det neurale netværk anvendtes Monte Carlo Træsøgning (MCTS) for at kunne løse en terning fra en \emph{scrambled} tilstand $s_0$. MCTS er en heuristisk søgealgoritme. Som det ligger i navnet, bygger MCTS et træ af tilstande, hvor roden er $s_0$ og dens børneknuder er de resulterende tilstande efter hver af de 12 mulige handlinger. MCTS er en effektiv søgealgoritme, fordi den sørger for at ekspandere den mest lovende bladknude først. 
