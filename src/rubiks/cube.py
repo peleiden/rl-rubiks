@@ -153,15 +153,15 @@ if __name__ == "__main__":
 			rube = RubiksCube()
 			rube.scramble(n)
 	
-	n = int(1e4)
-	nt = range(1, 5)
-	games = np.empty(12)
+	n = int(1e5)
+	nt = range(1, 7)
+	games = np.empty(24)
 
 	title = f"Scramble bench: {games.size} cubes each with {n} scrambles"
 	bm = Benchmark(test_scramble, "local_benchmarks/scramble_example", title)
-	bm.singlethreaded("", games)
+	bm.singlethreaded("Using old 6 x 8 x 6 representation", games)
 	threads, times = bm.multithreaded(nt, games)
-	bm.plot_mt_results(threads, times, title)
+	bm.plot_mt_results(threads, times, "Using old 6 x 8 x 6 representation")
 
 	
 	
