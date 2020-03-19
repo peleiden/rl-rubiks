@@ -63,17 +63,15 @@ DeepCubeA formår at løse alle testkonfigurationer og generaliserer til andre d
 
 
 \section{Rapportens mål}
-I høj grad at genskabe \cite{HumansBeGone}
-BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN 
-BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN BESKRIVELSE AF VORES MÅL BESKRIVELSE AF VORES METODE BESKRIVELSE AF OPGAVEN 
+Motiveret af Rubiks terning som et miljø for eksperimentation i Reinforcement Learning på svære, kombinatoriske problemer, er det denne rapports mål at udforske mulighederne og begrænsningerne ved at bruge Reinforcement Learning på at løse Rubiks terning.
+Der ønskes altså at skabes en løsningsalgoritme, som ikke bruger problem-specifik viden og derfor selv skal lære problemet at kende og udvikle strategier gennem et Reinforcement Learning-paradigme. 
+Den generelle form til agenten er på baggrund af litteratursammenligningen valgt til at være en grafsøgende agent, der bruger lærte, dybe neurale netværk som heuristik til at afsøge tilstandsrummet frem til løsningen. For at tage udgangspunkt i en forholdsvis direkte løsningsmetode, det et hovedmål for rapporten at genskabe metoderne (men ikke nødvendigvis resultaterne) for agenten \textit{DeepCube} fra \cite{HumansBeGone}.
 
-I denne rapport vil vi undersøge reinforcement learning som et redskab til at løse Rubiks terning.
-Der v med udgangspunkt i gruppeteori.
-Det skal give et bedre overblik over problemets kombinatoriske størrelse og dertil hørende sværhedsgrad.
+Der vil derfor implementeres et dybt neuralt neværk, der både approksimerer en værdi til hver tilstand og den optimale politik hertil. Dette netværk trænes ved brug af en værdiapproksimativ metode kaldet audodidaktisk iteration, der bruger en tidligere version af netværket samt en breddeførst søgning på dybde 1 til at approksimere værdi og politik til hver tilstand.
+Når netværket er færdigtrænet, bruges dette til at gennemføre Monte Carlo træsøgning frem til den færdige tilstand. 
 
-Fra litteraturen hesker der ingen tvivl om, hvorvidt det kan lade sig gøre at løse Rubiks terning med reinforcement learning.
-Vi ønsker derfor at genskabe de anvendte metoder og se, hvor mange tilfældige træk fra en løst terning det er muligt for algoritmen at løse.
-Det vil blive undersøgt for metoder fra litteraturen: Autodidaktisk iteration \cite{HumansBeGone} og A*-søgning med autodidaktisk iteration som heurestik.
+I implementationen af en sådan agent er der en del store udfordringer for konvergens som skyldes problemets kombinatoriske eksplosion, der beskrives i \ref{sec:grouptheory}, hvilket gør det til et fokus for rapporten at optimere forudsætninger for læring og sammenligne detaljer i læringsparadigmer.
+
 
 Konkret er målet med rapporten er at svare på følgende spørgsmål:
 \begin{itemize}
@@ -81,7 +79,11 @@ Konkret er målet med rapporten er at svare på følgende spørgsmål:
 	\item Hvilke forhold er optimale i forhold til en stabil konvergens af værdifunktionen, det neurale netværk, i autodidaktisk iteration? Her tænkes på datarepræsentationen og design af træningsproceduren.
 	\item Hvor tidseffektiv kan løsning og træning af RL i et problem med så stort udfaldsrum være? Her er både fokus på  at lære den bedst mulige værdi-approkismation, så løsningstid minimeres, men også på at softwaredesign i træningsfasen gør det muligt for agenten at udforske så meget som muligt af udfaldsrummet indenfor overskuelig tid.
 \end{itemize}
-I afsnit yada diskuter vi yadda og i afsnit yolo fyrer vi bolo.
+\noindent
+I følgende kapitel \eqref{chp:data} vil datagrundlaget for opgaven blive beskrevet ved først at motivere problemets sværhedsgrad, indføre terminilogi og notation samt vise tilstandsrummets størrelse ved brug af den gruppeteoretiske beskrivelse af terningen. Derefter vil den brugte datastruktur for terningen indføres og afbalancering mellem computationel effektivitet og semantisk passende repræsentation diskuteres.
+
+I kapitel \ref{chp:methods} vil metoderne for løsningen introduceres. Terningemiljøet gennemgås efterfulgt af en introduktion af Reinforcement Learning-opsætningen for problemet. Så introduceres værdi- og politiknetværket samt træningsproceduren, autodidaktisk iteration, samt kostfunktion og optimering for dette. Beskrivelse af løsningsagenten vil så afsluttes med introduktion af Monte Carlo-træsøgningsalgoritmen. Afslutningsvist  vil de gennemførte eksperimenter blive ridset op.
+
 
 
  
