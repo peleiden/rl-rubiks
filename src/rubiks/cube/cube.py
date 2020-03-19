@@ -152,10 +152,10 @@ if __name__ == "__main__":
 	games = [None] * 24
 
 	title = f"Scramble bench: {len(games)} cubes each with {n} scrambles"
-	bm = Benchmark(test_scramble, "local_benchmarks/scramble_fancy", title)
+	bm = Benchmark(test_scramble, "local_benchmarks/scramble_2024", title)
 	bm.singlethreaded("Using 20 x 24 representation", games)
-	threads, times = bm.multithreaded(nt, games)
-	bm.plot_mt_results(threads, times, "Using 20 x 24 representation")
+	threads, times = bm.multithreaded(nt, games, "Using 20 x 24 representation")
+	bm.plot_mt_results(threads, times, f"{title} using 20 x 24 representation")
 
 	
 	
