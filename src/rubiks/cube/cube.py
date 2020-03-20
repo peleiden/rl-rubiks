@@ -12,6 +12,12 @@ def _get_assembled(dtype=np.int8):
 	return tensor_state
 
 class Cube:
+	
+	# NB: If the six sides are represented by an array, the order should be F, B, T, D, L, R
+	# For niceness
+	F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
+	# Corresponding colours
+	colours = ["yellow", "white", "red", "orange", "blue", "green"]
 
 	_assembled = _get_assembled()
 	map_pos, map_neg = get_tensor_map()
@@ -20,36 +26,61 @@ class Cube:
 	for i in range(6): action_space.extend( [(i, True), (i, False)] )
 	action_dim = len(action_space)
 	
-	# The values for stickers on the corners in the order of their priority
-	# The first is the tracked one
-	corner_values = (
-		(0, 2, 4),
-		(0, 3, 4),
-		(0, 3, 5),
-		(0, 2, 5),
-		(1, 2, 4),
-		(1, 3, 4),
-		(1, 3, 5),
-		(1, 2, 5),
+	# Indices in 6x3x3 array
+	# 6x3x3 is based on
+	#   T        2
+	# L F R B  4 0 5 1
+	#   D        3
+	# First -> second -> third has a "right turn"
+	# First in each index also sticker value
+	corner_maps = (
+		((F, 0, 0), (L, 0, 2), (T, 2, 0)),
+		((F, 2, 0), (D, 0, 0), (L, 2, 2)),
+		((F, 2, 2), (R, 2, 0), (D, 0, 2)),
+		((F, 0, 2), (T, 2, 2), (R, 0, 0)),
+		((B, 0, 2), (T, 0, 0), (L, 0, 0)),
+		((B, 2, 2), (L, 2, 0), (D, 2, 0)),
+		((B, 2, 0), (D, 2, 2), (R, 2, 2)),
+		((B, 0, 0), (R, 0, 2), (T, 0, 2)),
 	)
-	side_values = (
-		(0, 2),
-		(0, 4),
-		(0, 3),
-		(0, 5),
-		(2, 4),
-		(3, 4),
-		(3, 5),
-		(2, 5),
-		(1, 2),
-		(1, 4),
-		(1, 3),
-		(1, 5),
+	side_maps = (
+		((F, 0, 1), (T, 2, 1)),
+		((F, 1, 0), (L, 1, 2)),
+		((F, 2, 1), (D, 0, 1)),
+		((F, 1, 2), (R, 1, 0)),
+		((T, 1, 0), (L, 0, 1)),
+		((D, 1, 0), (L, 2, 1)),
+		((D, 1, 2), (R, 2, 1)),
+		((T, 1, 2), (R, 0, 1)),
+		((B, 0, 1), (T, 0, 1)),
+		((B, 1, 2), (L, 0, 1)),
+		((B, 2, 1), (D, 2, 1)),
+		((B, 1, 0), (R, 1, 2)),
 	)
-	
-	# NB: If the six sides are represented by an array, the order should be F, B, T, D, L, R
-	# Corresponding colours
-	colours = ["yellow", "white", "red", "orange", "blue", "green"]
+	# corner_values = (
+	# 	(0, 2, 4),
+	# 	(0, 3, 4),
+	# 	(0, 3, 5),
+	# 	(0, 2, 5),
+	# 	(1, 2, 4),
+	# 	(1, 3, 4),
+	# 	(1, 3, 5),
+	# 	(1, 2, 5),
+	# )
+	# side_values = (
+	# 	(0, 2),
+	# 	(0, 4),
+	# 	(0, 3),
+	# 	(0, 5),
+	# 	(2, 4),
+	# 	(3, 4),
+	# 	(3, 5),
+	# 	(2, 5),
+	# 	(1, 2),
+	# 	(1, 4),
+	# 	(1, 3),
+	# 	(1, 5),
+	# )
 	
 	@classmethod
 	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool):
@@ -109,53 +140,80 @@ class Cube:
 		oh[idcs] = 1
 		return oh
 	
-	@staticmethod
-	def as633(state: np.ndarray):
+	@classmethod
+	def as633(cls, state: np.ndarray):
 		"""
 		Order: F, B, T, D, L, R
 		"""
-		state633 = (np.ones((3, 3, 6)) * np.arange(6)).transpose(2, 1, 0)
+		# Starts with assembled state
+		state633 = (np.ones((3, 3, 6)) * np.arange(6)).transpose(2, 1, 0).astype(int)
 		for i in range(8):
-			pos = np.floor(state[i] / 3)
-			orientation = state[i] // 3
-			# TODO: Dis gonna suck
-			# Probably need to map each position to all stickers, so huge map
+			# Inserts values for corner i in position pos
+			pos = state[i] // 3
+			orientation = state[i] % 3
+			values = np.roll([x[0] for x in cls.corner_maps[i]], orientation)
+			state633[cls.corner_maps[pos][0]] = values[0]
+			state633[cls.corner_maps[pos][1]] = values[1]
+			state633[cls.corner_maps[pos][2]] = values[2]
 		for i in range(12):
-			pos = np.floor(state[i] / 2)
-			orientation = state[i] // 2
+			# Inserts values for side i in position pos
+			pos = state[i+8] // 2
+			orientation = state[i+8] % 2
+			values = np.roll([x[0] for x in cls.side_maps[i]], orientation)
+			state633[cls.side_maps[pos][0]] = values[0]
+			state633[cls.side_maps[pos][1]] = values[1]
 		return state633
 	
-	@staticmethod
-	def stringify(state: np.ndarray):
-		# TODO: Fancy print
-		return str(state)
+	@classmethod
+	def stringify(cls, state: np.ndarray):
+		state633 = cls.as633(state)
+		stringarr = np.empty((9, 12), dtype=str)
+		stringarr[...] = " "
+		simple = np.array([
+			[-1, cls.T, -1, -1],
+			[cls.L, cls.F, cls.R, cls.B],
+			[-1, cls.D, -1, -1],
+		])
+		for i in range(6):
+			pos = tuple(int(x) for x in np.where(simple==i))
+			stringarr[pos[0]*3 : pos[0]*3+3, pos[1]*3 : pos[1]*3+3] = state633[i].astype(str)
+		string = "\n".join([" ".join([x for x in y]) for y in stringarr])
+		return string
 
 if __name__ == "__main__":
 	
 	state = Cube.get_assembled()
-	print(state)
-	state = Cube.rotate(state, 0, False)
-	print(state)
+	# print(Cube.as633(state))
+	print(Cube.stringify(state))
+	print()
+	state = Cube.rotate(state, 0, True)
+	# print(Cube.as633(state))
+	print(Cube.stringify(state))
+	print()
+	# state = Cube.rotate(state, 0, False)
+	# print(Cube.as633(state))
+	# print()
+	
 	
 	# Benchmarking example
-	from src.rubiks.utils.benchmark import Benchmark
-	def test_scramble(games):
-		# Function is weird, as it is designed to work for both single and multithreaded benchmarks
-		if hasattr(games, "__iter__"):
-			for _ in games:
-				Cube.as_oh(Cube.scramble(n)[0])
-		else:
-			Cube.as_oh(Cube.scramble(n)[0])
-
-	n = int(1e5)
-	nt = range(1, 7)
-	games = [None] * 24
-
-	title = f"Scramble bench: {len(games)} cubes each with {n} scrambles"
-	bm = Benchmark(test_scramble, "local_benchmarks/scramble_2024", title)
-	bm.singlethreaded("Using 20 x 24 representation", games)
-	threads, times = bm.multithreaded(nt, games, "Using 20 x 24 representation")
-	bm.plot_mt_results(threads, times, f"{title} using 20 x 24")
+	# from src.rubiks.utils.benchmark import Benchmark
+	# def test_scramble(games):
+	# 	# Function is weird, as it is designed to work for both single and multithreaded benchmarks
+	# 	if hasattr(games, "__iter__"):
+	# 		for _ in games:
+	# 			Cube.as_oh(Cube.scramble(n)[0])
+	# 	else:
+	# 		Cube.as_oh(Cube.scramble(n)[0])
+	#
+	# n = int(1e5)
+	# nt = range(1, 7)
+	# games = [None] * 24
+	#
+	# title = f"Scramble bench: {len(games)} cubes each with {n} scrambles"
+	# bm = Benchmark(test_scramble, "local_benchmarks/scramble_2024", title)
+	# bm.singlethreaded("Using 20 x 24 representation", games)
+	# threads, times = bm.multithreaded(nt, games, "Using 20 x 24 representation")
+	# bm.plot_mt_results(threads, times, f"{title} using 20 x 24")
 
 	
 	

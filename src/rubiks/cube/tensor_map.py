@@ -31,43 +31,37 @@ class SimpleState:
 			   f"Side orientations:   {[int(x) for x in self.side_orientations]}"
 
 @dataclass
-class TensorMap:
+class ActionMap:
 	corner_map: tuple  # Corner mapping in positive revolution
 	side_map: tuple  # Side mapping in positive revolution
 	corner_static: int  # Corner orientation static - other two switch
 	side_switch: bool  # Side orientation switch
 
 class Actions:
-	F = TensorMap((0, 1, 2, 3, 0),
+	F = ActionMap((0, 1, 2, 3, 0),
 				  (0, 1, 2, 3, 0),
 				  0,
-				  False,
-				  )
-	B = TensorMap((4, 7, 6, 5, 4),
+				  False)
+	B = ActionMap((4, 7, 6, 5, 4),
 				  (8, 11, 10, 9, 8),
 				  0,
-				  False,
-				  )
-	T = TensorMap((0, 3, 7, 4, 0),
+				  False)
+	T = ActionMap((0, 3, 7, 4, 0),
 				  (0, 7, 8, 4, 0),
 				  1,
-				  True,
-				  )
-	D = TensorMap((1, 5, 6, 2, 1),
+				  True)
+	D = ActionMap((1, 5, 6, 2, 1),
 				  (2, 5, 10, 6, 2),
 				  1,
-				  True,
-				  )
-	L = TensorMap((0, 4, 5, 1, 0),
+				  True)
+	L = ActionMap((0, 4, 5, 1, 0),
 				  (1, 4, 9, 5, 1),
 				  2,
-				  False,
-				  )
-	R = TensorMap((7, 3, 2, 6, 7),
+				  False)
+	R = ActionMap((7, 3, 2, 6, 7),
 				  (3, 6, 11, 7, 3),
 				  2,
-				  False,
-				  )
+				  False)
 
 
 def get_corner_pos(pos: int, orientation: int):
@@ -102,7 +96,7 @@ def get_tensor_map():
 				neg[0, to_idx] = from_idx - to_idx
 			# Mappings for sides
 			for k in range(2):
-				new_orientation = k if action.side_switch else int(not k)
+				new_orientation = k if not action.side_switch else int(not k)
 				from_idx = get_side_pos(action.side_map[j], k)
 				to_idx = get_side_pos(action.side_map[j+1], new_orientation)
 				pos[1, from_idx] = to_idx - from_idx
