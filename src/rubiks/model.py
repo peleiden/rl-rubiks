@@ -48,7 +48,7 @@ class Model(nn.Module):
 		self.config = config
 		self.log = logger
 
-		shared_thiccness = [288, 4096, 2048]
+		shared_thiccness = [480, 4096, 2048]
 		policy_thiccness = [shared_thiccness[-1], 512, 12]
 		value_thiccness = [shared_thiccness[-1], 512, 1]
 		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))

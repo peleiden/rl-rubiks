@@ -1,0 +1,118 @@
+import numpy as np
+from dataclasses import dataclass
+
+# Midlertidig dokumentation
+# Hver cubie har en position, 0-7 for hjørner og 0-11 for sider
+# Hver rotation mapper hver relevant position til en anden
+# Derudover mappes orientering
+# Den sticker på cubien, der holdes øje med, har en orientering 0-2 for hjørner og 0-1 for sider
+# Tallet angiver en "prioritet". Den side, der har flest stickers i løst tilstand, har højst prioritet
+# F/B starter med 8 hver, T_D med 2 hver og L/R med 0 hver
+# På grund af symmetrien vil der aldrig være overlap
+# Alle maps er angivet for positiv omløbsretning
+# Set forfra
+# Forreste lag | Midterste lag | Bagerste lag
+# h0 s0 h3     | s4    s7      | h4 s8  h7
+# s1    s3     |               | s9     s11
+# h1 s2 h2     | s5    s6      | h5 s10 h6
+# TODO: Human readable version
+
+class SimpleState:
+	# Used for representation in the readable Actions maps
+	# Initialized in solved state
+	corners = np.arange(8)
+	corner_orientations = np.zeros(8)
+	sides = np.arange(12)
+	side_orientations = np.zeros(12)
+	def __str__(self):
+		return f"Corners:             {[int(x) for x in self.corners]}\n" + \
+			   f"Corner orientations: {[int(x) for x in self.corner_orientations]}\n" + \
+			   f"Sides:               {[int(x) for x in self.sides]}\n" + \
+			   f"Side orientations:   {[int(x) for x in self.side_orientations]}"
+
+@dataclass
+class ActionMap:
+	corner_map: tuple  # Corner mapping in positive revolution
+	side_map: tuple  # Side mapping in positive revolution
+	corner_static: int  # Corner orientation static - other two switch
+	side_switch: bool  # Side orientation switch
+
+class Actions:
+	F = ActionMap((0, 1, 2, 3, 0),
+				  (0, 1, 2, 3, 0),
+				  0,
+				  False)
+	B = ActionMap((4, 7, 6, 5, 4),
+				  (8, 11, 10, 9, 8),
+				  0,
+				  False)
+	T = ActionMap((0, 3, 7, 4, 0),
+				  (0, 7, 8, 4, 0),
+				  1,
+				  True)
+	D = ActionMap((1, 5, 6, 2, 1),
+				  (2, 5, 10, 6, 2),
+				  1,
+				  True)
+	L = ActionMap((0, 4, 5, 1, 0),
+				  (1, 4, 9, 5, 1),
+				  2,
+				  False)
+	R = ActionMap((7, 3, 2, 6, 7),
+				  (3, 6, 11, 7, 3),
+				  2,
+				  False)
+
+
+def get_corner_pos(pos: int, orientation: int):
+	return pos * 3 + orientation
+
+def get_side_pos(pos: int, orientation: int):
+	return pos * 2 + orientation
+
+def get_tensor_map():
+	# Returns two maps
+	# The first is positive revolution, second is negative
+	# Each is a six long list containg 2x24 mapping tensors
+	# Order is F, B, T, D, L, R
+	# Row one for corners [:8] and row two for sides [8:]
+	# Value at index i should be added to i in state representation
+	actions = [Actions.F, Actions.B, Actions.T, Actions.D, Actions.L, Actions.R]
+	map_pos = list()
+	map_neg = list()
+	# Mappings for each action
+	for i in range(6):
+		action = actions[i]
+		pos = np.zeros((2, 24), dtype=np.int8)
+		neg = np.zeros((2, 24), dtype=np.int8)
+		# Mappings for each corner/side cubies
+		for j in range(4):
+			# Mappings for corners
+			for k in range(3):
+				new_orientation = k if k == action.corner_static else next(iter({0, 1, 2} - {action.corner_static, k}))
+				from_idx = get_corner_pos(action.corner_map[j], k)
+				to_idx = get_corner_pos(action.corner_map[j+1], new_orientation)
+				pos[0, from_idx] = to_idx - from_idx
+				neg[0, to_idx] = from_idx - to_idx
+			# Mappings for sides
+			for k in range(2):
+				new_orientation = k if not action.side_switch else int(not k)
+				from_idx = get_side_pos(action.side_map[j], k)
+				to_idx = get_side_pos(action.side_map[j+1], new_orientation)
+				pos[1, from_idx] = to_idx - from_idx
+				neg[1, to_idx] = from_idx - to_idx
+		map_pos.append(pos)
+		map_neg.append(neg)
+	
+	return map_pos, map_neg
+
+if __name__ == "__main__":
+	map_pos, map_neg = get_tensor_map()
+	for pos, neg in zip(map_pos, map_neg):
+		print("".join([f"{x: 4}" for x in pos[0]]))
+		print("".join([f"{x: 4}" for x in pos[1]]))
+		print("".join([f"{x: 4}" for x in neg[0]]))
+		print("".join([f"{x: 4}" for x in neg[1]]))
+		print()
+
+

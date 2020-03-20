@@ -1,15 +1,15 @@
 import numpy as np
 
-from src.rubiks.cube import RubiksCube
+from src.rubiks.cube.cube import Cube
 
 
 
 class Agent:
-	action_space, action_dim = RubiksCube.action_space, RubiksCube.action_dim
+	action_space, action_dim = Cube.action_space, Cube.action_dim
 
 	def __init__(self, model_needed: bool = True):
 		self.model_needed = model_needed
-		self.model_env = RubiksCube if model_needed else None
+		self.model_env = Cube if model_needed else None
 
 	def act(self, state: np.array):
 		raise NotImplementedError
