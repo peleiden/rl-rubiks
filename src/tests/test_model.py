@@ -4,8 +4,7 @@ import torch
 
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.utils.logger import NullLogger
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from src.rubiks.utils.device import cpu, gpu
 
 def test_model_config():
 	cf = ModelConfig(torch.nn.ReLU())
@@ -20,10 +19,10 @@ class TestModel:
 	
 	def test_model(self):
 		config = ModelConfig()
-		model = Model(config)
-		assert next(model.parameters()).device.type == device.type
+		model = Model(config).to(gpu)
+		assert next(model.parameters()).device.type == gpu.type
 		model.eval()
-		x = torch.randn(2, 288)
+		x = torch.randn(2, 480).to(gpu)
 		model(x)
 		model.train()
 		model(x)
@@ -32,13 +31,13 @@ class TestModel:
 		torch.manual_seed(42)
 		
 		config = ModelConfig()
-		model = Model(config, logger=NullLogger())
+		model = Model(config, logger=NullLogger()).to(gpu)
 		model_dir = "local_tests/local_model_test"
 		model.save(model_dir)
 		assert os.path.exists(f"{model_dir}/config.json")
 		assert os.path.exists(f"{model_dir}/model.pt")
 		
 		model = Model.load(model_dir)
-		assert next(model.parameters()).device.type == device.type
+		assert next(model.parameters()).device.type == gpu.type
 		
 
