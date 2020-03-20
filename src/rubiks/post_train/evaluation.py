@@ -25,10 +25,9 @@ class Evaluator:
 		self.tt = TickTock()
 		self.log = logger
 		self.verbose = verbose
-		if scrambling_procedure is not None:
-			Cube.scrambling_procedure = scrambling_procedure
+		self.scrambling_procedure = scrambling_procedure or Cube.scrambling_procedure
 
-		self.log(f"Creating evaluator: Scrambling procedure: {Cube.scrambling_procedure}, max_moves: {self.max_moves}, agent: {self.agent} ")
+		self.log(f"Creating evaluator: Scrambling procedure: {self.scrambling_procedure}, max_moves: {self.max_moves}, agent: {self.agent} ")
 
 	
 	def eval(self, N_games: int, n_threads: int = cpu_count()):

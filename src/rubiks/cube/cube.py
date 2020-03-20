@@ -26,6 +26,11 @@ class Cube:
 	for i in range(6): action_space.extend( [(i, True), (i, False)] )
 	action_dim = len(action_space)
 	
+	# Scrambling procedure saved as dict for reproducability
+	scrambling_procedure = {
+		'N_scrambles':	(5, 10),  # Tuple for scrambling random # moves in uniform [low, high[
+	}
+	
 	# Indices in 6x3x3 array
 	# 6x3x3 is based on
 	#   T        2
@@ -57,30 +62,6 @@ class Cube:
 		((B, 2, 1), (D, 2, 1)),
 		((B, 1, 0), (R, 1, 2)),
 	)
-	# corner_values = (
-	# 	(0, 2, 4),
-	# 	(0, 3, 4),
-	# 	(0, 3, 5),
-	# 	(0, 2, 5),
-	# 	(1, 2, 4),
-	# 	(1, 3, 4),
-	# 	(1, 3, 5),
-	# 	(1, 2, 5),
-	# )
-	# side_values = (
-	# 	(0, 2),
-	# 	(0, 4),
-	# 	(0, 3),
-	# 	(0, 5),
-	# 	(2, 4),
-	# 	(3, 4),
-	# 	(3, 5),
-	# 	(2, 5),
-	# 	(1, 2),
-	# 	(1, 4),
-	# 	(1, 3),
-	# 	(1, 5),
-	# )
 	
 	@classmethod
 	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool):
@@ -88,8 +69,6 @@ class Cube:
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
-		
-		assert current_state.size == 20
 
 		altered_state = current_state.copy()
 		map_ = cls.map_pos[face] if pos_rev else cls.map_neg[face]
@@ -110,18 +89,19 @@ class Cube:
 		
 		return state, faces, dirs
 	
-	def sequence_scrambler(self, n: int):
+	@classmethod
+	def sequence_scrambler(cls, n: int):
 		"""
 		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
 		"""
-		scrambled_states = np.empty((n, *self._assembled.shape))
+		scrambled_states = np.empty((n, *cls._assembled.shape))
 
 		faces = np.random.randint(6, size = (n, ))
 		dirs = np.random.randint(2, size = (n, )).astype(bool)
 
-		scrambled_states[0] = self._assembled
+		scrambled_states[0] = cls._assembled
 		for i, face, d in zip(range(n-1), faces, dirs):
-			scrambled_states[i+1] = self.rotate(scrambled_states[i], face, d)
+			scrambled_states[i+1] = cls.rotate(scrambled_states[i], face, d)
 		return scrambled_states
 	
 	@classmethod

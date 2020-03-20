@@ -11,10 +11,41 @@ class TestRubiksCube:
 		assert Cube.is_assembled(state)
 		assert Cube._assembled.shape == (20,)
 		
-	def test_move(self):
+	def test_cube(self):
+		# Tests that stringify and by extensions as633 works on assembled
 		state = Cube.get_assembled()
-		moves = ((0, 1), (0, 0), (0, 1), (1, 1), (2, 0), (3, 0), (3, 1), (2, 1), (1, 0), (0, 0))
-		assembled = (False, True, False, False, False, False, False, False, False, True)
+		assert Cube.stringify(state) == "\n".join([
+			"      2 2 2            ",
+			"      2 2 2            ",
+			"      2 2 2            ",
+			"4 4 4 0 0 0 5 5 5 1 1 1",
+			"4 4 4 0 0 0 5 5 5 1 1 1",
+			"4 4 4 0 0 0 5 5 5 1 1 1",
+			"      3 3 3            ",
+			"      3 3 3            ",
+			"      3 3 3            ",
+		])
+		# Performs moves and checks if are assembled/not assembled as expected
+		moves = ((0, 1), (0, 0), (0, 1), (1, 1), (2, 0), (3, 0))
+		assembled = (False, True, False, False, False, False)
+		for m, a in zip(moves, assembled):
+			state = Cube.rotate(state, *m)
+			assert a == Cube.is_assembled(state)
+		# TODO: Test that state is in expected state
+		# assert Cube.stringify(state) == "\n".join([
+		# 	"      2 2 2            ",
+		# 	"      2 2 2            ",
+		# 	"      2 2 2            ",
+		# 	"4 4 4 0 0 0 5 5 5 1 1 1",
+		# 	"4 4 4 0 0 0 5 5 5 1 1 1",
+		# 	"4 4 4 0 0 0 5 5 5 1 1 1",
+		# 	"      3 3 3            ",
+		# 	"      3 3 3            ",
+		# 	"      3 3 3            ",
+		# ])
+		# Tests more moves
+		moves = ((3, 1), (2, 1), (1, 0), (0, 0))
+		assembled = (False, False, False, True)
 		for m, a in zip(moves, assembled):
 			state = Cube.rotate(state, *m)
 			assert a == Cube.is_assembled(state)
@@ -36,7 +67,7 @@ class TestRubiksCube:
 			target633.append(np.ones((3, 3)) * i)
 		target633 = np.array(target633)
 		assert (state == target633).all()
-		# TODO: Test for more rotated versions
+		
 	# def test_reset(self):
 	# 	r = Cube()
 	# 	state = get_assembled()
