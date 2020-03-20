@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from src.rubiks.cube.tensor_map import SimpleState, get_corner_pos, get_side_pos, get_tensor_map
 
-def _get_assembled(dtype=np.int8):
+def _get_assembled(dtype):
 	assembled_state = SimpleState()
 	tensor_state = np.empty(20, dtype=dtype)
 	for i in range(8):
@@ -19,7 +19,8 @@ class Cube:
 	# Corresponding colours
 	colours = ["yellow", "white", "red", "orange", "blue", "green"]
 
-	_assembled = _get_assembled()
+	dtype = np.int8  # Data type used for internal representation
+	assembled = _get_assembled(dtype)  # READ ONLY!!! Use Cube.get_assembled() if speed is not critical
 	map_pos, map_neg = get_tensor_map()
 
 	action_space = list()
@@ -82,7 +83,7 @@ class Cube:
 
 		faces = np.random.randint(6, size = (n, ))
 		dirs = np.random.randint(2, size = (n, )).astype(bool)
-		state = cls._assembled.copy()
+		state = cls.assembled.copy()
 
 		for face, d in zip(faces, dirs):
 			state = cls.rotate(state, face, d)  # Uses rotate instead of move as checking for victory is not needed here
@@ -94,30 +95,33 @@ class Cube:
 		"""
 		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
 		"""
-		scrambled_states = np.empty((n, *cls._assembled.shape))
+		scrambled_states = np.empty((n, *cls.assembled.shape), dtype=cls.dtype)
 
 		faces = np.random.randint(6, size = (n, ))
 		dirs = np.random.randint(2, size = (n, )).astype(bool)
 
-		scrambled_states[0] = cls._assembled
+		scrambled_states[0] = cls.assembled
 		for i, face, d in zip(range(n-1), faces, dirs):
 			scrambled_states[i+1] = cls.rotate(scrambled_states[i], face, d)
 		return scrambled_states
 	
 	@classmethod
 	def get_assembled(cls):
-		return cls._assembled.copy()
+		return cls.assembled.copy()
 
 	@classmethod
 	def is_assembled(cls, state: np.ndarray):
-		return (state == cls._assembled).all()
+		return (state == cls.assembled).all()
 	
 	@classmethod
-	def as_oh(cls, state: np.ndarray):
-		# Takes in a state and returns a 480 long one-hot tensor on the given device
-		oh = torch.zeros(480)
-		idcs = np.arange(20) * 24 + state
-		oh[idcs] = 1
+	def as_oh(cls, states: np.ndarray):
+		# Takes in n states and returns an n x 480 one-hot tensor
+		if len(states.shape) == 1:
+			states = np.array([states])
+		oh = torch.zeros(states.shape[0], 480).squeeze()
+		idcs = np.array([np.arange(20) * 24 + state for state in states]).squeeze()
+		for i in range(len(idcs)):
+			oh[i, idcs[i]] = 1
 		return oh
 	
 	@classmethod

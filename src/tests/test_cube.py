@@ -9,7 +9,7 @@ class TestRubiksCube:
 	def test_init(self):
 		state = Cube.get_assembled()
 		assert Cube.is_assembled(state)
-		assert Cube._assembled.shape == (20,)
+		assert Cube.assembled.shape == (20,)
 		
 	def test_cube(self):
 		# Tests that stringify and by extensions as633 works on assembled

@@ -8,7 +8,7 @@ from src.rubiks.cube.cube import Cube
 from src.rubiks.post_train.agents import DeepCube
 from src.rubiks.post_train.evaluation import Evaluator
 from src.rubiks.utils.logger import Logger, NullLogger
-
+from src.rubiks.utils.device import cpu, gpu
 
 class Train:
 	
@@ -20,15 +20,18 @@ class Train:
 	eval_rewards = list()
 
 
-	def __init__(self, 
-			optim_fn				= torch.optim.RMSprop,
-			lr: float				= 1e-5,
-			policy_criterion		= torch.nn.CrossEntropyLoss,
-			value_criterion			= torch.nn.MSELoss,
-			logger: Logger			= NullLogger(),
-			eval_scrambling: dict 	= None,
-			eval_max_moves: int		= None,
+	def __init__(self,
+				 device,
+				 optim_fn				= torch.optim.RMSprop,
+				 lr: float				= 1e-5,
+				 policy_criterion		= torch.nn.CrossEntropyLoss,
+				 value_criterion		= torch.nn.MSELoss,
+				 logger: Logger			= NullLogger(),
+				 eval_scrambling: dict 	= None,
+				 eval_max_moves: int	= None,
 		):
+		
+		self.device = device
 
 		self.optim 	= optim_fn
 		self.lr		= lr
@@ -69,10 +72,9 @@ class Train:
 			torch.cuda.empty_cache()
 
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
-			training_data, value_targets, policy_targets, loss_weights = torch.from_numpy(training_data),\
-																		 torch.from_numpy(value_targets),\
-																		 torch.from_numpy(policy_targets),\
-																		 torch.from_numpy(loss_weights)
+			value_targets, policy_targets, loss_weights = torch.from_numpy(value_targets).to(self.device),\
+														  torch.from_numpy(policy_targets).to(self.device),\
+														  torch.from_numpy(loss_weights).to(self.device)
 			net.train()
 			batch_losses = list()
 			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
@@ -106,52 +108,48 @@ class Train:
 		
 		return net
 
-
-	@staticmethod 
-	def ADI_traindata(net, games: int, sequence_length: int):
+	def ADI_traindata(self, net, games: int, sequence_length: int):
 		"""
 		Implements Autodidactic Iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
 
-		Returns games * sequence_length number of observations divided in three arrays:
+		Returns games * sequence_length number of observations divided in four arrays:
 
-		np.array: `states` contains the rubiks state for each data point
+		torch.tensor: `states` contains the rubiks state for each data point
 		np.arrays: `policy_targets` and `value_targets` contains optimal value and policy targets for each training point
 		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
 		"""
 		with torch.no_grad():
 			# TODO Parallize and consider cpu/gpu conversion (probably move net to cpu and parallelize)
-			net.eval() 
-			cube = Cube()
+			net.eval()
 
 			N_data = games * sequence_length
-			states = np.empty(( N_data,  *cube._assembled.shape), dtype=np.float32)
+			states = torch.empty(N_data, 480).to(self.device).float()
 			policy_targets, value_targets = np.empty(N_data, dtype=np.int64), np.empty(games * sequence_length, dtype=np.float32)
 			loss_weights = np.empty(N_data)
 
 			# Plays a number of games
 			for i in range(games):
-				scrambled_cubes = cube.sequence_scrambler(sequence_length)
-				states[i*sequence_length:i*sequence_length + sequence_length] = scrambled_cubes
+				scrambled_cubes = Cube.sequence_scrambler(sequence_length)
+				states[i*sequence_length:i*sequence_length + sequence_length] = Cube.as_oh(scrambled_cubes).to(self.device)
 				
 				# For all states in the scrambled game
 				for j, scrambled_state in enumerate(scrambled_cubes):
 
 					# Explore 12 substates
-					substates = np.empty((cube.action_dim, *cube._assembled.shape))
-					for k, action in enumerate(cube.action_space): 
-						substates[k] = cube.rotate(scrambled_state, *action)
-					
-					rewards = torch.Tensor([1 if (substate == cube._assembled).all() else -1 for substate in substates])
-					substates = torch.Tensor( substates.reshape(cube.action_dim, -1) ) #TODO: Handle device
+					substates = np.empty((Cube.action_dim, *Cube.assembled.shape))
+					for k, action in enumerate(Cube.action_space):
+						substates[k] = Cube.rotate(scrambled_state, *action)
+					rewards = torch.Tensor([1 if Cube.is_assembled(substate) else -1 for substate in substates]).to(self.device)
+					substates_oh = Cube.as_oh(substates).to(self.device)
 
-					values = net(substates, policy=False, value=True).squeeze()
+					values = net(substates_oh, policy=False, value=True).squeeze()
 					values += rewards				
 
 					policy = values.argmax()
 
-					current_idx = i*sequence_length + j
+					current_idx = i * sequence_length + j
 					policy_targets[current_idx] = policy
-					value_targets[current_idx] = values[policy] if not (scrambled_state == cube._assembled).all() else 0  #Max Lapan convergence fix
+					value_targets[current_idx] = values[policy] if not Cube.is_assembled(scrambled_state) else 0  #Max Lapan convergence fix
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
 
@@ -205,9 +203,9 @@ if __name__ == "__main__":
 	modelconfig = ModelConfig(
 		batchnorm=False,
 	)
-	model = Model(modelconfig, logger=train_logger)
+	model = Model(modelconfig, logger=train_logger).to(gpu)
 
-	train = Train(logger=train_logger, lr=1e-5)
+	train = Train(gpu, logger=train_logger, lr=1e-5)
 	model = train.train(model, 40, batch_size=50, rollout_games=100, rollout_depth=20, evaluation_interval=False)
 
 	train.plot_training("local_train/local_train", show=True)
