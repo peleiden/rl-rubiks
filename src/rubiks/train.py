@@ -72,9 +72,10 @@ class Train:
 			torch.cuda.empty_cache()
 
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
-			value_targets, policy_targets, loss_weights = torch.from_numpy(value_targets).to(self.device),\
-														  torch.from_numpy(policy_targets).to(self.device),\
-														  torch.from_numpy(loss_weights).to(self.device)
+			training_data, value_targets, policy_targets, loss_weights = training_data.to(self.device),\
+																		 torch.from_numpy(value_targets).to(self.device),\
+																		 torch.from_numpy(policy_targets).to(self.device),\
+																		 torch.from_numpy(loss_weights).to(self.device)
 			net.train()
 			batch_losses = list()
 			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
@@ -123,14 +124,14 @@ class Train:
 			net.eval()
 
 			N_data = games * sequence_length
-			states = torch.empty(N_data, 480).to(self.device).float()
+			states = torch.empty(N_data, 480).float()
 			policy_targets, value_targets = np.empty(N_data, dtype=np.int64), np.empty(games * sequence_length, dtype=np.float32)
 			loss_weights = np.empty(N_data)
 
 			# Plays a number of games
 			for i in range(games):
 				scrambled_cubes = Cube.sequence_scrambler(sequence_length)
-				states[i*sequence_length:i*sequence_length + sequence_length] = Cube.as_oh(scrambled_cubes).to(self.device)
+				states[i*sequence_length:i*sequence_length + sequence_length] = Cube.as_oh(scrambled_cubes)
 				
 				# For all states in the scrambled game
 				for j, scrambled_state in enumerate(scrambled_cubes):
@@ -139,10 +140,10 @@ class Train:
 					substates = np.empty((Cube.action_dim, *Cube.assembled.shape))
 					for k, action in enumerate(Cube.action_space):
 						substates[k] = Cube.rotate(scrambled_state, *action)
-					rewards = torch.Tensor([1 if Cube.is_assembled(substate) else -1 for substate in substates]).to(self.device)
+					rewards = torch.Tensor([1 if Cube.is_assembled(substate) else -1 for substate in substates])
 					substates_oh = Cube.as_oh(substates).to(self.device)
 
-					values = net(substates_oh, policy=False, value=True).squeeze()
+					values = net(substates_oh, policy=False, value=True).squeeze().cpu()
 					values += rewards				
 
 					policy = values.argmax()
@@ -152,8 +153,7 @@ class Train:
 					value_targets[current_idx] = values[policy] if not Cube.is_assembled(scrambled_state) else 0  #Max Lapan convergence fix
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
-
-		states = states.reshape(N_data, -1)
+		
 		return states, policy_targets, value_targets, loss_weights
 
 	def plot_training(self, save_dir: str, title="", show=False):
@@ -206,6 +206,6 @@ if __name__ == "__main__":
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 
 	train = Train(gpu, logger=train_logger, lr=1e-5)
-	model = train.train(model, 40, batch_size=50, rollout_games=100, rollout_depth=20, evaluation_interval=False)
+	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
 
-	train.plot_training("local_train/local_train", show=True)
+	train.plot_training("local_train", show=True)
