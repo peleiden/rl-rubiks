@@ -29,7 +29,7 @@ class Cube:
 
 	dtype = np.int8  # Data type used for internal representation
 	assembled = _get_assembled(dtype)  # READ ONLY!!! Use Cube.get_assembled() if speed is not critical
-	map_pos, map_neg = get_tensor_map()
+	map_pos, map_neg = get_tensor_map(dtype)
 	corner_633map, side_633map = get_633maps(F, B, T, D, L, R)
 
 	action_space = list()

@@ -105,7 +105,7 @@ def get_corner_pos(pos: int, orientation: int):
 def get_side_pos(pos: int, orientation: int):
 	return pos * 2 + orientation
 
-def get_tensor_map():
+def get_tensor_map(dtype):
 	# Returns two maps
 	# The first is positive revolution, second is negative
 	# Each is a six long list containg 2x24 mapping tensors
@@ -118,8 +118,8 @@ def get_tensor_map():
 	# Mappings for each action
 	for i in range(6):
 		action = actions[i]
-		pos = np.zeros((2, 24), dtype=np.int8)
-		neg = np.zeros((2, 24), dtype=np.int8)
+		pos = np.zeros((2, 24), dtype=dtype)
+		neg = np.zeros((2, 24), dtype=dtype)
 		# Mappings for each corner/side cubies
 		for j in range(4):
 			# Mappings for corners
