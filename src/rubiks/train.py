@@ -179,6 +179,8 @@ class Train:
 
 		fig.tight_layout()
 		plt.title(title if title else "Training")
+		plt.semilogy()
+		plt.grid(True)
 		
 		os.makedirs(save_dir, exist_ok=True)
 		plt.savefig(os.path.join(save_dir, "training.png"))
@@ -198,6 +200,7 @@ class Train:
 
 
 if __name__ == "__main__":
+	import sys
 	from src.rubiks.model import Model, ModelConfig
 	train_logger = Logger("local_train/training_loop.log", "Training loop")
 
@@ -209,4 +212,4 @@ if __name__ == "__main__":
 	train = Train(gpu, logger=train_logger, lr=1e-5)
 	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
 
-	train.plot_training("local_train", show=True)
+	train.plot_training("local_train/with_fix", show=False)
