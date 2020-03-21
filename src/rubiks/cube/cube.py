@@ -112,6 +112,10 @@ class Cube:
 			# Inserts values for corner i in position pos
 			pos = state[i] // 3
 			orientation = state[i] % 3
+			# Mapping should probably be smarter
+			# For these corners, "right turn" order is 0 2 1 instead of 0 1 2, so orientation is messed up without this fix
+			if pos in [0, 2, 5, 7]:
+				orientation *= -1
 			values = np.roll([x[0] for x in cls.corner_633map[i]], orientation)
 			state633[cls.corner_633map[pos][0]] = values[0]
 			state633[cls.corner_633map[pos][1]] = values[1]
@@ -145,12 +149,12 @@ if __name__ == "__main__":
 	
 	state = Cube.get_assembled()
 	# print(Cube.as633(state))
+	# print(Cube.stringify(state))
+	# print()
+	state = Cube.rotate(state, 2, True)
+	Cube.as633(state)
 	print(Cube.stringify(state))
-	print()
-	state = Cube.rotate(state, 0, True)
-	# print(Cube.as633(state))
-	print(Cube.stringify(state))
-	print()
+	# print()
 	# state = Cube.rotate(state, 0, False)
 	# print(Cube.as633(state))
 	# print()
