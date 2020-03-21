@@ -1,6 +1,6 @@
 # Hacky import code needed to import from sibling dir
 from src.rubiks.cube.cube import Cube
-from src.rubiks.cube.tensor_maps import SimpleState, get_corner_pos, get_side_pos
+from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 
 import numpy as np
 import torch

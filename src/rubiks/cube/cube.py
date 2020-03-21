@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from src.rubiks.cube.tensor_maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
+from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
 
 def _get_assembled(dtype):
 	assembled_state = SimpleState()
@@ -18,6 +18,14 @@ class Cube:
 	F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
 	# Corresponding colours
 	colours = ["red", "orange", "white", "yellow", "green", "blue"]
+	rgba = [
+		(1, 0, 0, 1),
+		(1, 3/5, 0, 1),
+		(1, 1, 1, 1),
+		(1, 1, 0, 1),
+		(0, 1, 0, 1),
+		(0, 0, 1, 1),
+	]
 
 	dtype = np.int8  # Data type used for internal representation
 	assembled = _get_assembled(dtype)  # READ ONLY!!! Use Cube.get_assembled() if speed is not critical
