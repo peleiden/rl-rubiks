@@ -15,7 +15,42 @@ from dataclasses import dataclass
 # h0 s0 h3     | s4    s7      | h4 s8  h7
 # s1    s3     |               | s9     s11
 # h1 s2 h2     | s5    s6      | h5 s10 h6
-# TODO: Human readable version
+
+
+# Indices in 6x3x3 array
+# 6x3x3 is based on
+#   T        2
+# L F R B  4 0 5 1
+#   D        3
+# First -> second -> third has a "right turn"
+# First in each index also sticker value
+def get_633maps(F, B, T, D, L, R):
+	corner_633map = (
+		((F, 0, 0), (L, 0, 2), (T, 2, 0)),
+		((F, 2, 0), (D, 0, 0), (L, 2, 2)),
+		((F, 2, 2), (R, 2, 0), (D, 0, 2)),
+		((F, 0, 2), (T, 2, 2), (R, 0, 0)),
+		((B, 0, 2), (T, 0, 0), (L, 0, 0)),
+		((B, 2, 2), (L, 2, 0), (D, 2, 0)),
+		((B, 2, 0), (D, 2, 2), (R, 2, 2)),
+		((B, 0, 0), (R, 0, 2), (T, 0, 2)),
+	)
+	side_633map = (
+		((F, 0, 1), (T, 2, 1)),
+		((F, 1, 0), (L, 1, 2)),
+		((F, 2, 1), (D, 0, 1)),
+		((F, 1, 2), (R, 1, 0)),
+		((T, 1, 0), (L, 0, 1)),
+		((D, 1, 0), (L, 2, 1)),
+		((D, 1, 2), (R, 2, 1)),
+		((T, 1, 2), (R, 0, 1)),
+		((B, 0, 1), (T, 0, 1)),
+		((B, 1, 2), (L, 0, 1)),
+		((B, 2, 1), (D, 2, 1)),
+		((B, 1, 0), (R, 1, 2)),
+	)
+	return corner_633map, side_633map
+
 
 class SimpleState:
 	# Used for representation in the readable Actions maps

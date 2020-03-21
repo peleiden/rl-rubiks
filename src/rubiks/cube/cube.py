@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from src.rubiks.cube.tensor_map import SimpleState, get_corner_pos, get_side_pos, get_tensor_map
+from src.rubiks.cube.tensor_maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
 
 def _get_assembled(dtype):
 	assembled_state = SimpleState()
@@ -13,15 +13,16 @@ def _get_assembled(dtype):
 
 class Cube:
 	
-	# NB: If the six sides are represented by an array, the order should be F, B, T, D, L, R
+	# If the six sides are represented by an array, the order should be F, B, T, D, L, R
 	# For niceness
 	F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
 	# Corresponding colours
-	colours = ["yellow", "white", "red", "orange", "blue", "green"]
+	colours = ["red", "orange", "white", "yellow", "green", "blue"]
 
 	dtype = np.int8  # Data type used for internal representation
 	assembled = _get_assembled(dtype)  # READ ONLY!!! Use Cube.get_assembled() if speed is not critical
 	map_pos, map_neg = get_tensor_map()
+	corner_633map, side_633map = get_633maps(F, B, T, D, L, R)
 
 	action_space = list()
 	for i in range(6): action_space.extend( [(i, True), (i, False)] )
@@ -31,38 +32,6 @@ class Cube:
 	scrambling_procedure = {
 		'N_scrambles':	(5, 10),  # Tuple for scrambling random # moves in uniform [low, high[
 	}
-	
-	# Indices in 6x3x3 array
-	# 6x3x3 is based on
-	#   T        2
-	# L F R B  4 0 5 1
-	#   D        3
-	# First -> second -> third has a "right turn"
-	# First in each index also sticker value
-	corner_maps = (
-		((F, 0, 0), (L, 0, 2), (T, 2, 0)),
-		((F, 2, 0), (D, 0, 0), (L, 2, 2)),
-		((F, 2, 2), (R, 2, 0), (D, 0, 2)),
-		((F, 0, 2), (T, 2, 2), (R, 0, 0)),
-		((B, 0, 2), (T, 0, 0), (L, 0, 0)),
-		((B, 2, 2), (L, 2, 0), (D, 2, 0)),
-		((B, 2, 0), (D, 2, 2), (R, 2, 2)),
-		((B, 0, 0), (R, 0, 2), (T, 0, 2)),
-	)
-	side_maps = (
-		((F, 0, 1), (T, 2, 1)),
-		((F, 1, 0), (L, 1, 2)),
-		((F, 2, 1), (D, 0, 1)),
-		((F, 1, 2), (R, 1, 0)),
-		((T, 1, 0), (L, 0, 1)),
-		((D, 1, 0), (L, 2, 1)),
-		((D, 1, 2), (R, 2, 1)),
-		((T, 1, 2), (R, 0, 1)),
-		((B, 0, 1), (T, 0, 1)),
-		((B, 1, 2), (L, 0, 1)),
-		((B, 2, 1), (D, 2, 1)),
-		((B, 1, 0), (R, 1, 2)),
-	)
 	
 	@classmethod
 	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool):
@@ -135,17 +104,17 @@ class Cube:
 			# Inserts values for corner i in position pos
 			pos = state[i] // 3
 			orientation = state[i] % 3
-			values = np.roll([x[0] for x in cls.corner_maps[i]], orientation)
-			state633[cls.corner_maps[pos][0]] = values[0]
-			state633[cls.corner_maps[pos][1]] = values[1]
-			state633[cls.corner_maps[pos][2]] = values[2]
+			values = np.roll([x[0] for x in cls.corner_633map[i]], orientation)
+			state633[cls.corner_633map[pos][0]] = values[0]
+			state633[cls.corner_633map[pos][1]] = values[1]
+			state633[cls.corner_633map[pos][2]] = values[2]
 		for i in range(12):
 			# Inserts values for side i in position pos
 			pos = state[i+8] // 2
 			orientation = state[i+8] % 2
-			values = np.roll([x[0] for x in cls.side_maps[i]], orientation)
-			state633[cls.side_maps[pos][0]] = values[0]
-			state633[cls.side_maps[pos][1]] = values[1]
+			values = np.roll([x[0] for x in cls.side_633map[i]], orientation)
+			state633[cls.side_633map[pos][0]] = values[0]
+			state633[cls.side_633map[pos][1]] = values[1]
 		return state633
 	
 	@classmethod

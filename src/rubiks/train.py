@@ -47,14 +47,14 @@ class Train:
 		self.evaluator = Evaluator(agent, max_moves = eval_max_moves, scrambling_procedure = eval_scrambling, verbose = False, logger = self.log)
 
 	def train(self,
-			net,
-	 		rollouts: int,
-			batch_size: int			= 50, #Required to be > 1 when training with batchnorm
-			rollout_games: int		= 10000,
-			rollout_depth: int		= 200,
-			evaluation_interval: int	= 2,
-			evaluation_length: int		= 20,
-#			verbose: bool			= True,
+			  net,
+			  rollouts: int,
+			  batch_size: int			= 50,  # Required to be > 1 when training with batchnorm
+			  rollout_games: int		= 10000,
+			  rollout_depth: int		= 200,
+			  evaluation_interval: int	= 2,
+			  evaluation_length: int	= 20,
+			  # verbose: bool			= True,
 		):
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
@@ -130,6 +130,7 @@ class Train:
 
 			# Plays a number of games
 			for i in range(games):
+				# TODO: Generate before loop and parallelize
 				scrambled_cubes = Cube.sequence_scrambler(sequence_length)
 				states[i*sequence_length:i*sequence_length + sequence_length] = Cube.as_oh(scrambled_cubes)
 				
@@ -150,7 +151,7 @@ class Train:
 
 					current_idx = i * sequence_length + j
 					policy_targets[current_idx] = policy
-					value_targets[current_idx] = values[policy] if not Cube.is_assembled(scrambled_state) else 0  #Max Lapan convergence fix
+					value_targets[current_idx] = values[policy] if not Cube.is_assembled(scrambled_state) else 0  # Max Lapan convergence fix
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
 		
