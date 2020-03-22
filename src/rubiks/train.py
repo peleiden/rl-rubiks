@@ -55,7 +55,7 @@ class Train:
 			  rollout_depth: int		= 200,
 			  evaluation_interval: int	= 2,
 			  evaluation_length: int	= 20,
-			  # verbose: bool			= True,
+			  verbose: bool			= True,
 		):
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
@@ -104,7 +104,8 @@ class Train:
 			self.tt.end_section("Training loop")
 			
 			torch.cuda.empty_cache()
-			self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}.")
+			if verbose or rollout in (np.linspace(0, 1, 20)*rollouts).astype(int):
+				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}.")
 			
 			if evaluation_interval and (rollout + 1) % evaluation_interval == 0:
 				self.tt.section("Evaluation")
@@ -116,6 +117,9 @@ class Train:
 				self.eval_rollouts.append(rollout)
 				self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
+		
+		if verbose:
+			print(self.tt)
 		
 		return net
 
@@ -225,7 +229,6 @@ if __name__ == "__main__":
 	tt.tick()
 	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
-	train_logger(f"Train time sections\n{train.tt}")
 	model.save(loc)
 
 	train.plot_training(loc, show=False)
