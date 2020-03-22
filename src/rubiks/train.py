@@ -228,4 +228,4 @@ if __name__ == "__main__":
 	train_logger(f"Train time sections\n{train.tt}")
 	model.save(loc)
 
-	train.plot_training(f"{loc}/with_fix", show=False)
+	train.plot_training(f"{loc}/training_loss.png", show=False)

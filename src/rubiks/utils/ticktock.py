@@ -37,7 +37,7 @@ class TickTock:
 		return {kw: v["elapsed"] for kw, v in self._sections.items()}
 	
 	@classmethod
-	def stringify_time(cls, dt: float, unit: str):
+	def stringify_time(cls, dt: float, unit="ms"):
 		return f"{dt*cls._units[unit]:.3f} {unit}"
 	
 	def stringify_sections(self, unit="ms"):
