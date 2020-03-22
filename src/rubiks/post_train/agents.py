@@ -11,7 +11,7 @@ class Agent:
 		self.model_needed = model_needed
 		self.model_env = Cube if model_needed else None
 
-	def act(self, state: np.array):
+	def act(self, state: np.ndarray):
 		raise NotImplementedError
 
 	def __str__(self):
@@ -21,14 +21,14 @@ class RandomAgent(Agent):
 	def __init__(self, **kwargs):
 		super().__init__(model_needed=False, **kwargs)
 		
-	def act(self, state: np.array):
+	def act(self, state: np.ndarray):
 		return self.action_space[np.random.randint(self.action_dim)]
 
 class SimpleBFS(Agent):
 	def __init__(self, **kwargs):
 		super().__init__(model_needed=True, **kwargs)
 
-	def act(self, state: np.array):
+	def act(self, state: np.ndarray):
 		return NotImplementedError
 
 
@@ -36,7 +36,7 @@ class DeepCube(Agent):
 	def __init__(self, net = None, **kwargs):
 		super().__init__(model_needed=False, **kwargs)
 
-	def act(self, state: np.array):
+	def act(self, state: np.ndarray):
 		return NotImplementedError
 
 	def update_net(self, net):

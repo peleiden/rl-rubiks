@@ -7,8 +7,9 @@ import torch
 from src.rubiks.cube.cube import Cube
 from src.rubiks.post_train.agents import DeepCube
 from src.rubiks.post_train.evaluation import Evaluator
-from src.rubiks.utils.logger import Logger, NullLogger
 from src.rubiks.utils.device import cpu, gpu
+from src.rubiks.utils.logger import Logger, NullLogger
+from src.rubiks.utils.ticktock import TickTock
 
 class Train:
 	
@@ -39,9 +40,9 @@ class Train:
 		self.policy_criterion = policy_criterion(reduction = 'none')
 		self.value_criterion  = value_criterion(reduction = 'none')
 
-
 		self.log = logger
 		self.log(f"Created trainer with optimizer: {self.optim}, policy and value criteria: {self.policy_criterion}, {self.value_criterion}. Learning rate: {self.lr}")
+		self.tt = TickTock()
 
 		agent = DeepCube(net = None)
 		self.evaluator = Evaluator(agent, max_moves = eval_max_moves, scrambling_procedure = eval_scrambling, verbose = False, logger = self.log)
@@ -70,12 +71,18 @@ class Train:
 		
 		for rollout in range(rollouts):
 			torch.cuda.empty_cache()
-
+			
+			self.tt.section("Training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
+			self.tt.end_section("Training data")
+			self.tt.section("Training data to device")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(self.device),\
 																		 torch.from_numpy(value_targets).to(self.device),\
 																		 torch.from_numpy(policy_targets).to(self.device),\
 																		 torch.from_numpy(loss_weights).to(self.device)
+			self.tt.end_section("Training data to device")
+			
+			self.tt.section("Training loop")
 			net.train()
 			batch_losses = list()
 			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
@@ -94,11 +101,13 @@ class Train:
 				
 				batch_losses.append(float(loss))
 			self.train_losses[rollout] = np.mean(batch_losses)
+			self.tt.end_section("Training loop")
 			
 			torch.cuda.empty_cache()
 			self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}.")
-
+			
 			if evaluation_interval and (rollout + 1) % evaluation_interval == 0:
+				self.tt.section("Evaluation")
 				net.eval()
 				self.evaluator.agent.update_net(net)
 				eval_results = self.evaluator.eval(evaluation_length)
@@ -106,6 +115,7 @@ class Train:
 				
 				self.eval_rollouts.append(rollout)
 				self.eval_rewards.append(eval_reward)
+				self.tt.end_section("Evaluation")
 		
 		return net
 
@@ -143,9 +153,11 @@ class Train:
 						substates[k] = Cube.rotate(scrambled_state, *action)
 					rewards = torch.Tensor([1 if Cube.is_assembled(substate) else -1 for substate in substates])
 					substates_oh = Cube.as_oh(substates).to(self.device)
-
+					
+					self.tt.section("ADI feedforward")
 					values = net(substates_oh, policy=False, value=True).squeeze().cpu()
-					values += rewards				
+					self.tt.end_section("ADI feedforward")
+					values += rewards
 
 					policy = values.argmax()
 
@@ -176,7 +188,6 @@ class Train:
 			reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color,  label="Evaluation reward")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 
-
 		fig.tight_layout()
 		plt.title(title if title else "Training")
 		plt.semilogy()
@@ -189,9 +200,9 @@ class Train:
 
 	@staticmethod
 	def _gen_batches_idcs(size: int, bsize: int):
-		'''
+		"""
 		Generates indices for batch 
-		'''
+		"""
 		nbatches = size // bsize
 		idcs = np.arange(size)
 		np.random.shuffle(idcs)
@@ -200,9 +211,10 @@ class Train:
 
 
 if __name__ == "__main__":
-	import sys
 	from src.rubiks.model import Model, ModelConfig
-	train_logger = Logger("local_train/training_loop.log", "Training loop")
+	loc = "local_train"
+	train_logger = Logger(f"{loc}/training_loop.log", "Training loop")
+	tt = TickTock()
 
 	modelconfig = ModelConfig(
 		batchnorm=False,
@@ -210,6 +222,10 @@ if __name__ == "__main__":
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 
 	train = Train(gpu, logger=train_logger, lr=1e-5)
+	tt.tick()
 	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
+	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
+	train_logger(f"Train time sections\n{train.tt}")
+	model.save(loc)
 
-	train.plot_training("local_train/with_fix", show=False)
+	train.plot_training(f"{loc}/with_fix", show=False)
