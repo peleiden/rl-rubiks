@@ -45,7 +45,7 @@ class Train:
 		self.tt = TickTock()
 
 		agent = DeepCube(net = None)
-		self.evaluator = Evaluator(agent, max_moves = eval_max_moves, scrambling_procedure = eval_scrambling, verbose = False, logger = self.log)
+		self.evaluator = Evaluator(agent, max_moves = eval_max_moves, scrambling_depths= eval_scrambling, verbose = False, logger = self.log)
 
 	def train(self,
 			  net,

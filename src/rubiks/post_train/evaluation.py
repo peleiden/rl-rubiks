@@ -1,7 +1,6 @@
-import numpy as np
-import multiprocessing as mp
-
 from os import cpu_count
+import multiprocessing as mp
+import numpy as np
 
 from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
@@ -9,62 +8,96 @@ from src.rubiks.utils.ticktock import TickTock
 from src.rubiks.cube.cube import Cube
 from src.rubiks.post_train.agents import Agent
 
+# Multiprocessing is silly, so all functions have to be top-level
+# This also means all info has to be parsed in with a single argument
+# https://stackoverflow.com/questions/3288595/multiprocessing-how-to-use-pool-map-on-a-function-defined-in-a-class
+def _eval_game(cfg: list):
+	agent, max_moves, depth = cfg
+	turns_to_complete = 0  # 0 for unfinished
+	state, _, _ = Cube.scramble(depth)
+	for i in range(max_moves):
+		action = agent.act(state)
+		state = Cube.rotate(state, *action)
+		if Cube.is_assembled(state):
+			turns_to_complete = i + 1
+			break
+	return turns_to_complete
+
 
 class Evaluator:
-	def __init__(self, 
-			agent: Agent,
-			max_moves: int				= 200,
-			scrambling_procedure: dict 	= None,
-			verbose: bool 				= True,
-			logger: Logger 				= NullLogger()
+	def __init__(self,
+				 n_games					= 420,  # Nice
+				 max_moves					= 200,
+				 scrambling_depths			= range(1, 10),
+				 verbose	 				= True,
+				 logger: Logger 			= NullLogger()
 		):
 
-		self.agent = agent
-		self.max_moves = max_moves if max_moves is not None else 200
+		self.n_games = n_games
+		self.max_moves = max_moves
 
 		self.tt = TickTock()
 		self.log = logger
 		self.verbose = verbose
-		self.scrambling_procedure = scrambling_procedure or Cube.scrambling_procedure
+		self.scrambling_depths = np.array(scrambling_depths)
 
-		self.log(f"Creating evaluator: Scrambling procedure: {self.scrambling_procedure}, max_moves: {self.max_moves}, agent: {self.agent} ")
-
+		self.log("\n".join([
+			"Creating evaluator",
+			f"Games per scrambling depth: {self.n_games}",
+			f"Scrambling depths: {scrambling_depths}",
+			f"Max moves: {self.max_moves}",
+		]))
 	
-	def eval(self, N_games: int, n_threads: int = cpu_count()):
-		if self.verbose: self.log(f"Evaluation: Beginning {N_games} games on {n_threads} threads")
-
-		self.tt.tick()
-		with mp.Pool(n_threads) as p:
-			results = p.map(self._run_N_games, [int(N_games) // n_threads]*n_threads) #Divide games equally between threads
-		time = self.tt.tock()
+	def eval(self, agent: Agent, max_threads: int = None):
+		"""
+		Evaluates an agent
+		"""
+		self.log(f"Evaluating {self.n_games*len(self.scrambling_depths)} games with agent {agent}")
 		
-		if self.verbose: self.log(f"Evaluation completed in {time:.4} s")
-
-		all_results = np.concatenate(results)
+		# Builds configurations for runs
+		cfgs = []
+		for i, d in enumerate(self.scrambling_depths):
+			for _ in range(self.n_games):
+				cfgs.append((agent, self.max_moves, d))
 		
-		self.log(f"Evaluation results out of {len(all_results)} games:\n\
-		\tnumber of wins: {len(all_results[all_results != 0])}\n\
-		\tmoves to win-distribution [[moves], [counts]]:{[ list(res) for res in np.unique(all_results[all_results != 0], return_counts = True) ]} ")
-		return all_results
-
+		self.tt.section(f"Evaluation of {agent}")
+		with mp.Pool(max_threads if max_threads and max_threads < cpu_count() else cpu_count()) as p:
+			res = p.map(_eval_game, cfgs)
+		self.tt.end_section(f"Evaluation of {agent}")
+		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
+		
+		self.log(f"Evaluation results")
+		for i, d in enumerate(self.scrambling_depths):
+			self.log(f"Scrambling depth {d}", with_timestamp=False)
+			self.log(f"\tShare completed: {np.count_nonzero(res[i]!=0)*100/len(res[i]):.2f} %", with_timestamp=False)
+			self.log(f"\tMean turns to complete (ex. unfinished): {res[i][res[i]!=0].mean():.2f}", with_timestamp=False)
+		
+		return res
 	
-	def _run_N_games(self, N: int):
-		results = np.zeros(N) #0 represents not completed 
-		cube = Cube()
-
-		for i in range(N):
-			cube.reset()
-			for j in range(self.max_moves):
-				action = self.agent.act( cube.state )
-				if cube.move(*action): 
-					results[i] = j #saving number of steps required to win
+	def eval_hists(self, eval_results: dict):
+		"""
+		{agent: results from self.eval}
+		"""
+		raise NotImplementedError
+	
+	def _get_eval_fn(self, agent: Agent):
+		def eval_fn(depth: int):
+			turns_to_complete = 0  # 0 for unfinished
+			state = Cube.scramble(depth)
+			for i in range(self.max_moves):
+				action = agent.act(state)
+				state = Cube.rotate(state, *action)
+				if Cube.is_assembled(state):
+					turns_to_complete = i + 1
 					break
-		return results
+			return turns_to_complete
+		return eval_fn
+			
 
 if __name__ == "__main__":
 	from src.rubiks.post_train.agents import RandomAgent
-	e = Evaluator(RandomAgent(),
-		logger = Logger("local_evaluation/randomagent.log", "Testing the RandomAgent"),
-		scrambling_procedure = {'N_scrambles':	(1, 3)} 
-	) 
-	results = e.eval(1e3)
+	e = Evaluator(n_games = 1000,
+				  logger = Logger("local_evaluation/randomagent.log", "Testing the RandomAgent"),
+				  scrambling_depths = range(1, 10)
+	)
+	results = e.eval(RandomAgent())

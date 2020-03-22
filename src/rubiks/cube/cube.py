@@ -36,11 +36,6 @@ class Cube:
 	for i in range(6): action_space.extend( [(i, True), (i, False)] )
 	action_dim = len(action_space)
 	
-	# Scrambling procedure saved as dict for reproducability
-	scrambling_procedure = {
-		'N_scrambles':	(5, 10),  # Tuple for scrambling random # moves in uniform [low, high[
-	}
-	
 	@classmethod
 	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool):
 
