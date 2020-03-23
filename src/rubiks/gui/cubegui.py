@@ -55,6 +55,7 @@ class CubeView(GridLayout):
 		but.bind(on_release=self.reset)
 		
 		# Updates view after one second so positions can update
+		# TODO: Schedule opslag efter positions og opdater, når ikke 0
 		Clock.schedule_once(self.update_state_view, 1)
 	
 	def get_rotate_callback(self, action):

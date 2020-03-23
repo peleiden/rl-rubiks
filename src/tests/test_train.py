@@ -13,7 +13,7 @@ class TestTrain:
 
 		#The standard test		
 		net = Model(ModelConfig()).to(gpu)
-		train = Train(gpu)
+		train = Train()
 
 		# Current
 		net = train.train(net, 2, batch_size=2, rollout_games=2, rollout_depth=2, evaluation_interval=0)
