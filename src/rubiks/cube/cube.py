@@ -81,12 +81,12 @@ class Cube:
 	def sequence_scrambler(cls, games: int, n: int):
 		"""
 		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
-		Returns a games x n x 20 tensor with states as well as their one-hot representations (games x n x 480)
+		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
 		"""
 		with mp.Pool(cpu_count()) as p:
 			res = p.map(_sequence_scrambler, [n]*games)
 			states = np.array([x[0] for x in res])
-			oh_states = torch.stack([x[1] for x in res])
+			oh_states = torch.stack([x[1] for x in res]).view(-1, 480)
 		return states, oh_states
 	
 	@classmethod

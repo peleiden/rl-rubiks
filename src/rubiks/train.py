@@ -85,11 +85,11 @@ class Train:
 			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
 				optimizer.zero_grad()
 				
-				print(training_data[batch].shape)
+				# print(training_data[batch].shape)
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
 				#Use loss on both policy and value
-				print(policy_pred.shape, policy_pred.device, policy_pred.dtype)
-				print(policy_targets[batch].shape, policy_targets[batch].device, policy_targets[batch].dtype)
+				# print(policy_pred.shape, policy_pred.device, policy_pred.dtype)
+				# print(policy_targets[batch].shape, policy_targets[batch].device, policy_targets[batch].dtype)
 				losses = self.policy_criterion(policy_pred, policy_targets[batch]) 
 				losses += self.value_criterion(value_pred.squeeze(), value_targets[batch])
 					
@@ -222,7 +222,7 @@ if __name__ == "__main__":
 
 	train = Train(logger=train_logger, lr=1e-5)
 	tt.tick()
-	model = train.train(model, 100, batch_size=40, rollout_games=100, rollout_depth=20, evaluation_interval=False)
+	model = train.train(model, 200, batch_size=40, rollout_games=400, rollout_depth=20, evaluation_interval=False)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
 	model.save(loc)
 
