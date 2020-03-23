@@ -222,7 +222,7 @@ if __name__ == "__main__":
 
 	train = Train(logger=train_logger, lr=1e-5)
 	tt.tick()
-	model = train.train(model, 200, batch_size=40, rollout_games=400, rollout_depth=20, evaluation_interval=False)
+	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
 	model.save(loc)
 
