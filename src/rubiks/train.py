@@ -158,6 +158,7 @@ class Train:
 					rewards = torch.Tensor([1 if Cube.is_assembled(substate) else -1 for substate in substates])
 					substates_oh = Cube.as_oh(substates).to(self.device)
 					
+					# TODO: See if possible to move this part to after loop to parallellize further on gpu
 					self.tt.section("ADI feedforward")
 					values = net(substates_oh, policy=False, value=True).squeeze().cpu()
 					self.tt.end_section("ADI feedforward")
