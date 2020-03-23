@@ -37,7 +37,7 @@ class TestModel:
 		assert os.path.exists(f"{model_dir}/config.json")
 		assert os.path.exists(f"{model_dir}/model.pt")
 		
-		model = Model.load(model_dir)
+		model = Model.load(model_dir).to(gpu)
 		assert next(model.parameters()).device.type == gpu.type
 		
 

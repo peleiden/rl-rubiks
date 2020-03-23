@@ -105,7 +105,7 @@ class Model(nn.Module):
 		conf_path = os.path.join(load_dir, "config.json")
 		with open(conf_path, encoding="utf-8") as conf:
 			state_dict = torch.load(model_path)
-			config = ModelConfig(**json.load(conf))
+			config = ModelConfig.from_json_dict(json.load(conf))
 		
 		model = Model(config)
 		model.load_state_dict(state_dict)

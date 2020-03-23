@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from src.rubiks.cube.cube import Cube
 
@@ -29,7 +30,8 @@ class SimpleBFS(Agent):
 
 
 class DeepCube(Agent):
-	def __init__(self, net = None, **kwargs):
+	# Pure neural net agent
+	def __init__(self, net: torch.nn.Module, **kwargs):
 		super().__init__(**kwargs)
 
 	def act(self, state: np.ndarray):

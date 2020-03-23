@@ -7,13 +7,13 @@ import torch
 
 class TestRubiksCube:
 	def test_init(self):
-		state = Cube.get_assembled()
-		assert Cube.is_assembled(state)
-		assert Cube.assembled.shape == (20,)
+		state = Cube.get_solved()
+		assert Cube.is_solved(state)
+		assert Cube.solved.shape == (20,)
 		
 	def test_cube(self):
 		# Tests that stringify and by extensions as633 works on assembled
-		state = Cube.get_assembled()
+		state = Cube.get_solved()
 		assert Cube.stringify(state) == "\n".join([
 			"      2 2 2            ",
 			"      2 2 2            ",
@@ -30,7 +30,7 @@ class TestRubiksCube:
 		assembled = (False, True, False, False, False, False)
 		for m, a in zip(moves, assembled):
 			state = Cube.rotate(state, *m)
-			assert a == Cube.is_assembled(state)
+			assert a == Cube.is_solved(state)
 		# TODO: Test that state is in expected state
 		# assert Cube.stringify(state) == "\n".join([
 		# 	"      2 2 2            ",
@@ -48,10 +48,10 @@ class TestRubiksCube:
 		assembled = (False, False, False, True)
 		for m, a in zip(moves, assembled):
 			state = Cube.rotate(state, *m)
-			assert a == Cube.is_assembled(state)
+			assert a == Cube.is_solved(state)
 	
 	def test_oh(self):
-		state = Cube.get_assembled()
+		state = Cube.get_solved()
 		oh = Cube.as_oh(state)
 		supposed_state = torch.zeros(20, 24)
 		corners = [get_corner_pos(c, o) for c, o in zip(SimpleState.corners, SimpleState.corner_orientations)]
@@ -61,7 +61,7 @@ class TestRubiksCube:
 		assert (supposed_state.flatten() == oh).all()
 	
 	def test_633(self):
-		state = Cube.as633(Cube.get_assembled())
+		state = Cube.as633(Cube.get_solved())
 		target633 = list()
 		for i in range(6):
 			target633.append(np.ones((3, 3)) * i)

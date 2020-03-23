@@ -9,10 +9,10 @@ class TestAgent:
 	
 	def test_actions(self):
 		a = Agent()
-		r = Cube()
+		state = Cube.get_solved()
 		# Make sure every aciton in action space is possible
 		for action in a.action_space:
-			r.move(*action)
+			state = Cube.rotate(state, *action)
 		assert a.action_dim == 12
 		
 	def test_act(self):
@@ -20,22 +20,14 @@ class TestAgent:
 		with pytest.raises(NotImplementedError) as e_info:
 			a.act(None)
 
-	def test_model(self):
-		a = Agent(model_needed=True)
-		assert a.model_env == Cube
-
 class TestRandomAgent:
 	
 	def test_init(self):
 		a = RandomAgent()
 		assert isinstance(a, Agent)
-		assert hasattr(a, 'model_needed')
-		assert a.model_env is None
-
 	def test_act(self):
 		np.random.seed(42)
 		a = RandomAgent()
-		r = Cube()
-
+		state = Cube.get_solved()
 		for _ in range(10):
-			r.move(*a.act(None))
+			state = Cube.rotate(state, *a.act(state))

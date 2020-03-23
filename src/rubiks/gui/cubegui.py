@@ -32,7 +32,7 @@ class Face(GridLayout):
 class CubeView(GridLayout):
 	def __init__(self, state = None, **kwargs):
 		super().__init__(**kwargs)
-		self.state = state or Cube.get_assembled()
+		self.state = state or Cube.get_solved()
 		# Layouts are ordered such that they are in the order of F, B, T, D, L, R, Actions, Reset, and 4 x empty
 		self.layouts = [Face(face) for face in "FBTDLR"] + [GridLayout(cols=2), Button()] + [GridLayout() for _ in range(4)]
 		self.layout_order = [11, 2, 8, 9, 4, 0, 5, 1, 10, 3, 6, 7]
@@ -64,7 +64,7 @@ class CubeView(GridLayout):
 		return rotate
 	
 	def reset(self, instance):
-		self.state = Cube.get_assembled()
+		self.state = Cube.get_solved()
 		self.update_state_view()
 	
 	def update_state_view(self, dt=0):

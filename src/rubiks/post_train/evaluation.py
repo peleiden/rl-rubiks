@@ -1,5 +1,5 @@
 from os import cpu_count
-import multiprocessing as mp
+import torch.multiprocessing as mp
 import numpy as np
 
 from src.rubiks.utils.logger import NullLogger, Logger
@@ -18,7 +18,7 @@ def _eval_game(cfg: list):
 	for i in range(max_moves):
 		action = agent.act(state)
 		state = Cube.rotate(state, *action)
-		if Cube.is_assembled(state):
+		if Cube.is_solved(state):
 			turns_to_complete = i + 1
 			break
 	return turns_to_complete
@@ -87,7 +87,7 @@ class Evaluator:
 			for i in range(self.max_moves):
 				action = agent.act(state)
 				state = Cube.rotate(state, *action)
-				if Cube.is_assembled(state):
+				if Cube.is_solved(state):
 					turns_to_complete = i + 1
 					break
 			return turns_to_complete

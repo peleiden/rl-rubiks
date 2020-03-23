@@ -152,10 +152,10 @@ class Train:
 				for j, scrambled_state in enumerate(scrambled_cubes):
 
 					# Explore 12 substates
-					substates = np.empty((Cube.action_dim, *Cube.assembled.shape))
+					substates = np.empty((Cube.action_dim, *Cube.solved.shape))
 					for k, action in enumerate(Cube.action_space):
 						substates[k] = Cube.rotate(scrambled_state, *action)
-					rewards = torch.Tensor([1 if Cube.is_assembled(substate) else -1 for substate in substates])
+					rewards = torch.Tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
 					substates_oh = Cube.as_oh(substates).to(self.device)
 					
 					# TODO: See if possible to move this part to after loop to parallellize further on gpu
@@ -168,7 +168,7 @@ class Train:
 
 					current_idx = i * sequence_length + j
 					policy_targets[current_idx] = policy
-					value_targets[current_idx] = values[policy] if not Cube.is_assembled(scrambled_state) else 0  # Max Lapan convergence fix
+					value_targets[current_idx] = values[policy] if not Cube.is_solved(scrambled_state) else 0  # Max Lapan convergence fix
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
 		
