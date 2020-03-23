@@ -74,6 +74,7 @@ class Evaluator:
 			self.log(f"Scrambling depth {d}", with_timestamp=False)
 			self.log(f"\tShare completed: {np.count_nonzero(res[i]!=0)*100/len(res[i]):.2f} %", with_timestamp=False)
 			self.log(f"\tMean turns to complete (ex. unfinished): {res[i][res[i]!=0].mean():.2f}", with_timestamp=False)
+			self.log(f"\tMedian turns to complete (ex. unfinished): {np.median(res[i][res[i]!=0]):.2f}", with_timestamp=False)
 		if self.verbose:
 			self.log(f"Evaluation runtime\n{self.tt}")
 		
@@ -109,3 +110,4 @@ if __name__ == "__main__":
 	)
 	# results = e.eval(RandomAgent(), 6)
 	results = e.eval(DeepCube.from_saved("local_train"))
+	# TODO: Boxplot over completion turns for each scrambling depth
