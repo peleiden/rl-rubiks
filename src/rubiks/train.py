@@ -84,12 +84,11 @@ class Train:
 			batch_losses = list()
 			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
 				optimizer.zero_grad()
-
+				
+				print(training_data[batch].shape)
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
 				#Use loss on both policy and value
-				print(batch)
 				print(policy_pred.shape, policy_pred.device, policy_pred.dtype)
-				print(batch.shape, batch.device, batch.dtype)
 				print(policy_targets[batch].shape, policy_targets[batch].device, policy_targets[batch].dtype)
 				losses = self.policy_criterion(policy_pred, policy_targets[batch]) 
 				losses += self.value_criterion(value_pred.squeeze(), value_targets[batch])
