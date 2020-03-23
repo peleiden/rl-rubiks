@@ -118,7 +118,7 @@ class Train:
 				self.tt.end_section("Evaluation")
 		
 		if verbose:
-			print(self.tt)
+			self.log(self.tt)
 		
 		return net
 

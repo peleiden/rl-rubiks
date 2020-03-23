@@ -86,7 +86,7 @@ class Cube:
 		with mp.Pool(cpu_count()) as p:
 			res = p.map(_sequence_scrambler, [n]*games)
 			states = np.array([x[0] for x in res])
-			oh_states = torch.stack([x[1] for x in res]).view(-1, 480)  # TODO: Vær sikker på, at det er implementeret rigtigt
+			oh_states = torch.stack([x[1] for x in res]).view(-1, 480)
 		return states, oh_states
 	
 	@classmethod

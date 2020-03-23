@@ -44,15 +44,20 @@ class DeepCube(Agent):
 		self.sample_policy = sample_policy
 
 	def act(self, state: np.ndarray) -> (int, bool):
+		# child_states = np.array([Cube.rotate(state, *action) for action in Cube.action_space])
+		# oh = Cube.as_oh(child_states).to(gpu)
 		oh = Cube.as_oh(state).to(gpu)
 		self.net.eval()
 		with torch.no_grad():
 			policy = self.net(oh, True, False)
+			# vals = self.net(oh, False, True).squeeze()
+			# print(vals)
+			# policy = torch.nn.functional.softmax(self.net(oh, False, True).squeeze(), dim=0)
 		if self.sample_policy:
 			action = np.random.choice(12, p=policy.cpu().numpy())
 		else:
 			action = int(torch.argmax(policy))
-		return (action, True) if action < 6 else (action-6, False)
+		return Cube.action_space[action]
 
 	def update_net(self, net):
 		raise NotImplementedError

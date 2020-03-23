@@ -40,7 +40,7 @@ class TickTock:
 	def stringify_time(cls, dt: float, unit="ms"):
 		return f"{dt*cls._units[unit]:.3f} {unit}"
 	
-	def stringify_sections(self, unit="ms"):
+	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
 		sections = {kw: self.stringify_time(v, unit) for kw, v in self.get_sections().items()}
 		strs = []
@@ -49,4 +49,4 @@ class TickTock:
 		return "\n".join(strs)
 	
 	def __str__(self):
-		return self.stringify_sections()
+		return self.stringify_sections("s")
