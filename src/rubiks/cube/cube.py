@@ -1,5 +1,8 @@
+from os import cpu_count
+
 import numpy as np
 import torch
+import torch.multiprocessing as mp
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
 
 def _get_solved(dtype):
@@ -10,6 +13,20 @@ def _get_solved(dtype):
 	for i in range(12):
 		tensor_state[i+8] = get_side_pos(assembled_state.sides[i], assembled_state.side_orientations[i])
 	return tensor_state
+
+# Implemented toplevel for multithreading
+def _sequence_scrambler(n: int):
+	"""
+	A non-inplace scrambler that returns the state to each of the scrambles useful for ADI
+	"""
+	scrambled_states = np.empty((n, *Cube.solved.shape), dtype=Cube.dtype)
+	scrambled_states[0] = Cube.get_solved()
+	
+	faces = np.random.randint(6, size = (n, ))
+	dirs = np.random.randint(2, size = (n, )).astype(bool)
+	for i, face, d in zip(range(n-1), faces, dirs):
+		scrambled_states[i+1] = Cube.rotate(scrambled_states[i], face, d)
+	return scrambled_states, Cube.as_oh(scrambled_states)
 
 class Cube:
 	
@@ -52,30 +69,25 @@ class Cube:
 
 	@classmethod
 	def scramble(cls, n: int):
-
 		faces = np.random.randint(6, size = (n, ))
 		dirs = np.random.randint(2, size = (n, )).astype(bool)
 		state = cls.solved.copy()
-
 		for face, d in zip(faces, dirs):
 			state = cls.rotate(state, face, d)  # Uses rotate instead of move as checking for victory is not needed here
 		
 		return state, faces, dirs
 	
 	@classmethod
-	def sequence_scrambler(cls, n: int):
+	def sequence_scrambler(cls, games: int, n: int):
 		"""
 		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
+		Returns a games x n x 20 tensor with states as well as their one-hot representations (games x n x 480)
 		"""
-		scrambled_states = np.empty((n, *cls.solved.shape), dtype=cls.dtype)
-
-		faces = np.random.randint(6, size = (n, ))
-		dirs = np.random.randint(2, size = (n, )).astype(bool)
-
-		scrambled_states[0] = cls.solved
-		for i, face, d in zip(range(n-1), faces, dirs):
-			scrambled_states[i+1] = cls.rotate(scrambled_states[i], face, d)
-		return scrambled_states
+		with mp.Pool(cpu_count()) as p:
+			res = p.map(_sequence_scrambler, [n]*games)
+			states = np.array([x[0] for x in res])
+			oh_states = torch.stack([x[1] for x in res])
+		return states, oh_states
 	
 	@classmethod
 	def get_solved(cls):
@@ -88,7 +100,6 @@ class Cube:
 	@classmethod
 	def as_oh(cls, states: np.ndarray):
 		# Takes in n states and returns an n x 480 one-hot tensor
-		# TODO: Multithread
 		if len(states.shape) == 1:
 			states = np.expand_dims(states, 0)
 		oh = torch.zeros(states.shape[0], 480)

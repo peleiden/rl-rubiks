@@ -41,7 +41,7 @@ class Train:
 		self.log(f"Created trainer with optimizer: {self.optim}, policy and value criteria: {self.policy_criterion}, {self.value_criterion}. Learning rate: {self.lr}")
 		self.tt = TickTock()
 
-		agent = DeepCube(net = None)
+		agent = DeepCube(net = None)  # FIXME, also in eval part of self.train
 		self.evaluator = Evaluator(agent, max_moves = eval_max_moves, scrambling_depths= eval_scrambling, verbose = False, logger = self.log)
 
 	def train(self,
@@ -73,10 +73,10 @@ class Train:
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
 			self.tt.end_section("Training data")
 			self.tt.section("Training data to device")
-			training_data, value_targets, policy_targets, loss_weights = training_data.to(self.device),\
-																		 torch.from_numpy(value_targets).to(self.device),\
-																		 torch.from_numpy(policy_targets).to(self.device),\
-																		 torch.from_numpy(loss_weights).to(self.device)
+			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
+																		 torch.from_numpy(value_targets).to(gpu),\
+																		 torch.from_numpy(policy_targets).to(gpu),\
+																		 torch.from_numpy(loss_weights).to(gpu)
 			self.tt.end_section("Training data to device")
 			
 			self.tt.section("Training loop")
@@ -87,7 +87,10 @@ class Train:
 
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
 				#Use loss on both policy and value
-
+				print(batch)
+				print(policy_pred.shape, policy_pred.device, policy_pred.dtype)
+				print(batch.shape, batch.device, batch.dtype)
+				print(policy_targets[batch].shape, policy_targets[batch].device, policy_targets[batch].dtype)
 				losses = self.policy_criterion(policy_pred, policy_targets[batch]) 
 				losses += self.value_criterion(value_pred.squeeze(), value_targets[batch])
 					
@@ -130,24 +133,19 @@ class Train:
 		np.arrays: `policy_targets` and `value_targets` contains optimal value and policy targets for each training point
 		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
 		"""
+		
+		N_data = games * sequence_length
+		states, oh_states = Cube.sequence_scrambler(games, sequence_length)
+		policy_targets = np.empty(N_data, dtype=np.int64)
+		value_targets = np.empty(games * sequence_length, dtype=np.float32)
+		loss_weights = np.empty(N_data)
+		
+		net.eval()
 		with torch.no_grad():
-			# TODO Parallize and consider cpu/gpu conversion (probably move net to cpu and parallelize)
-			net.eval()
-
-			N_data = games * sequence_length
-			states = torch.empty(N_data, 480).float()
-			policy_targets, value_targets = np.empty(N_data, dtype=np.int64), np.empty(games * sequence_length, dtype=np.float32)
-			loss_weights = np.empty(N_data)
-
 			# Plays a number of games
 			for i in range(games):
-				# TODO: Generate before loop and parallelize
-				scrambled_cubes = Cube.sequence_scrambler(sequence_length)
-				states[i*sequence_length:i*sequence_length + sequence_length] = Cube.as_oh(scrambled_cubes)
-				
 				# For all states in the scrambled game
-				for j, scrambled_state in enumerate(scrambled_cubes):
-
+				for j, scrambled_state in enumerate(states[i]):
 					# Explore 12 substates
 					substates = np.empty((Cube.action_dim, *Cube.solved.shape))
 					for k, action in enumerate(Cube.action_space):
@@ -169,7 +167,7 @@ class Train:
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
 		
-		return states, policy_targets, value_targets, loss_weights
+		return oh_states, policy_targets, value_targets, loss_weights
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
@@ -225,7 +223,7 @@ if __name__ == "__main__":
 
 	train = Train(logger=train_logger, lr=1e-5)
 	tt.tick()
-	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
+	model = train.train(model, 100, batch_size=40, rollout_games=100, rollout_depth=20, evaluation_interval=False)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
 	model.save(loc)
 
