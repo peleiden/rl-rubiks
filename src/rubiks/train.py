@@ -22,7 +22,6 @@ class Train:
 
 
 	def __init__(self,
-				 device,
 				 optim_fn				= torch.optim.RMSprop,
 				 lr: float				= 1e-5,
 				 policy_criterion		= torch.nn.CrossEntropyLoss,
@@ -31,8 +30,6 @@ class Train:
 				 eval_scrambling: dict 	= None,
 				 eval_max_moves: int	= None,
 		):
-		
-		self.device = device
 
 		self.optim 	= optim_fn
 		self.lr		= lr
@@ -156,7 +153,7 @@ class Train:
 					for k, action in enumerate(Cube.action_space):
 						substates[k] = Cube.rotate(scrambled_state, *action)
 					rewards = torch.Tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
-					substates_oh = Cube.as_oh(substates).to(self.device)
+					substates_oh = Cube.as_oh(substates).to(gpu)
 					
 					# TODO: See if possible to move this part to after loop to parallellize further on gpu
 					self.tt.section("ADI feedforward")
@@ -174,7 +171,7 @@ class Train:
 		
 		return states, policy_targets, value_targets, loss_weights
 
-	def plot_training(self, save_dir: str, title="", show=False):
+	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
 		"""
@@ -195,7 +192,7 @@ class Train:
 
 		fig.tight_layout()
 		plt.title(title if title else "Training")
-		plt.semilogy()
+		if semi_logy: plt.semilogy()
 		plt.grid(True)
 		
 		os.makedirs(save_dir, exist_ok=True)
@@ -226,7 +223,7 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 
-	train = Train(gpu, logger=train_logger, lr=1e-5)
+	train = Train(logger=train_logger, lr=1e-5)
 	tt.tick()
 	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")

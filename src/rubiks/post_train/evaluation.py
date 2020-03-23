@@ -6,12 +6,12 @@ from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks.post_train.agents import Agent
+from src.rubiks.post_train.agents import Agent, DeepCube
 
 # Multiprocessing is silly, so all functions have to be top-level
 # This also means all info has to be parsed in with a single argument
 # https://stackoverflow.com/questions/3288595/multiprocessing-how-to-use-pool-map-on-a-function-defined-in-a-class
-def _eval_game(cfg: list):
+def _eval_game(cfg: (Agent, int, int)):
 	agent, max_moves, depth = cfg
 	turns_to_complete = 0  # 0 for unfinished
 	state, _, _ = Cube.scramble(depth)
@@ -61,8 +61,11 @@ class Evaluator:
 				cfgs.append((agent, self.max_moves, d))
 		
 		self.tt.section(f"Evaluation of {agent}")
-		with mp.Pool(max_threads if max_threads and max_threads < cpu_count() else cpu_count()) as p:
-			res = p.map(_eval_game, cfgs)
+		if agent.with_mt:
+			with mp.Pool(max_threads if max_threads and max_threads < cpu_count() else cpu_count()) as p:
+				res = p.map(_eval_game, cfgs)
+		else:
+			res = [_eval_game(cfg) for cfg in cfgs]
 		self.tt.end_section(f"Evaluation of {agent}")
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
 		
@@ -71,6 +74,8 @@ class Evaluator:
 			self.log(f"Scrambling depth {d}", with_timestamp=False)
 			self.log(f"\tShare completed: {np.count_nonzero(res[i]!=0)*100/len(res[i]):.2f} %", with_timestamp=False)
 			self.log(f"\tMean turns to complete (ex. unfinished): {res[i][res[i]!=0].mean():.2f}", with_timestamp=False)
+		if self.verbose:
+			self.log(f"Evaluation runtime\n{self.tt}")
 		
 		return res
 	
@@ -95,9 +100,12 @@ class Evaluator:
 			
 
 if __name__ == "__main__":
+	mp.set_start_method("spawn")  # Necessary for cuda to work in mp mode
 	from src.rubiks.post_train.agents import RandomAgent
 	e = Evaluator(n_games = 1000,
+				  max_moves=10,
 				  logger = Logger("local_evaluation/randomagent.log", "Testing the RandomAgent"),
 				  scrambling_depths = range(1, 10)
 	)
-	results = e.eval(RandomAgent())
+	# results = e.eval(RandomAgent(), 6)
+	results = e.eval(DeepCube.from_saved("local_train"))
