@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks.post_train.agents import DeepCube
+from src.rubiks.post_train.agents import PolicyCube, DeepCube, DeepAgent
 from src.rubiks.post_train.evaluation import Evaluator
 from src.rubiks.utils.device import cpu, gpu
 from src.rubiks.utils.logger import Logger, NullLogger
@@ -29,6 +29,7 @@ class Train:
 				 logger: Logger			= NullLogger(),
 				 eval_scrambling: dict 	= None,
 				 eval_max_moves: int	= None,
+				 deepagent: DeepAgent		= DeepCube
 		):
 
 		self.optim 	= optim_fn
@@ -41,7 +42,7 @@ class Train:
 		self.log(f"Created trainer with optimizer: {self.optim}, policy and value criteria: {self.policy_criterion}, {self.value_criterion}. Learning rate: {self.lr}")
 		self.tt = TickTock()
 
-		agent = DeepCube(net = None)  # FIXME, also in eval part of self.train
+		agent = deepagent(net = None)  # FIXME, also in eval part of self.train
 		self.evaluator = Evaluator(agent, max_moves = eval_max_moves, scrambling_depths= eval_scrambling, verbose = False, logger = self.log)
 
 	def train(self,
@@ -219,8 +220,8 @@ if __name__ == "__main__":
 		batchnorm=False,
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
-
-	train = Train(logger=train_logger, lr=1e-5)
+	deepagent = PolicyCube
+	train = Train(logger=train_logger, lr=1e-5, deepagent=deepagent)
 	tt.tick()
 	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")

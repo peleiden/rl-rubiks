@@ -35,12 +35,29 @@ class SimpleBFS(Agent):
 	def act(self, state: np.ndarray):
 		return NotImplementedError
 
-
-class DeepCube(Agent):
-	# Pure neural net agent
-	def __init__(self, net: Model, sample_policy=False, **kwargs):
+class DeepAgent(Agent):
+	def __init__(self, net: Model, **kwargs):
 		super().__init__(**kwargs)
 		self.net = net
+
+	def act(self, state: np.ndarray) -> (int, bool):
+		raise NotImplementedError
+
+	def update_net(self, net):
+		raise NotImplementedError
+	
+	@staticmethod
+	def from_saved(loc: str, sample_policy=False):
+		net = Model.load(loc)
+		net.to(gpu)
+		return DeepCube(net, sample_policy)
+
+
+
+class PolicyCube(DeepAgent):
+	# Pure neural net agent
+	def __init__(self, sample_policy=False, **kwargs):
+		super().__init__(**kwargs)
 		self.sample_policy = sample_policy
 
 	def act(self, state: np.ndarray) -> (int, bool):
@@ -59,13 +76,15 @@ class DeepCube(Agent):
 			action = int(torch.argmax(policy))
 		return Cube.action_space[action]
 
-	def update_net(self, net):
+
+class DeepCube(DeepAgent):
+	def __init__(self, sample_policy=False, **kwargs):
+		super().__init__(**kwargs)
+		self.sample_policy = sample_policy
+
+	def act(self, state: np.ndarray) -> (int, bool):
 		raise NotImplementedError
+
 	
-	@staticmethod
-	def from_saved(loc: str, sample_policy=False):
-		net = Model.load(loc)
-		net.to(gpu)
-		return DeepCube(net, sample_policy)
 
 

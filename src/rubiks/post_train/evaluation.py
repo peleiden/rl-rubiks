@@ -6,7 +6,7 @@ from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks.post_train.agents import Agent, DeepCube
+from src.rubiks.post_train.agents import Agent, PolicyCube
 
 # Multiprocessing is silly, so all functions have to be top-level
 # This also means all info has to be parsed in with a single argument
@@ -109,5 +109,5 @@ if __name__ == "__main__":
 				  scrambling_depths = range(1, 10)
 	)
 	# results = e.eval(RandomAgent(), 6)
-	results = e.eval(DeepCube.from_saved("local_train"))
+	results = e.eval(PolicyCube.from_saved("local_train"))
 	# TODO: Boxplot over completion turns for each scrambling depth
