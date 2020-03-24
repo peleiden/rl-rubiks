@@ -1,0 +1,82 @@
+%%% eval: (setenv "LANG" "de_DE.UTF-8")
+% !TeX spellcheck = da_DK
+% !TeX program = lualatex
+\documentclass[12pt,fleqn,]{article}
+
+\usepackage[danish]{babel}
+\usepackage{../../../report/texfiles/SpeedyGonzales}
+\usepackage{../../../report/texfiles/MediocreMike}
+\usepackage{pdfpages}
+ \geometry{
+	left=20mm,
+	top=20mm,
+	left=2cm,
+	right=2cm
+}
+\title{\vspace*{-4cm}Feedback til \textit{
+		Using Deep Lear​ning to classif​y grain kernels​ and grain dama​ges}}
+\author{Søren Winkel Holm, Anne Agathe Pedersen og Asger Laurits Schultz\\
+s183911, s174300, s183912}
+\date{\today}
+
+\fancypagestyle{plain}
+{
+	\fancyhf{}
+	\rfoot{Side \thepage{} af \pageref{LastPage}}
+	\renewcommand{\headrulewidth}{0pt}
+}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{}
+\chead{}
+\rhead{}
+\rfoot{Side \thepage{} af \pageref{LastPage}}
+
+\graphicspath{{Billeder/}}
+\linespread{1.15} 
+
+\begin{document}
+
+\maketitle
+\noindent
+Rapporten giver læseren en rigtig spændende og alsidig indføring i teknikkerne og problemet i segmenteringsopgaven. Vi har nogle kommentarer og spørgsmål fordelt på de enkelte afsnit nedenfor.
+\\
+\\
+\textbf{Introduktionen} indeholder en god og gennemarbejdet motivation for, hvordan billedanalyse og klassificering kan anvendes på fødevaredata. Der må gerne være mere information om, hvad landbrugere helt præcis får ud af denne \textit{grading} af kornprøverne. Det må også gerne være mere klart, hvilke klasser, I vil klassificere efter; vi gætter på kornsorter, men det er stadigvæk ikke helt tydeligt. De tre sidste afsnit i introduktionen kunne flyttes til starten af metodeafsnittet, da de er relativt tekniske i deres indhold. Set bort fra dét er opbygningen af introduktionen ellers rigtig god, og I har lavet nogle meget naturlige overgange mellem afsnittene. 
+\\
+\\
+\textbf{Dataafsnittet} starter fint med en oversigt over datasættet. Størrelsen såvel som klassefordelingen fremgår tydeligt . Derudover introduceres udfordringer grundigt - her med tanke på klasserne, der ikke er perfekt balancerede, som alle ting bør være, samt muligheden for klassifikation og bygs ligheder med ødelagte kerner. Hvor dataafsnittet kunne forbedres, er i den mere detaljerede beskrivelse af datasættetet. Der foreligger ingen eksplicit beskrivelse af features. Det er tydeligt, højde og bredde indgår samt RGB-farver, omend implicit, men der savnes et samlet overblik over features og evt. deres egenskaber (intervaller og andre statistikker). I den nuværende form, er der nogle ting, vi ikke helt fanger: Er lysintensiteten beregnet fra RGB-værdierne, og i så fald hvordan, eller er det en grundlæggende del af datasættet? - Er der andre farvekanaler end RGB, fx infrarød? Det kunne gøres mere eksplicit, hvordan datasættet er blevet behandlet, inden I fik det. Fremstillingen af det er beskrevet i indledningen, men den kunne også være med i dataafsnittet. De givne plots er rigtig gode og beskrivende og giver indsigt i centrale dele af datasættet. Herunder har I gjort fine overvejelser om fordelingen af højde og bredde med udgangspunkt i centralgrænsesætningen. Med forbehold for de beskrevne mangler er det et informativt og velstruktureret dataafsnit.
+\\
+\\
+\textbf{Metodeafsnittet} efterlader én med et rigtig godt overblik over alle de forskellige teknologier, der skal bruges. Sektionerne om \textit{image cleanup} og \textit{data augmentation} har nogle dejligt konkrete gennemgange af noget, der normalt kan være meget svært at formidle. Det er gavnligt for ens overblik, hvordan hver teknik (billed-augmenteringerne, residual- og SE-blokke samt balanceringsteknikkerne) får en god, sproglig beskrivelse og visualiseringer med på vejen. Når der fortsat arbejdes på rapporten, ville det gøre teknikkerne lettere forståelige at tilføje konkrete, matematiske beskrivelser af nogle af kerne-funktionerne som \textit{spatial bins} i SSP, og SE-blokkene, da en matematisk beskrivelse sammen med jeres gode sproglige gennemgang ville gøre det knivskarpt. Metodeafsnittet desuden ville blive sat godt i kontekst af et afsnit i starten eller slutningen (eller begge dele), der skarpt ridsede læringsproblemet op i datainput, optimering, antal klasser, valgte parametre og de modeller, I vil sammenligne. Der må også gerne komme en gennemgang af den statistiske metode. Det virker til at være ret cutting edge-modeller, I bruger og det bliver rigtig spændende at høre, hvor godt det virker. 
+\
+
+Spørgsmål til projektet:
+\begin{itemize}
+
+\item Hvilken værdi får landbrugerne ud af denne grading af deres kornprøver? 
+\item Hvordan er datasættet produceret og behandlet, inden I fik det?
+\item Præcis hvilke features indgår i datasættet?   
+\item Hvilke eksperimenter/sammenlignende træninger har I tænkt jer at gennemføre?
+\item Hvordan fungerer de nuværende teknikker hos FOSS i forhold til dem, I undersøger?
+\item Hvilke metrikker vil I bruge til at evaluere modellerne (især med tanke på klasse-ubalancen)?
+
+\end{itemize}
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
