@@ -46,18 +46,18 @@ class DeepAgent(Agent):
 	def update_net(self, net):
 		raise NotImplementedError
 	
-	@staticmethod
-	def from_saved(loc: str, sample_policy=False):
+	@classmethod
+	def from_saved(cls, loc: str, **kwargs):
 		net = Model.load(loc)
 		net.to(gpu)
-		return DeepCube(net, sample_policy)
+		return cls(net, **kwargs)
 
 
 
 class PolicyCube(DeepAgent):
 	# Pure neural net agent
-	def __init__(self, sample_policy=False, **kwargs):
-		super().__init__(**kwargs)
+	def __init__(self, net, sample_policy=False, **kwargs):
+		super().__init__(net, **kwargs)
 		self.sample_policy = sample_policy
 
 	def act(self, state: np.ndarray) -> (int, bool):
@@ -78,8 +78,8 @@ class PolicyCube(DeepAgent):
 
 
 class DeepCube(DeepAgent):
-	def __init__(self, sample_policy=False, **kwargs):
-		super().__init__(**kwargs)
+	def __init__(self, net, sample_policy=False, **kwargs):
+		super().__init__(net, **kwargs)
 		self.sample_policy = sample_policy
 
 	def act(self, state: np.ndarray) -> (int, bool):
