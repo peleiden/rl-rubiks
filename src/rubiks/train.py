@@ -27,12 +27,12 @@ class Train:
 				 policy_criterion		= torch.nn.CrossEntropyLoss,
 				 value_criterion		= torch.nn.MSELoss,
 				 logger: Logger			= NullLogger(),
-				 eval_scrambling: dict 	= None,
+				 eval_scrambling: dict	= None,
 				 eval_max_moves: int	= None,
 				 deepagent: DeepAgent		= DeepCube
 		):
 
-		self.optim 	= optim_fn
+		self.optim	= optim_fn
 		self.lr		= lr
 
 		self.policy_criterion = policy_criterion(reduction = 'none')
