@@ -88,6 +88,20 @@ Hvad vi skal skrive på rapporten:
 * Søren: 3.2, 3.4, 1.3
 * Anne: MCTS (3.3). Guds tal i data
 
+### Uge 8
+#### 25/3-2020
+Feedbacksession. 
+
+Omfattende rapport. Velskreven. Har gjort os umage med at oversætte godt til dansk. 
+
+Introducerer alt mht. til rubiksterningen (det hele vender tilbage til terningen). Forklar hvad vi gerne vil forklare fra referencen i stedet for at referere til den hele tiden. Vi skal ikke prøve at skjule at vi gerne vil genskabe. Må gerne blive lidt mere teknisk mht. at rotationen skal kunne foregå hurtigere. Motivere hvorfor vi bruger gruppeteori, træafsøgning, etc. til sidst.
+
+Godt flow med at starte med den gamle repræsentation og så gå videre til den nye. Gøre den mere appetitlig og kun have det med der er vigtigt. X og Y skal forklares tidligere. Guds Tal skal relateres til vores løsning. 
+
+Uddybning af kritisk spm 3: Hvordan vil vi sikre os i diskussionen at vi kan forklare hvor vores resultater kommer fra? 
+
+
+
 
 
 ## Vejledermøder
