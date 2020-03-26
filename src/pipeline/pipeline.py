@@ -25,6 +25,8 @@ def exec_job(job: Job):
 	if job.eval_args:
 		logger.section()
 		evaluator = Evaluator(**job.eval_args, logger=logger)
+		for agent_fn in job.agents:
+			agent = agent_fn(net)
 	
 	# TODO: Finish implementing evaluation and return both training and evaluation results
 	return train.train_rollouts, train.train_losses

@@ -117,21 +117,34 @@ class Train:
 			self.tt.end_section("Training loop")
 
 			torch.cuda.empty_cache()
-			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*rollouts).astype(int):
+			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}")
 
-			if self.evaluation_interval and (rollout + 1) % self.evaluation_interval == 0:
+			if self.evaluation_interval and rollout % self.evaluation_interval == 0:
+				self.tt.section("Target value average")
+				targets = value_targets.cpu().numpy()
+				# print(targets)
+				# print(targets.shape)
+				depths = np.arange(1, self.rollout_depth)
+				avg_targets = np.empty(self.rollout_depth-1)
+				for i, depth in enumerate(depths):
+					idcs = np.arange(self.rollout_games) * self.rollout_depth + depth
+					# print(idcs)
+					avg_targets[i] = targets[idcs].mean()
+				plt.plot(depths, avg_targets, label=f"Rollout {rollout}")
+				self.tt.end_section("Target value average")
 				# FIXME
 				self.tt.section("Evaluation")
-				net.eval()
-				self.evaluator.agent.update_net(net)
-				eval_results = self.evaluator.eval(self.evaluation_length)
-				eval_reward = (eval_results != 0).mean()  # TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
-
-				self.eval_rollouts.append(rollout)
-				self.eval_rewards.append(eval_reward)
+				# net.eval()
+				# self.evaluator.agent.update_net(net)
+				# eval_results = self.evaluator.eval(self.evaluation_length)
+				# eval_reward = (eval_results != 0).mean()  # TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
+				#
+				# self.eval_rollouts.append(rollout)
+				# self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
-		
+		plt.show()
+		plt.legend(loc=1)
 		self.log.verbose(self.tt)
 
 		return net
@@ -172,7 +185,6 @@ class Train:
 					values = net(substates_oh, policy=False, value=True).squeeze().cpu()
 					self.tt.end_section("ADI feedforward")
 					values += rewards
-
 					policy = values.argmax()
 
 					current_idx = i * sequence_length + j
@@ -200,7 +212,7 @@ class Train:
 			color = 'blue'
 			reward_ax = loss_ax.twinx()
 			reward_ax.set_ylabel("Number of games won", color=color)
-			reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color,  label="Evaluation reward")
+			reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color, label="Evaluation reward")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 
 		fig.tight_layout()
@@ -239,9 +251,9 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(logger=train_logger, lr=1e-5, deepagent=deepagent)
+	train = Train(100, batch_size=40, rollout_games=150, rollout_depth=20, evaluation_interval=40, logger=train_logger, lr=1e-5, deepagent=deepagent)
 	tt.tick()
-	model = train.train(model, 200, batch_size=40, rollout_games=200, rollout_depth=20, evaluation_interval=False)
+	model = train.train(model)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
 	model.save(loc)
 

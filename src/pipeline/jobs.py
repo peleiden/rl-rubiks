@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from src.rubiks.model import ModelConfig
-from src.rubiks.post_train.agents import DeepAgent
+from src.rubiks.post_train.agents import DeepAgent, PolicyCube
 from src.rubiks.utils.logger import Logger
 from src.rubiks.train import Train
 from src.rubiks.post_train.evaluation import Evaluator
@@ -39,6 +39,7 @@ jobs = [
 			 "value_criterion": torch.nn.MSELoss,
 		},
 		model_cfg = ModelConfig(),
+		agents = (lambda net: PolicyCube(net, True), ),
 	),
 ]
 
