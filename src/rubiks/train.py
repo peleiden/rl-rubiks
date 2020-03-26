@@ -7,9 +7,10 @@ import torch
 from src.rubiks.cube.cube import Cube
 from src.rubiks.post_train.agents import PolicyCube, DeepCube, DeepAgent
 from src.rubiks.post_train.evaluation import Evaluator
-from src.rubiks.utils.device import cpu, gpu
+from src.rubiks.utils.device import gpu
 from src.rubiks.utils.logger import Logger, NullLogger
 from src.rubiks.utils.ticktock import TickTock
+
 
 class Train:
 
@@ -22,15 +23,30 @@ class Train:
 
 
 	def __init__(self,
-				 optim_fn				= torch.optim.RMSprop,
-				 lr: float				= 1e-5,
-				 policy_criterion		= torch.nn.CrossEntropyLoss,
-				 value_criterion		= torch.nn.MSELoss,
-				 logger: Logger			= NullLogger(),
-				 eval_scrambling: dict	= None,
-				 eval_max_moves: int	= None,
-				 deepagent: DeepAgent		= DeepCube
+				 rollouts: int,
+				 batch_size: int			= 50,  # Required to be > 1 when training with batchnorm
+				 rollout_games: int			= 10000,
+				 rollout_depth: int			= 200,
+				 evaluation_interval: int	= 2,
+				 evaluation_length: int		= 20,
+				 eval_max_moves: int		= None,
+				 eval_scrambling: range		= None,  # TODO: Consider if this many evaluation arguments are needed
+				 optim_fn					= torch.optim.RMSprop,
+				 lr: float					= 1e-5,
+				 policy_criterion			= torch.nn.CrossEntropyLoss,
+				 value_criterion			= torch.nn.MSELoss,
+				 logger: Logger				= NullLogger(),
+				 deepagent: DeepAgent		= DeepCube,
 		):
+		self.rollouts = rollouts
+		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
+		self.rollout_games = rollout_games
+		self.rollout_depth = rollout_depth
+		self.evaluation_interval = evaluation_interval
+		self.evaluation_length = evaluation_length
+		self.eval_max_moves = eval_max_moves
+		self.eval_scrambling = eval_scrambling
+		self.agent_class = deepagent
 
 		self.optim = optim_fn
 		self.lr	= lr
@@ -40,38 +56,31 @@ class Train:
 
 		self.log = logger
 		self.log(f"Created trainer with optimizer: {self.optim}, policy and value criteria: {self.policy_criterion}, {self.value_criterion}. Learning rate: {self.lr}")
+		self.log(f"Training procedure:\nRollouts: {self.rollouts}\nBatch size: {self.batch_size}\nRollout games: {self.rollout_games}\nRollout depth: {self.rollout_depth}")
 		self.tt = TickTock()
 
-		agent = deepagent(net=None)  # FIXME, also in eval part of self.train
-		self.evaluator = Evaluator(agent, max_moves=eval_max_moves, scrambling_depths=eval_scrambling, verbose=False, logger=self.log)
+		self.evaluator = Evaluator(max_moves=eval_max_moves, scrambling_depths=eval_scrambling, logger=self.log)
 
-	def train(self,
-			  net,
-			  rollouts: int,
-			  batch_size: int			= 50,  # Required to be > 1 when training with batchnorm
-			  rollout_games: int		= 10000,
-			  rollout_depth: int		= 200,
-			  evaluation_interval: int	= 2,
-			  evaluation_length: int	= 20,
-			  verbose: bool			= True,
-		):
+	def train(self, net):
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
-		self.moves_per_rollout = rollout_depth * rollout_games
-		batch_size = self.moves_per_rollout if not batch_size else batch_size
-		self.log(f"Beginning training. Optimization is performed in batches of {batch_size}")
-		self.log(f"Rollouts: {rollouts}. Each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
+		
+		agent = self.agent_class(net)
+		
+		self.moves_per_rollout = self.rollout_depth * self.rollout_games
+		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
+		self.log(f"Rollouts: {self.rollouts}. Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}. Eval_interval: {evaluation_interval}.")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
-		self.train_rollouts, self.train_losses = np.arange(rollouts), np.empty(rollouts)
+		self.train_rollouts, self.train_losses = np.arange(self.rollouts), np.empty(self.rollouts)
 
-		for rollout in range(rollouts):
+		for rollout in range(self.rollouts):
 			torch.cuda.empty_cache()
 
 			self.tt.section("Training data")
-			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
+			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, self.rollout_games, self.rollout_depth)
 			self.tt.end_section("Training data")
 			self.tt.section("Training data to device")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
@@ -83,7 +92,7 @@ class Train:
 			self.tt.section("Training loop")
 			net.train()
 			batch_losses = list()
-			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
+			for batch in self._gen_batches_idcs(self.moves_per_rollout, self.batch_size):
 				optimizer.zero_grad()
 
 				# print(training_data[batch].shape)
@@ -103,10 +112,11 @@ class Train:
 			self.tt.end_section("Training loop")
 
 			torch.cuda.empty_cache()
-			if verbose or rollout in (np.linspace(0, 1, 20)*rollouts).astype(int):
+			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}.")
 
-			if evaluation_interval and (rollout + 1) % evaluation_interval == 0:
+			if self.evaluation_interval and (rollout + 1) % self.evaluation_interval == 0:
+				# FIXME
 				self.tt.section("Evaluation")
 				net.eval()
 				self.evaluator.agent.update_net(net)
@@ -117,8 +127,7 @@ class Train:
 				self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
 
-		if verbose:
-			self.log(self.tt)
+		self.log.verbose(self.tt)
 
 		return net
 
@@ -212,7 +221,7 @@ class Train:
 if __name__ == "__main__":
 	from src.rubiks.model import Model, ModelConfig
 	loc = "local_train"
-	train_logger = Logger(f"{loc}/training_loop.log", "Training loop")
+	train_logger = Logger(f"{loc}/training_loop.log", "Training loop", True)
 	tt = TickTock()
 
 	modelconfig = ModelConfig(

@@ -4,12 +4,13 @@ from src.rubiks.utils.ticktock import get_timestamp
 
 class Logger:
 
-	def __init__(self, fpath: str, title: str):
+	def __init__(self, fpath: str, title: str, verbose=True):
 		dirs = "/".join(fpath.split('/')[:-1])
 		if not os.path.exists(dirs):
 			os.makedirs(dirs)
 
 		self.fpath = fpath
+		self._verbose = verbose
 	
 		with open(self.fpath, "w+", encoding="utf-8") as logfile:
 			logfile.write("")
@@ -39,7 +40,14 @@ class Logger:
 			logfile.write(tolog+"\n")
 			print(tolog)
 	
-	def newline(self):
+	def verbose(self, *tolog, with_timestamp=True):
+		if self._verbose:
+			self(*tolog, with_timestamp)
+	
+	def is_verbose(self):
+		return self._verbose
+	
+	def section(self):
 		with open(self.fpath, "a", encoding="utf-8") as logfile:
 			logfile.write("\n")
 			print()
@@ -47,14 +55,11 @@ class Logger:
 class NullLogger(Logger):
 
 	def __init__(self, *args, **kwargs):
-
 		pass
 
 	def log(self, *tolog, **kwargs):
-
 		pass
 
-	def newline(self):
-
+	def section(self):
 		pass
 

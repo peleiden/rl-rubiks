@@ -29,7 +29,6 @@ class Evaluator:
 				 n_games					= 420,  # Nice
 				 max_moves					= 200,
 				 scrambling_depths			= range(1, 10),
-				 verbose	 				= True,
 				 logger: Logger 			= NullLogger()
 		):
 
@@ -38,7 +37,6 @@ class Evaluator:
 
 		self.tt = TickTock()
 		self.log = logger
-		self.verbose = verbose
 		self.scrambling_depths = np.array(scrambling_depths)
 
 		self.log("\n".join([
@@ -48,7 +46,7 @@ class Evaluator:
 			f"Max moves: {self.max_moves}",
 		]))
 	
-	def eval(self, agent: Agent, max_threads: int = None):
+	def eval(self, agent: Agent, max_threads=1):
 		"""
 		Evaluates an agent
 		"""
@@ -62,7 +60,7 @@ class Evaluator:
 		
 		self.tt.section(f"Evaluation of {agent}")
 		if agent.with_mt:
-			with mp.Pool(max_threads if max_threads and max_threads < cpu_count() else cpu_count()) as p:
+			with mp.Pool(min(max_threads, cpu_count())) as p:
 				res = p.map(_eval_game, cfgs)
 		else:
 			res = [_eval_game(cfg) for cfg in cfgs]
@@ -75,8 +73,7 @@ class Evaluator:
 			self.log(f"\tShare completed: {np.count_nonzero(res[i]!=0)*100/len(res[i]):.2f} %", with_timestamp=False)
 			self.log(f"\tMean turns to complete (ex. unfinished): {res[i][res[i]!=0].mean():.2f}", with_timestamp=False)
 			self.log(f"\tMedian turns to complete (ex. unfinished): {np.median(res[i][res[i]!=0]):.2f}", with_timestamp=False)
-		if self.verbose:
-			self.log(f"Evaluation runtime\n{self.tt}")
+		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 		
 		return res
 	
@@ -101,11 +98,10 @@ class Evaluator:
 			
 
 if __name__ == "__main__":
-	mp.set_start_method("spawn")  # Necessary for cuda to work in mp mode
 	from src.rubiks.post_train.agents import RandomAgent
 	e = Evaluator(n_games = 1000,
-				  max_moves=10,
-				  logger = Logger("local_evaluation/randomagent.log", "Testing the RandomAgent"),
+				  max_moves = 10,
+				  logger = Logger("local_evaluation/randomagent.log", "Testing the RandomAgent", True),
 				  scrambling_depths = range(1, 10)
 	)
 	# results = e.eval(RandomAgent(), 6)
