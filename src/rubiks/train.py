@@ -12,9 +12,9 @@ from src.rubiks.utils.logger import Logger, NullLogger
 from src.rubiks.utils.ticktock import TickTock
 
 class Train:
-	
+
 	moves_per_rollout: int
-	
+
 	train_losses: np.ndarray
 	train_rollouts: np.ndarray
 	eval_rollouts = list()
@@ -32,18 +32,18 @@ class Train:
 				 deepagent: DeepAgent		= DeepCube
 		):
 
-		self.optim	= optim_fn
-		self.lr		= lr
+		self.optim = optim_fn
+		self.lr	= lr
 
-		self.policy_criterion = policy_criterion(reduction = 'none')
-		self.value_criterion  = value_criterion(reduction = 'none')
+		self.policy_criterion = policy_criterion(reduction='none')
+		self.value_criterion = value_criterion(reduction='none')
 
 		self.log = logger
 		self.log(f"Created trainer with optimizer: {self.optim}, policy and value criteria: {self.policy_criterion}, {self.value_criterion}. Learning rate: {self.lr}")
 		self.tt = TickTock()
 
-		agent = deepagent(net = None)  # FIXME, also in eval part of self.train
-		self.evaluator = Evaluator(agent, max_moves = eval_max_moves, scrambling_depths= eval_scrambling, verbose = False, logger = self.log)
+		agent = deepagent(net=None)  # FIXME, also in eval part of self.train
+		self.evaluator = Evaluator(agent, max_moves=eval_max_moves, scrambling_depths=eval_scrambling, verbose=False, logger=self.log)
 
 	def train(self,
 			  net,
@@ -60,16 +60,16 @@ class Train:
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
 		self.moves_per_rollout = rollout_depth * rollout_games
-		batch_size = self.moves_per_rollout if not batch_size else batch_size 
+		batch_size = self.moves_per_rollout if not batch_size else batch_size
 		self.log(f"Beginning training. Optimization is performed in batches of {batch_size}")
 		self.log(f"Rollouts: {rollouts}. Each consisting of {rollout_games} games with a depth of {rollout_depth}. Eval_interval: {evaluation_interval}.")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		self.train_rollouts, self.train_losses = np.arange(rollouts), np.empty(rollouts)
-		
+
 		for rollout in range(rollouts):
 			torch.cuda.empty_cache()
-			
+
 			self.tt.section("Training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout_games, rollout_depth)
 			self.tt.end_section("Training data")
@@ -79,48 +79,47 @@ class Train:
 																		 torch.from_numpy(policy_targets).to(gpu),\
 																		 torch.from_numpy(loss_weights).to(gpu)
 			self.tt.end_section("Training data to device")
-			
+
 			self.tt.section("Training loop")
 			net.train()
 			batch_losses = list()
 			for batch in self._gen_batches_idcs(self.moves_per_rollout, batch_size):
 				optimizer.zero_grad()
-				
+
 				# print(training_data[batch].shape)
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
+
 				#Use loss on both policy and value
-				# print(policy_pred.shape, policy_pred.device, policy_pred.dtype)
-				# print(policy_targets[batch].shape, policy_targets[batch].device, policy_targets[batch].dtype)
-				losses = self.policy_criterion(policy_pred, policy_targets[batch]) 
+				losses = self.policy_criterion(policy_pred, policy_targets[batch])
 				losses += self.value_criterion(value_pred.squeeze(), value_targets[batch])
-					
+
 				#Weighteing of losses according to move importance
 				loss = ( losses * loss_weights[batch] ).mean()
 				loss.backward()
 				optimizer.step()
-				
+
 				batch_losses.append(float(loss))
 			self.train_losses[rollout] = np.mean(batch_losses)
 			self.tt.end_section("Training loop")
-			
+
 			torch.cuda.empty_cache()
 			if verbose or rollout in (np.linspace(0, 1, 20)*rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}.")
-			
+
 			if evaluation_interval and (rollout + 1) % evaluation_interval == 0:
 				self.tt.section("Evaluation")
 				net.eval()
 				self.evaluator.agent.update_net(net)
 				eval_results = self.evaluator.eval(evaluation_length)
 				eval_reward = (eval_results != 0).mean()  # TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
-				
+
 				self.eval_rollouts.append(rollout)
 				self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
-		
+
 		if verbose:
 			self.log(self.tt)
-		
+
 		return net
 
 	def ADI_traindata(self, net, games: int, sequence_length: int):
@@ -133,13 +132,10 @@ class Train:
 		np.arrays: `policy_targets` and `value_targets` contains optimal value and policy targets for each training point
 		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
 		"""
-		
+
 		N_data = games * sequence_length
 		states, oh_states = Cube.sequence_scrambler(games, sequence_length)
 		policy_targets = np.empty(N_data, dtype=np.int64)
-		value_targets = np.empty(games * sequence_length, dtype=np.float32)
-		loss_weights = np.empty(N_data)
-		
 		net.eval()
 		with torch.no_grad():
 			# Plays a number of games
@@ -152,7 +148,7 @@ class Train:
 						substates[k] = Cube.rotate(scrambled_state, *action)
 					rewards = torch.Tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
 					substates_oh = Cube.as_oh(substates).to(gpu)
-					
+
 					# TODO: See if possible to move this part to after loop to parallellize further on gpu
 					self.tt.section("ADI feedforward")
 					values = net(substates_oh, policy=False, value=True).squeeze().cpu()
@@ -166,14 +162,14 @@ class Train:
 					value_targets[current_idx] = values[policy] if not Cube.is_solved(scrambled_state) else 0  # Max Lapan convergence fix
 
 					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
-		
+
 		return oh_states, policy_targets, value_targets, loss_weights
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
 		"""
-		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8)) 
+		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8))
 		loss_ax.set_xlabel(f"Rollout of {self.moves_per_rollout} moves")
 
 		color = 'red'
@@ -192,16 +188,16 @@ class Train:
 		plt.title(title if title else "Training")
 		if semi_logy: plt.semilogy()
 		plt.grid(True)
-		
+
 		os.makedirs(save_dir, exist_ok=True)
 		plt.savefig(os.path.join(save_dir, "training.png"))
-		
+
 		if show: plt.show()
 
 	@staticmethod
 	def _gen_batches_idcs(size: int, bsize: int):
 		"""
-		Generates indices for batch 
+		Generates indices for batch
 		"""
 		nbatches = size // bsize
 		idcs = np.arange(size)
