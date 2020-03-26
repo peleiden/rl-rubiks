@@ -42,15 +42,14 @@ class Logger:
 	
 	def verbose(self, *tolog, with_timestamp=True):
 		if self._verbose:
-			self(*tolog, with_timestamp)
+			self(*tolog, with_timestamp=with_timestamp)
 	
 	def is_verbose(self):
 		return self._verbose
 	
-	def section(self):
-		with open(self.fpath, "a", encoding="utf-8") as logfile:
-			logfile.write("\n")
-			print()
+	def section(self, title=""):
+		title = f"\n{title}"
+		self.log(title)
 
 class NullLogger(Logger):
 

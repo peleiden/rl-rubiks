@@ -94,6 +94,7 @@ class Model(nn.Module):
 		with open(conf_path, "w", encoding="utf-8") as conf:
 			torch.save(self.state_dict(), model_path)
 			json.dump(self.config.as_json_dict(), conf)
+		self.log(f"Saved model to {model_path} and configuration to {conf_path}")
 	
 	@staticmethod
 	def load(load_dir: str):

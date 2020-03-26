@@ -5,7 +5,7 @@ import torch
 
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model
-from src.rubiks.utils.device import cpu, gpu
+from src.rubiks.utils import cpu, gpu
 
 
 class Agent:
@@ -51,7 +51,6 @@ class DeepAgent(Agent):
 		net = Model.load(loc)
 		net.to(gpu)
 		return cls(net, **kwargs)
-
 
 
 class PolicyCube(DeepAgent):

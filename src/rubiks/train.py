@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from src.rubiks.model import Model
 from src.rubiks.cube.cube import Cube
 from src.rubiks.post_train.agents import PolicyCube, DeepCube, DeepAgent
 from src.rubiks.post_train.evaluation import Evaluator
-from src.rubiks.utils.device import gpu
+from src.rubiks.utils import gpu
 from src.rubiks.utils.logger import Logger, NullLogger
 from src.rubiks.utils.ticktock import TickTock
 
@@ -21,13 +22,12 @@ class Train:
 	eval_rollouts = list()
 	eval_rewards = list()
 
-
 	def __init__(self,
 				 rollouts: int,
 				 batch_size: int			= 50,  # Required to be > 1 when training with batchnorm
 				 rollout_games: int			= 10000,
 				 rollout_depth: int			= 200,
-				 evaluation_interval: int	= 2,
+				 evaluation_interval: int	= None,
 				 evaluation_length: int		= 20,
 				 eval_max_moves: int		= None,
 				 eval_scrambling: range		= None,  # TODO: Consider if this many evaluation arguments are needed
@@ -39,6 +39,7 @@ class Train:
 				 deepagent: DeepAgent		= DeepCube,
 		):
 		self.rollouts = rollouts
+		self.train_rollouts = np.arange(rollouts)
 		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
@@ -61,17 +62,21 @@ class Train:
 
 		self.evaluator = Evaluator(max_moves=eval_max_moves, scrambling_depths=eval_scrambling, logger=self.log)
 
-	def train(self, net):
+	def train(self, net: Model) -> Model:
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
 		
-		agent = self.agent_class(net)
+		agent = self.agent_class(net)  # FIXME
 		
 		self.moves_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
-		self.log(f"Rollouts: {self.rollouts}. Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}. Eval_interval: {evaluation_interval}.")
+		self.log("\n".join([
+			f"Rollouts: {self.rollouts}",
+			f"Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}",
+			f"Eval_interval: {self.evaluation_interval}.",
+		]))
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		self.train_rollouts, self.train_losses = np.arange(self.rollouts), np.empty(self.rollouts)
@@ -113,20 +118,20 @@ class Train:
 
 			torch.cuda.empty_cache()
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*rollouts).astype(int):
-				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}.")
+				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}")
 
 			if self.evaluation_interval and (rollout + 1) % self.evaluation_interval == 0:
 				# FIXME
 				self.tt.section("Evaluation")
 				net.eval()
 				self.evaluator.agent.update_net(net)
-				eval_results = self.evaluator.eval(evaluation_length)
+				eval_results = self.evaluator.eval(self.evaluation_length)
 				eval_reward = (eval_results != 0).mean()  # TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
 
 				self.eval_rollouts.append(rollout)
 				self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
-
+		
 		self.log.verbose(self.tt)
 
 		return net
@@ -140,6 +145,7 @@ class Train:
 		torch.tensor: `states` contains the rubiks state for each data point
 		np.arrays: `policy_targets` and `value_targets` contains optimal value and policy targets for each training point
 		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
+		TODO: Figure out why mp doesn't work
 		"""
 
 		N_data = games * sequence_length
@@ -181,6 +187,7 @@ class Train:
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
 		"""
+		self.log("Making plot of training")
 		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8))
 		loss_ax.set_xlabel(f"Rollout of {self.moves_per_rollout} moves")
 
@@ -202,7 +209,9 @@ class Train:
 		plt.grid(True)
 
 		os.makedirs(save_dir, exist_ok=True)
-		plt.savefig(os.path.join(save_dir, "training.png"))
+		path = os.path.join(save_dir, "training.png")
+		plt.savefig(path)
+		self.log(f"Saved plot to {path}")
 
 		if show: plt.show()
 
@@ -219,7 +228,8 @@ class Train:
 
 
 if __name__ == "__main__":
-	from src.rubiks.model import Model, ModelConfig
+	from src.rubiks.model import Model, ModelConfig, Model, Model
+	
 	loc = "local_train"
 	train_logger = Logger(f"{loc}/training_loop.log", "Training loop", True)
 	tt = TickTock()
