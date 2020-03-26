@@ -136,6 +136,9 @@ class Train:
 		N_data = games * sequence_length
 		states, oh_states = Cube.sequence_scrambler(games, sequence_length)
 		policy_targets = np.empty(N_data, dtype=np.int64)
+		value_targets = np.empty(games * sequence_length, dtype=np.float32)
+		loss_weights = np.empty(N_data)
+
 		net.eval()
 		with torch.no_grad():
 			# Plays a number of games
