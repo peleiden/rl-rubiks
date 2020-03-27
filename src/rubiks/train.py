@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from typing import List
 
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model
@@ -21,6 +22,8 @@ class Train:
 	train_rollouts: np.ndarray
 	eval_rollouts = list()
 	eval_rewards = list()
+	depths: np.ndarray
+	avg_value_targets: List[np.ndarray] = list()
 
 	def __init__(self,
 				 rollouts: int,
@@ -43,6 +46,7 @@ class Train:
 		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
+		self.depths = np.arange(1, rollout_depth)
 		self.evaluation_interval = evaluation_interval
 		self.evaluation_length = evaluation_length
 		self.eval_max_moves = eval_max_moves
@@ -67,6 +71,7 @@ class Train:
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
+		self.tt.tick()
 		
 		agent = self.agent_class(net)  # FIXME
 		
@@ -75,7 +80,7 @@ class Train:
 		self.log("\n".join([
 			f"Rollouts: {self.rollouts}",
 			f"Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}",
-			f"Eval_interval: {self.evaluation_interval}.",
+			f"Eval_interval: {self.evaluation_interval}",
 		]))
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
@@ -123,15 +128,10 @@ class Train:
 			if self.evaluation_interval and rollout % self.evaluation_interval == 0:
 				self.tt.section("Target value average")
 				targets = value_targets.cpu().numpy()
-				# print(targets)
-				# print(targets.shape)
-				depths = np.arange(1, self.rollout_depth)
-				avg_targets = np.empty(self.rollout_depth-1)
-				for i, depth in enumerate(depths):
+				self.avg_value_targets.append(np.empty_like(self.depths))
+				for i, depth in enumerate(self.depths):
 					idcs = np.arange(self.rollout_games) * self.rollout_depth + depth
-					# print(idcs)
-					avg_targets[i] = targets[idcs].mean()
-				plt.plot(depths, avg_targets, label=f"Rollout {rollout}")
+					self.avg_value_targets[-1][i] = targets[idcs].mean()
 				self.tt.end_section("Target value average")
 				# FIXME
 				self.tt.section("Evaluation")
@@ -140,12 +140,12 @@ class Train:
 				# eval_results = self.evaluator.eval(self.evaluation_length)
 				# eval_reward = (eval_results != 0).mean()  # TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
 				#
-				# self.eval_rollouts.append(rollout)
+				self.eval_rollouts.append(rollout)
 				# self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
-		plt.show()
-		plt.legend(loc=1)
+				
 		self.log.verbose(self.tt)
+		self.log(f"Total training time: {self.tt.stringify_time(self.tt.tock())}")
 
 		return net
 
@@ -162,36 +162,40 @@ class Train:
 		"""
 
 		N_data = games * sequence_length
+		self.tt.section("Scrambling")
 		states, oh_states = Cube.sequence_scrambler(games, sequence_length)
+		self.tt.end_section("Scrambling")
 		policy_targets = np.empty(N_data, dtype=np.int64)
 		value_targets = np.empty(games * sequence_length, dtype=np.float32)
 		loss_weights = np.empty(N_data)
 
 		net.eval()
-		with torch.no_grad():
-			# Plays a number of games
-			for i in range(games):
-				# For all states in the scrambled game
-				for j, scrambled_state in enumerate(states[i]):
-					# Explore 12 substates
-					substates = np.empty((Cube.action_dim, *Cube.solved.shape))
-					for k, action in enumerate(Cube.action_space):
-						substates[k] = Cube.rotate(scrambled_state, *action)
-					rewards = torch.Tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
-					substates_oh = Cube.as_oh(substates).to(gpu)
+		prev_grad = torch.is_grad_enabled()
+		torch.set_grad_enabled(False)
+		# Plays a number of games
+		for i in range(games):
+			# For all states in the scrambled game
+			for j, scrambled_state in enumerate(states[i]):
+				# Explore 12 substates
+				substates = np.empty((Cube.action_dim, *Cube.solved.shape))
+				for k, action in enumerate(Cube.action_space):
+					substates[k] = Cube.rotate(scrambled_state, *action)
+				rewards = torch.Tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
+				substates_oh = Cube.as_oh(substates).to(gpu)
 
-					# TODO: See if possible to move this part to after loop to parallellize further on gpu
-					self.tt.section("ADI feedforward")
-					values = net(substates_oh, policy=False, value=True).squeeze().cpu()
-					self.tt.end_section("ADI feedforward")
-					values += rewards
-					policy = values.argmax()
+				# TODO: See if possible to move this part to after loop to parallellize further on gpu
+				self.tt.section("ADI feedforward")
+				values = net(substates_oh, policy=False, value=True).squeeze().cpu()
+				self.tt.end_section("ADI feedforward")
+				values += rewards
+				policy = values.argmax()
 
-					current_idx = i * sequence_length + j
-					policy_targets[current_idx] = policy
-					value_targets[current_idx] = values[policy] if not Cube.is_solved(scrambled_state) else 0  # Max Lapan convergence fix
+				current_idx = i * sequence_length + j
+				policy_targets[current_idx] = policy
+				value_targets[current_idx] = values[policy] if not Cube.is_solved(scrambled_state) else 0  # Max Lapan convergence fix
 
-					loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
+				loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
+		torch.set_grad_enabled(prev_grad)
 
 		return oh_states, policy_targets, value_targets, loss_weights
 
@@ -208,12 +212,12 @@ class Train:
 		loss_ax.plot(self.train_rollouts, self.train_losses, label="Training loss", color = color)
 		loss_ax.tick_params(axis='y', labelcolor = color)
 
-		if self.eval_rollouts:
-			color = 'blue'
-			reward_ax = loss_ax.twinx()
-			reward_ax.set_ylabel("Number of games won", color=color)
-			reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color, label="Evaluation reward")
-			reward_ax.tick_params(axis='y', labelcolor=color)
+		# if self.eval_rollouts: TODO
+		# 	color = 'blue'
+		# 	reward_ax = loss_ax.twinx()
+		# 	reward_ax.set_ylabel("Number of games won", color=color)
+		# 	reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color, label="Evaluation reward")
+		# 	reward_ax.tick_params(axis='y', labelcolor=color)
 
 		fig.tight_layout()
 		plt.title(title if title else "Training")
@@ -226,6 +230,19 @@ class Train:
 		self.log(f"Saved plot to {path}")
 
 		if show: plt.show()
+		plt.clf()
+	
+	def plot_value_targets(self, loc, show=False):
+		self.log("Plotting average value targets")
+		plt.figure(figsize=(19.2, 10.8))
+		for target, rollout in zip(self.avg_value_targets, self.eval_rollouts):
+			plt.plot(self.depths, target, label=f"Rollout {rollout}")
+		plt.legend(loc=1)
+		path = f"{loc}/avg_target_values.png"
+		plt.savefig(path)
+		if show: plt.show()
+		plt.clf()
+		self.log(f"Saved plot to {path}")
 
 	@staticmethod
 	def _gen_batches_idcs(size: int, bsize: int):
@@ -250,10 +267,11 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(1, batch_size=20, rollout_games=40, rollout_depth=20, evaluation_interval=0, logger=train_logger, lr=1e-4, deepagent=deepagent)
-	tt.tick()
+	train = Train(200, batch_size=10, rollout_games=200, rollout_depth=25, evaluation_interval=30, logger=train_logger, lr=1e-5, deepagent=deepagent)
 	model = train.train(model)
-	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
 	model.save(loc)
 
 	train.plot_training(loc, show=False)
+	train.plot_value_targets(loc)
+
+

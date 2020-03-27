@@ -9,17 +9,6 @@ def get_timestamp(for_file=False):
 	else:
 		return str(datetime.now())
 	
-def thousand_seps(numstr: str or float or int) -> str:
-	decs = str(numstr)
-	rest = ""
-	if "." in decs:
-		rest = decs[decs.index("."):]
-		decs = decs[:decs.index(".")]
-	for i in range((len(decs)-1)//3):
-		idx = len(decs) - i * 3 - 3
-		decs = decs[:idx] + "," + decs[idx:]
-	return decs + rest
-	
 
 class TickTock:
 
@@ -46,10 +35,22 @@ class TickTock:
 		dt = self._sections[name]["tt"].tock()
 		self._sections[name]["elapsed"] += dt
 	
+	@staticmethod
+	def thousand_seps(numstr: str or float or int) -> str:
+		decs = str(numstr)
+		rest = ""
+		if "." in decs:
+			rest = decs[decs.index("."):]
+			decs = decs[:decs.index(".")]
+		for i in range((len(decs)-1)//3):
+			idx = len(decs) - i * 3 - 3
+			decs = decs[:idx] + "," + decs[idx:]
+		return decs + rest
+	
 	@classmethod
 	def stringify_time(cls, dt: float, unit="ms"):
 		str_ = f"{dt*cls._units[unit]:.3f} {unit}"
-		return thousand_seps(str_)
+		return cls.thousand_seps(str_)
 	
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
@@ -58,7 +59,7 @@ class TickTock:
 			strs.append([
 				kw,
 				self.stringify_time(v["elapsed"], unit),
-				thousand_seps(v["n"]),
+				self.thousand_seps(v["n"]),
 				self.stringify_time(v["elapsed"] / v["n"], "ms")
 			])
 		for i in range(len(strs[0])):
