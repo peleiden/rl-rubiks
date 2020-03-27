@@ -131,7 +131,7 @@ class Train:
 				self.avg_value_targets.append(np.empty_like(self.depths))
 				for i, depth in enumerate(self.depths):
 					idcs = np.arange(self.rollout_games) * self.rollout_depth + depth
-					self.avg_value_targets[-1][i] = targets[idcs].mean()
+					self.avg_value_targets[-1][i] = targets[idcs].mean()  # FIXME
 				self.tt.end_section("Target value average")
 				# FIXME
 				self.tt.section("Evaluation")
@@ -145,7 +145,7 @@ class Train:
 				self.tt.end_section("Evaluation")
 				
 		self.log.verbose(self.tt)
-		self.log(f"Total training time: {self.tt.stringify_time(self.tt.tock())}")
+		self.log(f"Total training time: {self.tt.stringify_time(self.tt.tock(), 's')}")
 
 		return net
 
@@ -238,6 +238,8 @@ class Train:
 		for target, rollout in zip(self.avg_value_targets, self.eval_rollouts):
 			plt.plot(self.depths, target, label=f"Rollout {rollout}")
 		plt.legend(loc=1)
+		plt.xlabel("Scrambling depth")
+		plt.ylabel("Average target value")
 		path = f"{loc}/avg_target_values.png"
 		plt.savefig(path)
 		if show: plt.show()
@@ -267,7 +269,7 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(200, batch_size=10, rollout_games=200, rollout_depth=25, evaluation_interval=30, logger=train_logger, lr=1e-5, deepagent=deepagent)
+	train = Train(200, batch_size=10, rollout_games=200, rollout_depth=25, evaluation_interval=30, logger=train_logger, lr=5e-6, deepagent=deepagent)
 	model = train.train(model)
 	model.save(loc)
 

@@ -44,7 +44,7 @@ class TickTock:
 			decs = decs[:decs.index(".")]
 		for i in range((len(decs)-1)//3):
 			idx = len(decs) - i * 3 - 3
-			decs = decs[:idx] + "," + decs[idx:]
+			decs = decs[:idx] + "," + decs[idx:]  # FIXME
 		return decs + rest
 	
 	@classmethod
