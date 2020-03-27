@@ -26,7 +26,8 @@ class TickTock:
 
 	def section(self, name: str):
 		if name not in self._sections:
-			self._sections[name] = {"tt": TickTock(), "elapsed": 0}
+			self._sections[name] = {"tt": TickTock(), "elapsed": 0, "n": 0}
+		self._sections[name]["n"] += 1
 		self._sections[name]["tt"].tick()
 	
 	def end_section(self, name: str):
@@ -34,7 +35,7 @@ class TickTock:
 		self._sections[name]["elapsed"] += dt
 	
 	def get_sections(self):
-		return {kw: v["elapsed"] for kw, v in self._sections.items()}
+		return {kw: (v["elapsed"], v["n"]) for kw, v in self._sections.items()}
 	
 	@classmethod
 	def stringify_time(cls, dt: float, unit="ms"):
@@ -42,11 +43,13 @@ class TickTock:
 	
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
-		sections = {kw: self.stringify_time(v, unit) for kw, v in self.get_sections().items()}
 		strs = []
-		for kw, v in sections.items():
-			strs.append(f"{kw}: {v}")
+		for kw, v in self.get_sections().items():
+			strs.append(f"{kw}: {self.stringify_time(v[0], unit)} - {v[1]} times averaging {self.stringify_time(v[0]/v[1], 'ms')} ")
 		return "\n".join(strs)
 	
 	def __str__(self):
 		return self.stringify_sections("s")
+
+
+

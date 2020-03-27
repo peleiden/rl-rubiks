@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from src.rubiks.model import Model
 from src.rubiks.cube.cube import Cube
+from src.rubiks.model import Model
 from src.rubiks.post_train.agents import PolicyCube, DeepCube, DeepAgent
 from src.rubiks.post_train.evaluation import Evaluator
 from src.rubiks.utils import gpu
@@ -238,7 +238,6 @@ class Train:
 		for batch in range(nbatches):
 			yield idcs[batch * bsize:(batch + 1) * bsize]
 
-
 if __name__ == "__main__":
 	from src.rubiks.model import Model, ModelConfig, Model, Model
 	
@@ -251,7 +250,7 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(100, batch_size=40, rollout_games=150, rollout_depth=20, evaluation_interval=40, logger=train_logger, lr=1e-5, deepagent=deepagent)
+	train = Train(5, batch_size=20, rollout_games=40, rollout_depth=20, evaluation_interval=0, logger=train_logger, lr=1e-4, deepagent=deepagent)
 	tt.tick()
 	model = train.train(model)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
