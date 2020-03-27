@@ -8,6 +8,18 @@ def get_timestamp(for_file=False):
 		return "-".join(str(datetime.now()).split(".")[0].split(":")).replace(" ", "_")
 	else:
 		return str(datetime.now())
+	
+def thousand_seps(numstr: str or float or int) -> str:
+	decs = str(numstr)
+	rest = ""
+	if "." in decs:
+		rest = decs[decs.index("."):]
+		decs = decs[:decs.index(".")]
+	for i in range((len(decs)-1)//3):
+		idx = len(decs) - i * 3 - 3
+		decs = decs[:idx] + "," + decs[idx:]
+	return decs + rest
+	
 
 class TickTock:
 
@@ -36,7 +48,8 @@ class TickTock:
 	
 	@classmethod
 	def stringify_time(cls, dt: float, unit="ms"):
-		return f"{dt*cls._units[unit]:.3f} {unit}"
+		str_ = f"{dt*cls._units[unit]:.3f} {unit}"
+		return thousand_seps(str_)
 	
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
@@ -45,7 +58,7 @@ class TickTock:
 			strs.append([
 				kw,
 				self.stringify_time(v["elapsed"], unit),
-				str(v["n"]),
+				thousand_seps(v["n"]),
 				self.stringify_time(v["elapsed"] / v["n"], "ms")
 			])
 		for i in range(len(strs[0])):

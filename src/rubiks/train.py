@@ -250,7 +250,7 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(5, batch_size=20, rollout_games=40, rollout_depth=20, evaluation_interval=0, logger=train_logger, lr=1e-4, deepagent=deepagent)
+	train = Train(1, batch_size=20, rollout_games=40, rollout_depth=20, evaluation_interval=0, logger=train_logger, lr=1e-4, deepagent=deepagent)
 	tt.tick()
 	model = train.train(model)
 	train_logger(f"Total training time: {tt.stringify_time(tt.tock())}")
