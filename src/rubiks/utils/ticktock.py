@@ -34,18 +34,29 @@ class TickTock:
 		dt = self._sections[name]["tt"].tock()
 		self._sections[name]["elapsed"] += dt
 	
-	def get_sections(self):
-		return {kw: (v["elapsed"], v["n"]) for kw, v in self._sections.items()}
-	
 	@classmethod
 	def stringify_time(cls, dt: float, unit="ms"):
 		return f"{dt*cls._units[unit]:.3f} {unit}"
 	
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
-		strs = []
-		for kw, v in self.get_sections().items():
-			strs.append(f"{kw}: {self.stringify_time(v[0], unit)} - {v[1]} times averaging {self.stringify_time(v[0]/v[1], 'ms')} ")
+		strs = [["Execution times", "Total time", "Hits", "Avg. time"]]
+		for kw, v in self._sections.items():
+			strs.append([
+				kw,
+				self.stringify_time(v["elapsed"], unit),
+				str(v["n"]),
+				self.stringify_time(v["elapsed"] / v["n"], "ms")
+			])
+		for i in range(len(strs[0])):
+			length = max(len(strs[j][i]) for j in range(len(strs)))
+			for j in range(len(strs)):
+				if i == 0:
+					strs[j][i] += " " * (length - len(strs[j][i]))
+				else:
+					strs[j][i] = " " * (length - len(strs[j][i])) + strs[j][i]
+		for i in range(len(strs)):
+			strs[i] = " | ".join(strs[i])
 		return "\n".join(strs)
 	
 	def __str__(self):
