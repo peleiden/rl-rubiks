@@ -46,7 +46,7 @@ class Train:
 		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
-		self.depths = np.arange(1, rollout_depth)
+		self.depths = np.arange(1, rollout_depth, dtype=float)
 		self.evaluation_interval = evaluation_interval
 		self.evaluation_length = evaluation_length
 		self.eval_max_moves = eval_max_moves
