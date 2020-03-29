@@ -26,14 +26,14 @@ class Logger:
 		time = get_timestamp()
 		with open(self.fpath, "a") as logfile:
 			tolog = " ".join([str(x) for x in tolog])
-			n_spaces = len(time)
+			spaces = len(time) * " "
 			logs = tolog.split("\n")
-			if with_timestamp:
-				logs[0] = time + "\t" + logs[0]
+			if with_timestamp and tolog:
+				logs[0] = f"{time}\t{logs[0]}"
 			else:
-				logs[0] = n_spaces * " " + "\t" + logs[0]
+				logs[0] = f"{spaces}\t{logs[0]}"
 			for i in range(1, len(logs)):
-				logs[i] = n_spaces * " " + "\t" + logs[i]
+				logs[i] = f"{spaces}\t{logs[i]}"
 				if logs[i].strip() == "":
 					logs[i] = ""
 			tolog = "\n".join(logs)
@@ -48,7 +48,7 @@ class Logger:
 		return self._verbose
 	
 	def section(self, title=""):
-		title = f"\n{title}"
+		self.log()
 		self.log(title)
 
 class NullLogger(Logger):
