@@ -3,7 +3,9 @@ from os import cpu_count
 import numpy as np
 import torch
 import torch.multiprocessing as mp
+
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
+
 
 def _get_solved(dtype):
 	assembled_state = SimpleState()
