@@ -20,7 +20,6 @@ class Train:
 
 	train_losses: np.ndarray
 	train_rollouts: np.ndarray
-	eval_rollouts = list()
 	eval_rewards = list()
 	depths: np.ndarray
 	avg_value_targets: List[np.ndarray] = list()
@@ -30,7 +29,7 @@ class Train:
 				 batch_size: int			= 50,  # Required to be > 1 when training with batchnorm
 				 rollout_games: int			= 10000,
 				 rollout_depth: int			= 200,
-				 evaluation_interval: int	= None,
+				 evaluations: int			= None,
 				 evaluation_length: int		= 20,
 				 eval_max_moves: int		= None,
 				 eval_scrambling: range		= None,  # TODO: Consider if this many evaluation arguments are needed
@@ -40,14 +39,15 @@ class Train:
 				 value_criterion			= torch.nn.MSELoss,
 				 logger: Logger				= NullLogger(),
 				 deepagent: DeepAgent		= DeepCube,
-		):
+				 ):
 		self.rollouts = rollouts
 		self.train_rollouts = np.arange(rollouts)
 		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
 		self.depths = np.arange(1, rollout_depth)
-		self.evaluation_interval = evaluation_interval
+		self.evaluations = np.unique(np.linspace(0, self.rollouts, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
+		self.evaluations.sort()
 		self.evaluation_length = evaluation_length
 		self.eval_max_moves = eval_max_moves
 		self.eval_scrambling = eval_scrambling
@@ -80,7 +80,7 @@ class Train:
 		self.log("\n".join([
 			f"Rollouts: {self.rollouts}",
 			f"Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}",
-			f"Eval_interval: {self.evaluation_interval}",
+			f"Evaluations: {len(self.evaluations)}",
 		]))
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
@@ -125,7 +125,7 @@ class Train:
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}")
 
-			if self.evaluation_interval and rollout % self.evaluation_interval == 0:
+			if rollout in self.evaluations:
 				self.tt.section("Target value average")
 				targets = value_targets.cpu().numpy()
 				self.avg_value_targets.append(np.empty_like(self.depths, dtype=float))
@@ -140,7 +140,6 @@ class Train:
 				# eval_results = self.evaluator.eval(self.evaluation_length)
 				# eval_reward = (eval_results != 0).mean()  # TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
 				#
-				self.eval_rollouts.append(rollout)
 				# self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
 				
@@ -235,7 +234,7 @@ class Train:
 	def plot_value_targets(self, loc, show=False):
 		self.log("Plotting average value targets")
 		plt.figure(figsize=(19.2, 10.8))
-		for target, rollout in zip(self.avg_value_targets, self.eval_rollouts):
+		for target, rollout in zip(self.avg_value_targets, self.evaluations):
 			plt.plot(self.depths, target, label=f"Rollout {rollout}")
 		plt.legend(loc=1)
 		plt.xlabel("Scrambling depth")
@@ -269,7 +268,7 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(200, batch_size=10, rollout_games=10, rollout_depth=10, evaluation_interval=30, logger=train_logger, lr=5e-6, deepagent=deepagent)
+	train = Train(10, batch_size=10, rollout_games=10, rollout_depth=10, evaluations=30, logger=train_logger, lr=5e-6, deepagent=deepagent)
 	model = train.train(model)
 	model.save(loc)
 
