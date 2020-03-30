@@ -46,7 +46,7 @@ class Train:
 		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
-		self.depths = np.arange(1, rollout_depth, dtype=float)
+		self.depths = np.arange(1, rollout_depth)
 		self.evaluation_interval = evaluation_interval
 		self.evaluation_length = evaluation_length
 		self.eval_max_moves = eval_max_moves
@@ -128,10 +128,10 @@ class Train:
 			if self.evaluation_interval and rollout % self.evaluation_interval == 0:
 				self.tt.section("Target value average")
 				targets = value_targets.cpu().numpy()
-				self.avg_value_targets.append(np.empty_like(self.depths))
+				self.avg_value_targets.append(np.empty_like(self.depths, dtype=float))
 				for i, depth in enumerate(self.depths):
 					idcs = np.arange(self.rollout_games) * self.rollout_depth + depth
-					self.avg_value_targets[-1][i] = targets[idcs].mean()  # FIXME
+					self.avg_value_targets[-1][i] = targets[idcs].mean()
 				self.tt.end_section("Target value average")
 				# FIXME
 				self.tt.section("Evaluation")
@@ -269,7 +269,7 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(200, batch_size=10, rollout_games=200, rollout_depth=25, evaluation_interval=30, logger=train_logger, lr=5e-6, deepagent=deepagent)
+	train = Train(200, batch_size=10, rollout_games=10, rollout_depth=10, evaluation_interval=30, logger=train_logger, lr=5e-6, deepagent=deepagent)
 	model = train.train(model)
 	model.save(loc)
 
