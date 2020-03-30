@@ -268,7 +268,7 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(10, batch_size=10, rollout_games=10, rollout_depth=10, evaluations=30, logger=train_logger, lr=5e-6, deepagent=deepagent)
+	train = Train(200, batch_size=10, rollout_games=200, rollout_depth=25, evaluations=5, logger=train_logger, lr=1e-5, deepagent=deepagent)
 	model = train.train(model)
 	model.save(loc)
 
