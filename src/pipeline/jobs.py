@@ -17,6 +17,7 @@ class Job:
 	title: str = None  # Defaults to loc
 	eval_args: dict = None  # Should match arguments for Evaluator.__init__ excluding logger
 	agents: tuple = ()  # Tuple of functions creating agents. Should only take net as arg. Evaluation will be performed for each agent
+	is2024: bool = True
 	verbose: bool = True
 	def __post_init__(self):
 		self.title = self.title or self.loc

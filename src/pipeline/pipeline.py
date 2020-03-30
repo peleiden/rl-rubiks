@@ -1,4 +1,5 @@
 from src.pipeline.jobs import Job, jobs
+from src.rubiks import get_repr, set_repr
 from src.rubiks.utils.logger import Logger
 from src.rubiks.utils import cpu, gpu
 from src.rubiks.model import Model
@@ -12,6 +13,8 @@ def exec_jobs():
 def exec_job(job: Job):
 	logger = Logger(f"{job.loc}/process.log", job.title, job.verbose)
 	logger(f"Starting job:\n{job}")
+	ini_repr = get_repr()
+	set_repr(job.is2024)
 
 	# Training
 	logger.section()
@@ -29,6 +32,7 @@ def exec_job(job: Job):
 			agent = agent_fn(net)
 
 	# TODO: Finish implementing evaluation and return both training and evaluation results
+	set_repr(ini_repr)
 	return train.train_rollouts, train.train_losses
 
 if __name__ == "__main__":
