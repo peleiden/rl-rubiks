@@ -4,10 +4,10 @@ import numpy as np
 import torch
 
 from src.rubiks.model import ModelConfig
-from src.rubiks.post_train.agents import DeepAgent, PolicyCube
+from src.rubiks.solving.agents import DeepAgent, PolicyCube
 from src.rubiks.utils.logger import Logger
 from src.rubiks.train import Train
-from src.rubiks.post_train.evaluation import Evaluator
+from src.rubiks.solving.evaluation import Evaluator
 
 @dataclass
 class Job:
@@ -20,7 +20,7 @@ class Job:
 	verbose: bool = True
 	def __post_init__(self):
 		self.title = self.title or self.loc
-	
+
 	def __str__(self):
 		return pformat(self.__dict__)
 

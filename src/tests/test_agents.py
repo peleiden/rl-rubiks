@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks.post_train.agents import Agent, RandomAgent
+from src.rubiks.solving.agents import Agent, RandomAgent
 
 
 class TestAgent:

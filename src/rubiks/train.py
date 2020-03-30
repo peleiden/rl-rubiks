@@ -7,8 +7,8 @@ from typing import List
 
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model
-from src.rubiks.post_train.agents import PolicyCube, DeepCube, DeepAgent
-from src.rubiks.post_train.evaluation import Evaluator
+from src.rubiks.solving.agents import PolicyCube, DeepCube, DeepAgent
+from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.utils import gpu
 from src.rubiks.utils.logger import Logger, NullLogger
 from src.rubiks.utils.ticktock import TickTock

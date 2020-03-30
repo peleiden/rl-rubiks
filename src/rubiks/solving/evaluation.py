@@ -6,7 +6,7 @@ from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks.post_train.agents import Agent, PolicyCube
+from src.rubiks.solving.agents import Agent, PolicyCube
 
 # Multiprocessing is silly, so all functions have to be top-level
 # This also means all info has to be parsed in with a single argument
@@ -98,7 +98,7 @@ class Evaluator:
 			
 
 if __name__ == "__main__":
-	from src.rubiks.post_train.agents import RandomAgent
+	from src.rubiks.solving.agents import RandomAgent
 	e = Evaluator(n_games = 1000,
 				  max_moves = 10,
 				  logger = Logger("local_evaluation/randomagent.log", "Testing the RandomAgent", True),

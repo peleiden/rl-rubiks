@@ -1,56 +1,60 @@
-from abc import ABC
-
 import numpy as np
 import torch
 
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model
 from src.rubiks.utils import cpu, gpu
+from src.rubiks.solving.search import Searcher, BFS, RandomDFS, MCTS
 
 
 class Agent:
-	action_space, action_dim = Cube.action_space, Cube.action_dim
 	# NN based agents see very little gain but much higher compute usage with standard mt implementation
 	# TODO: Either stick to ST for these agents or find better solution
 	with_mt = False
 
-	def act(self, state: np.ndarray):
+	def act(self, state: np.ndarray) -> (int, bool):
 		raise NotImplementedError
 
 	def __str__(self):
 		return f"{self.__class__.__name__}"
-
-class RandomAgent(Agent):
-	with_mt = True
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
-		
-	def act(self, state: np.ndarray):
-		return self.action_space[np.random.randint(self.action_dim)]
-
-class SimpleBFS(Agent):
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
-
-	def act(self, state: np.ndarray):
-		return NotImplementedError
 
 class DeepAgent(Agent):
 	def __init__(self, net: Model, **kwargs):
 		super().__init__(**kwargs)
 		self.net = net
 
-	def act(self, state: np.ndarray) -> (int, bool):
-		raise NotImplementedError
-
 	def update_net(self, net):
-		raise NotImplementedError
-	
+		self.net = net
+
 	@classmethod
 	def from_saved(cls, loc: str, **kwargs):
 		net = Model.load(loc)
 		net.to(gpu)
 		return cls(net, **kwargs)
+
+class TreeAgent(Agent):
+	with_mt = True
+	def __init__(self, searcher: Searcher, time_limit: int, **kwargs):
+		"""
+		time_limit: Number of seconds that the tree search part of the algorithm is allowed to searc
+		"""
+		super().__init__(**kwargs)
+		self.searcher = searcher
+		self.time_limit = time_limit
+
+	def act(self, state: np.ndarray) -> (int, bool):
+		if not self.searcher.action_queue:
+			self.searcher.search(state, self.time_limit)
+
+		return Cube.action_space[self.searcher.action_queue.popleft()]
+
+class RandomAgent(TreeAgent):
+	def __init__(self, time_limit: int,  **kwargs):
+		super().__init__(RandomDFS(self), time_limit **kwargs)
+
+class SimpleBFS(Agent):
+	def __init__(self, time_limit: int,  **kwargs):
+		super().__init__(BFS(self), time_limit **kwargs)
 
 
 class PolicyCube(DeepAgent):
@@ -76,14 +80,10 @@ class PolicyCube(DeepAgent):
 		return Cube.action_space[action]
 
 
-class DeepCube(DeepAgent):
-	def __init__(self, net, sample_policy=False, **kwargs):
-		super().__init__(net, **kwargs)
-		self.sample_policy = sample_policy
+class DeepCube(TreeAgent, DeepAgent):
+	with_mt = False
+	def __init__(self, net, time_limit: int,  **kwargs):
+		super().__init__(MCTS(self), time_limit, net, **kwargs)
 
-	def act(self, state: np.ndarray) -> (int, bool):
-		raise NotImplementedError
-
-	
 
 
