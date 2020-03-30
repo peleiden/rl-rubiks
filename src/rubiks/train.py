@@ -177,7 +177,7 @@ class Train:
 			# For all states in the scrambled game
 			for j, scrambled_state in enumerate(states[i]):
 				# Explore 12 substates
-				substates = np.empty((Cube.action_dim, *Cube.solved.shape))
+				substates = np.empty((Cube.action_dim, *Cube.get_solved_instance().shape))
 				for k, action in enumerate(Cube.action_space):
 					substates[k] = Cube.rotate(scrambled_state, *action)
 				rewards = torch.Tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
