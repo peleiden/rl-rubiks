@@ -1,3 +1,6 @@
+src/configs/local.ini
+
+
 *markdown*
 *.vscode
 *.aux
