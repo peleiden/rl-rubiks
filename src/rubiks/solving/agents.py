@@ -50,11 +50,11 @@ class TreeAgent(Agent):
 
 class RandomAgent(TreeAgent):
 	def __init__(self, time_limit: int,  **kwargs):
-		super().__init__(RandomDFS(self), time_limit **kwargs)
+		super().__init__(RandomDFS(self), time_limit, **kwargs)
 
 class SimpleBFS(Agent):
 	def __init__(self, time_limit: int,  **kwargs):
-		super().__init__(BFS(self), time_limit **kwargs)
+		super().__init__(BFS(self), time_limit, **kwargs)
 
 
 class PolicyCube(DeepAgent):

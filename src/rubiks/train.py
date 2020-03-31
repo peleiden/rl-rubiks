@@ -1,8 +1,4 @@
 import os
-import argparse
-
-from configparser import ConfigParser
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -42,7 +38,6 @@ class Train:
 			evaluation_length: int		= 20,
 			eval_max_moves: int		= None,
 			eval_scrambling: range		= None,  # TODO: Consider if this many evaluation arguments are needed
-			**kwargs,
 			):
 		self.rollouts = rollouts
 		self.train_rollouts = np.arange(rollouts)
@@ -259,66 +254,6 @@ class Train:
 		np.random.shuffle(idcs)
 		for batch in range(nbatches):
 			yield idcs[batch * bsize:(batch + 1) * bsize]
-def parse():
-	config_parser = argparse.ArgumentParser(
-			description = 'Start a training session of the DeepCube agent',
-			add_help = False,
-			)
 
-	config_parser.add_argument('--config', help="Location of config file", metavar="FILE")
-
-	args, remaining_args = config_parser.parse_known_args()
-
-	defaults = {
-	'rollouts': 1000,
-	'location': 'local_train',
-	'rollout_games': 1000,
-	'rollout_depth': 100,
-	'batch_size': 50,
-	'lr': 1e-5,
-	'optim_fn': 'RMSprop',
-	'agent': 'PolicyCube',
-	}
-
-	if args.config:
-		config = ConfigParser()
-		config.read([args.config])
-		defaults.update(dict(config.items("DEFAULT")))
-
-	parser = argparse.ArgumentParser(parents = [config_parser])
-	parser.set_defaults(**defaults)
-
-	parser.add_argument('--rollouts', help="Number of rollouts: Number of passes of ADI+parameter update", type=int)
-	parser.add_argument('--location', help="Save location for logs and plots", type=str)
-	parser.add_argument('--rollout_games', help="Number of games in ADI in each rollout", type=int)
-	parser.add_argument('--rollout_depth', help="Number of scramblings applied to each game in ADI", type=int)
-	parser.add_argument('--batch_size', help="Number of training examples to be used at the same time in parameter update", type=int)
-	parser.add_argument('--lr', help="Learning rate of parameter update", type=float)
-	parser.add_argument('--optim_fn', help="String corresponding to a class in torch.optim", type=str)
-	parser.add_argument('--agent', help="String corresponding to a deepagent class in src.rubiks.solving.agents", type=str, choices = ["PolicyCube", "DeepCube"])
-
-
-	args = parser.parse_args(remaining_args)
-
-	args.optim_fn = getattr(torch.optim, args.optim_fn)
-	args.agent = getattr(agents, args.agent)
-
-	return args
-
-if __name__ == "__main__":
-	args = parse()
-
-	train_logger = Logger(f"{args.location}/training_loop.log", "Training loop", True)
-
-	modelconfig = ModelConfig(batchnorm=False)
-	model = Model(modelconfig, logger=train_logger).to(gpu)
-
-	train = Train(**vars(args), logger=train_logger)
-
-	model = train.train(model)
-	model.save(args.location)
-
-	train.plot_training(args.location, show=False)
-	train.plot_value_targets(args.location)
 
 

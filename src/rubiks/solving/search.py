@@ -13,8 +13,9 @@ class Searcher:
 
 class RandomDFS(Searcher):
 	def search(self, state: np.ndarray, time_limit: int):
-		TickTock.tick()
-		while TickTock.tock() < time_limit:
+		tt = TickTock()
+		tt.tick()
+		while tt.tock() < time_limit:
 			action = np.random.randint(Cube.action_dim)
 			state = Cube.rotate(state, *Cube.action_space[action])
 
@@ -34,6 +35,7 @@ class MCTS(Searcher):
 
 
 	def search(self, state: np.ndarray, time_limit: int):
-		TickTock.tick()
-		while TickTock.tock() < time_limit:
+		tt = TickTock()
+		tt.tick()
+		while tt.tock() < time_limit:
 			pass

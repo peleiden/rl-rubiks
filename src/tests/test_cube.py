@@ -10,8 +10,12 @@ class TestRubiksCube:
 		state = Cube.get_solved()
 		assert Cube.is_solved(state)
 		assert Cube.get_solved_instance().shape == (20,)
-		
+
 	def test_cube(self):
+		state = Cube.get_solved()
+		for action in Cube.action_space:
+			state = Cube.rotate(state, *action)
+
 		# Tests that stringify and by extensions as633 works on assembled
 		state = Cube.get_solved()
 		assert Cube.stringify(state) == "\n".join([
@@ -49,7 +53,7 @@ class TestRubiksCube:
 		for m, a in zip(moves, assembled):
 			state = Cube.rotate(state, *m)
 			assert a == Cube.is_solved(state)
-	
+
 	def test_oh(self):
 		state = Cube.get_solved()
 		oh = Cube.as_oh(state)
@@ -59,7 +63,7 @@ class TestRubiksCube:
 		sides = [get_side_pos(s, o) for s, o in zip(SimpleState.sides, SimpleState.side_orientations)]
 		supposed_state[torch.arange(8, 20), sides] = 1
 		assert (supposed_state.flatten() == oh).all()
-	
+
 	def test_633(self):
 		state = Cube.as633(Cube.get_solved())
 		target633 = list()
@@ -67,7 +71,7 @@ class TestRubiksCube:
 			target633.append(np.ones((3, 3)) * i)
 		target633 = np.array(target633)
 		assert (state == target633).all()
-		
+
 	# def test_reset(self):
 	# 	r = Cube()
 	# 	state = get_assembled()
@@ -76,7 +80,7 @@ class TestRubiksCube:
 	# 	assert not r.is_assembled()
 	# 	assert N >= r.scrambling_procedure['N_scrambles'][0]
 	# 	assert N < r.scrambling_procedure['N_scrambles'][1]
-	
+
 	# def test_scramble(self):
 	# 	r = Cube()
 	# 	np.random.seed(42)
