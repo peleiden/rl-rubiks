@@ -314,6 +314,7 @@ if __name__ == "__main__":
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 
 	train = Train(**vars(args), logger=train_logger)
+
 	model = train.train(model)
 	model.save(args.location)
 
