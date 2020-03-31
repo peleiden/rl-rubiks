@@ -1,13 +1,16 @@
 import os
+import argparse
+
+from configparser import ConfigParser
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from typing import List
 
+import src.rubiks.solving.agents as agents
 from src.rubiks.cube.cube import Cube
-from src.rubiks.model import Model
-from src.rubiks.solving.agents import PolicyCube, DeepCube, DeepAgent
+from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.utils import gpu
 from src.rubiks.utils.logger import Logger, NullLogger
@@ -25,21 +28,22 @@ class Train:
 	avg_value_targets: List[np.ndarray] = list()
 
 	def __init__(self,
-				 rollouts: int,
-				 batch_size: int			= 50,  # Required to be > 1 when training with batchnorm
-				 rollout_games: int			= 10000,
-				 rollout_depth: int			= 200,
-				 evaluations: int			= None,
-				 evaluation_length: int		= 20,
-				 eval_max_moves: int		= None,
-				 eval_scrambling: range		= None,  # TODO: Consider if this many evaluation arguments are needed
-				 optim_fn					= torch.optim.RMSprop,
-				 lr: float					= 1e-5,
-				 policy_criterion			= torch.nn.CrossEntropyLoss,
-				 value_criterion			= torch.nn.MSELoss,
-				 logger: Logger				= NullLogger(),
-				 deepagent: DeepAgent		= DeepCube,
-				 ):
+			rollouts: int,
+			batch_size: int, # Required to be > 1 when training with batchnorm
+			rollout_games: int,
+			rollout_depth: int,
+			optim_fn,
+			lr: float,
+			agent: agents.DeepAgent,
+			logger: Logger			= NullLogger(),
+			policy_criterion		= torch.nn.CrossEntropyLoss,
+			value_criterion			= torch.nn.MSELoss,
+			evaluations: int		= None,
+			evaluation_length: int		= 20,
+			eval_max_moves: int		= None,
+			eval_scrambling: range		= None,  # TODO: Consider if this many evaluation arguments are needed
+			**kwargs,
+			):
 		self.rollouts = rollouts
 		self.train_rollouts = np.arange(rollouts)
 		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
@@ -51,7 +55,7 @@ class Train:
 		self.evaluation_length = evaluation_length
 		self.eval_max_moves = eval_max_moves
 		self.eval_scrambling = eval_scrambling
-		self.agent_class = deepagent
+		self.agent_class = agent
 
 		self.optim = optim_fn
 		self.lr	= lr
@@ -72,9 +76,9 @@ class Train:
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
 		self.tt.tick()
-		
+
 		agent = self.agent_class(net)  # FIXME
-		
+
 		self.moves_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
 		self.log("\n".join([
@@ -142,7 +146,7 @@ class Train:
 				#
 				# self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
-				
+
 		self.log.verbose(self.tt)
 		self.log(f"Total training time: {self.tt.stringify_time(self.tt.tock(), 's')}")
 
@@ -230,7 +234,7 @@ class Train:
 
 		if show: plt.show()
 		plt.clf()
-	
+
 	def plot_value_targets(self, loc, show=False):
 		self.log("Plotting average value targets")
 		plt.figure(figsize=(19.2, 10.8))
@@ -255,24 +259,65 @@ class Train:
 		np.random.shuffle(idcs)
 		for batch in range(nbatches):
 			yield idcs[batch * bsize:(batch + 1) * bsize]
+def parse():
+	config_parser = argparse.ArgumentParser(
+			description = 'Start a training session of the DeepCube agent',
+			add_help = False,
+			)
+
+	config_parser.add_argument('--config', help="Location of config file", metavar="FILE")
+
+	args, remaining_args = config_parser.parse_known_args()
+
+	defaults = {
+	'rollouts': 1000,
+	'location': 'local_train',
+	'rollout_games': 1000,
+	'rollout_depth': 100,
+	'batch_size': 50,
+	'lr': 1e-5,
+	'optim_fn': 'RMSprop',
+	'agent': 'PolicyCube',
+	}
+
+	if args.config:
+		config = ConfigParser()
+		config.read([args.config])
+		defaults.update(dict(config.items("DEFAULT")))
+
+	parser = argparse.ArgumentParser(parents = [config_parser])
+	parser.set_defaults(**defaults)
+
+	parser.add_argument('--rollouts', help="Number of rollouts: Number of passes of ADI+parameter update", type=int)
+	parser.add_argument('--location', help="Save location for logs and plots", type=str)
+	parser.add_argument('--rollout_games', help="Number of games in ADI in each rollout", type=int)
+	parser.add_argument('--rollout_depth', help="Number of scramblings applied to each game in ADI", type=int)
+	parser.add_argument('--batch_size', help="Number of training examples to be used at the same time in parameter update", type=int)
+	parser.add_argument('--lr', help="Learning rate of parameter update", type=float)
+	parser.add_argument('--optim_fn', help="String corresponding to a class in torch.optim", type=str)
+	parser.add_argument('--agent', help="String corresponding to a deepagent class in src.rubiks.solving.agents", type=str, choices = ["PolicyCube", "DeepCube"])
+
+
+	args = parser.parse_args(remaining_args)
+
+	args.optim_fn = getattr(torch.optim, args.optim_fn)
+	args.agent = getattr(agents, args.agent)
+
+	return args
 
 if __name__ == "__main__":
-	from src.rubiks.model import Model, ModelConfig, Model, Model
-	
-	loc = "local_train"
-	train_logger = Logger(f"{loc}/training_loop.log", "Training loop", True)
-	tt = TickTock()
+	args = parse()
 
-	modelconfig = ModelConfig(
-		batchnorm=False,
-	)
+	train_logger = Logger(f"{args.location}/training_loop.log", "Training loop", True)
+
+	modelconfig = ModelConfig(batchnorm=False)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
-	deepagent = PolicyCube
-	train = Train(200, batch_size=10, rollout_games=200, rollout_depth=25, evaluations=5, logger=train_logger, lr=1e-5, deepagent=deepagent)
-	model = train.train(model)
-	model.save(loc)
 
-	train.plot_training(loc, show=False)
-	train.plot_value_targets(loc)
+	train = Train(**vars(args), logger=train_logger)
+	model = train.train(model)
+	model.save(args.location)
+
+	train.plot_training(args.location, show=False)
+	train.plot_value_targets(args.location)
 
 
