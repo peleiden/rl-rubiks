@@ -52,6 +52,8 @@ class Logger:
 		self.log(title)
 
 class NullLogger(Logger):
+	
+	_verbose = False
 
 	def __init__(self, *args, **kwargs):
 		pass
