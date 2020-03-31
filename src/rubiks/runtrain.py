@@ -147,6 +147,7 @@ def parse(defaults: dict):
 			job_args.location = f"{job_args.location}/{jobname}" # Give unique location to each run
 			del job_args.config
 			jobs.append(TrainJob(jobname, **vars(job_args)))
+		with open(f"{save_location}/used_config.ini", 'w') as f: config.write(f)
 	# If no config was added or config of only defaults were  added, run from CLI/defaults.
 	if (not args.config) or (not config.sections()):
 		parser.set_defaults(**defaults)
@@ -156,9 +157,7 @@ def parse(defaults: dict):
 		jobs.append(TrainJob("Training", **vars(args)))
 
 	# For reproduceability: Save config file and arguments
-	save_location = f"{save_location}/used_config.ini"
-	with open(save_location, 'w') as f: config.write(f)
-	with open(save_location, 'a') as f: f.write(f"#{' '.join(sys.argv)}")
+	with open(f"{save_location}/used_config.ini", 'a') as f: f.write(f"#{' '.join(sys.argv)}")
 	return jobs
 
 
