@@ -73,7 +73,7 @@ class Train:
 		"""
 		self.tt.tick()
 		
-		agent = self.agent_class(net)  # FIXME
+		agent = self.agent_class(net, 10)  # FIXME
 		
 		self.moves_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
@@ -268,7 +268,7 @@ if __name__ == "__main__":
 	)
 	model = Model(modelconfig, logger=train_logger).to(gpu)
 	deepagent = PolicyCube
-	train = Train(200, batch_size=10, rollout_games=200, rollout_depth=25, evaluations=5, logger=train_logger, lr=1e-5, deepagent=deepagent)
+	train = Train(10, batch_size=10, rollout_games=10, rollout_depth=5, evaluations=5, logger=train_logger, lr=1e-5, deepagent=deepagent)
 	model = train.train(model)
 	model.save(loc)
 

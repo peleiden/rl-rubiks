@@ -3,8 +3,8 @@ import json
 import torch
 
 from src.rubiks.model import Model, ModelConfig
+from src.rubiks.utils import cpu, gpu
 from src.rubiks.utils.logger import NullLogger
-from src.rubiks.utils.device import cpu, gpu
 
 def test_model_config():
 	cf = ModelConfig(torch.nn.ReLU())
