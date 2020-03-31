@@ -50,6 +50,12 @@ URL: https://medium.com/datadriveninvestor/reinforcement-learning-to-solve-rubik
 * Szymon Matejczyk, "Learning to solve Rubik's cube",
 URL:https://www.youtube.com/watch?v=5Mm6NQXVLAg) 
 
+* Liu, Michael: "General Game-Playing With Monte Carlo Tree Search"
+URL: https://medium.com/@quasimik/monte-carlo-tree-search-applied-to-letterpress-34f41c86e238
+
+* Liu, Michael: "Implementing Monte Carlo Tree Search in Node.js"
+URL: https://medium.com/@quasimik/implementing-monte-carlo-tree-search-in-node-js-5f07595104df
+
 ### Baggrund og gruppeteori
 
 * Provenza, Hannah, "Group Theory and the Rubik's Cube", URL: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.643.2667. *Gennemgår en række aspekter ved Rubiks terning fra et gruppeteoretisk perspektiv, mere avanceret.*
