@@ -41,10 +41,13 @@ class TreeAgent(Agent):
 		super().__init__(**kwargs)
 		self.searcher = searcher
 		self.time_limit = time_limit
+		self.has_searched = False
 
 	def act(self, state: np.ndarray) -> (int, bool):
 		if not self.searcher.action_queue:
+			if self.has_searched: return False
 			self.searcher.search(state, self.time_limit)
+			self.has_searched = True
 
 		return Cube.action_space[self.searcher.action_queue.popleft()]
 
@@ -84,6 +87,5 @@ class DeepCube(TreeAgent, DeepAgent):
 	with_mt = False
 	def __init__(self, net, time_limit: int,  **kwargs):
 		super().__init__(MCTS(self), time_limit, net, **kwargs)
-
 
 

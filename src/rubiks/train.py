@@ -31,25 +31,22 @@ class Train:
 			optim_fn,
 			lr: float,
 			agent: agents.DeepAgent,
+			evaluator: Evaluator,
+			evaluations: int,
 			logger: Logger			= NullLogger(),
 			policy_criterion		= torch.nn.CrossEntropyLoss,
 			value_criterion			= torch.nn.MSELoss,
-			evaluations: int		= None,
-			evaluation_length: int		= 20,
-			eval_max_moves: int		= None,
-			eval_scrambling: range		= None,  # TODO: Consider if this many evaluation arguments are needed
-			):
+		):
+
 		self.rollouts = rollouts
-		self.train_rollouts = np.arange(rollouts)
 		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
 		self.depths = np.arange(1, rollout_depth)
+
 		self.evaluations = np.unique(np.linspace(0, self.rollouts, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
 		self.evaluations.sort()
-		self.evaluation_length = evaluation_length
-		self.eval_max_moves = eval_max_moves
-		self.eval_scrambling = eval_scrambling
+
 		self.agent_class = agent
 
 		self.optim = optim_fn
@@ -63,7 +60,7 @@ class Train:
 		self.log(f"Training procedure:\nRollouts: {self.rollouts}\nBatch size: {self.batch_size}\nRollout games: {self.rollout_games}\nRollout depth: {self.rollout_depth}")
 		self.tt = TickTock()
 
-		self.evaluator = Evaluator(max_moves=eval_max_moves, scrambling_depths=eval_scrambling, logger=self.log)
+		self.evaluator = evaluator
 
 	def train(self, net: Model) -> Model:
 		"""
@@ -72,7 +69,10 @@ class Train:
 		"""
 		self.tt.tick()
 
-		agent = self.agent_class(net)  # FIXME
+		if issubclass(self.agent_class, agents.TreeAgent):
+			agent = self.agent_class(net, self.evaluator.max_time)
+		else:
+			agent = self.agent_class(net)  # FIXME
 
 		self.moves_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
@@ -134,12 +134,12 @@ class Train:
 				self.tt.end_section("Target value average")
 				# FIXME
 				self.tt.section("Evaluation")
-				# net.eval()
-				# self.evaluator.agent.update_net(net)
-				# eval_results = self.evaluator.eval(self.evaluation_length)
-				# eval_reward = (eval_results != 0).mean()  # TODO: This reward should be smarter than simply counting the frequency of completed games within max_moves :think:
-				#
-				# self.eval_rewards.append(eval_reward)
+				net.eval()
+				agent.update_net(net)
+				eval_results = self.evaluator.eval(agent)
+				eval_reward = (eval_results != 0).mean()
+
+				self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
 
 		self.log.verbose(self.tt)

@@ -3,6 +3,7 @@ import sys
 from argparse import ArgumentParser
 from configparser import ConfigParser
 
+import numpy as np
 import torch
 
 import src.rubiks.solving.agents as agents
@@ -23,6 +24,10 @@ defaults  = {
 	'lr': 1e-5,
 	'optim_fn': 'RMSprop',
 	'agent': 'PolicyCube',
+	'evaluations': 20,
+	'eval_max_time': 60,
+	'eval_scrambling': '10 25',
+	'final_evals': 10000,
 	}
 
 class TrainJob:
@@ -37,6 +42,10 @@ class TrainJob:
 			lr: float,
 			optim_fn: str,
 			agent: str,
+			evaluations: int,
+			eval_max_time: int,
+			eval_scrambling: list,
+			final_evals: int,
 
 			# Currently not set by argparser/configparser
 			is2024: bool = True,
@@ -60,9 +69,17 @@ class TrainJob:
 
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
-
 		self.agent = getattr(agents, agent)
 		assert issubclass(self.agent, agents.DeepAgent)
+
+		self.evaluations = evaluations
+		assert self.evaluations <= self.rollouts
+		self.eval_max_time = eval_max_time
+		assert float(eval_max_time)
+		self.eval_scrambling = range(*eval_scrambling)
+		assert int(np.mean(self.eval_scrambling))
+		self.final_evals = final_evals
+		assert isinstance(self.final_evals, int)
 
 		self.location = location
 		self.logger = Logger(f"{self.location}/{self.jobname}.log", jobname, verbose) #Already creates logger at init to test whether path works
@@ -80,6 +97,10 @@ class TrainJob:
 
 		# Training
 		self.logger.section()
+
+		train_scramble = int(np.mean(self.eval_scrambling))
+
+		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=self.eval_max_time, scrambling_depths=[train_scramble], logger=self.logger)
 		train = Train(self.rollouts,
 				batch_size	=self.batch_size,
 				rollout_games	=self.rollout_games,
@@ -88,6 +109,8 @@ class TrainJob:
 				lr		=self.lr,
 				agent		=self.agent,
 				logger		=self.logger,
+				evaluations	=self.evaluations,
+				evaluator	=train_evaluator,
 		)
 
 
@@ -99,12 +122,9 @@ class TrainJob:
 		train.plot_training(self.location)
 
 		# Evaluation
-#		logger.section()
-#		evaluator = Evaluator(**job.eval_args, logger=logger)
-#		for agent_fn in job.agents:
-#			agent = agent_fn(net)
-
-		# TODO: Finish implementing evaluation and return both training and evaluation results
+		self.logger.section()
+		evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
+		evaluator.eval(self.agent(net))
 
 		set_repr(ini_repr)
 
@@ -129,9 +149,15 @@ def parse(defaults: dict):
 	parser.add_argument('--lr', help="Learning rate of parameter update", type=float)
 	parser.add_argument('--optim_fn', help="String corresponding to a class in torch.optim", type=str)
 	parser.add_argument('--agent', help="String corresponding to a deepagent class in src.rubiks.solving.agents", type=str, choices = ["PolicyCube", "DeepCube"])
+	parser.add_argument('--evaluations', help="Number of evaluations (each consisting of 1/4 og rollout_games) to be done during training", type=int)
+	parser.add_argument('--eval_max_time', help="Max time (seconds) for each game for the agent", type=int)
+	parser.add_argument('--eval_scrambling', help="Min<space>max number of scramblings to be run in evaluation. In evaluation during training, the mean of these is used", nargs=2,  type = int) #Bit ugly way to define list of two space-seperated integers
+	parser.add_argument('--final_evals', help="Number of games to be done in the evaluation after the training", type=int)
 
 	jobs = list()
+	with_config = False
 	if args.config:
+		with_config = True
 		config = ConfigParser()
 		config.read([args.config])
 		# If user sets a DEFAULT section, then this overwrites the defaults
@@ -147,7 +173,7 @@ def parse(defaults: dict):
 			job_args.location = f"{job_args.location}/{jobname}" # Give unique location to each run
 			del job_args.config
 			jobs.append(TrainJob(jobname, **vars(job_args)))
-		with open(f"{save_location}/used_config.ini", 'w') as f: config.write(f)
+
 	# If no config was added or config of only defaults were  added, run from CLI/defaults.
 	if (not args.config) or (not config.sections()):
 		parser.set_defaults(**defaults)
@@ -157,6 +183,9 @@ def parse(defaults: dict):
 		jobs.append(TrainJob("Training", **vars(args)))
 
 	# For reproduceability: Save config file and arguments
+	if with_config:
+		with open(f"{save_location}/used_config.ini", 'w') as f: config.write(f)
+
 	with open(f"{save_location}/used_config.ini", 'a') as f: f.write(f"#{' '.join(sys.argv)}")
 	return jobs
 
