@@ -198,13 +198,13 @@ class _Cube686(Cube):
 	# The i'th index contain the neighbors of the i'th side in positive direction
 	neighbours = np.array([
 		[1, 5, 4, 2],  # Front
-		[2, 3, 5, 0],  # Left
-		[0, 4, 3, 1],  # Top
 		[5, 1, 2, 4],  # Back
+		[0, 4, 3, 1],  # Top
+		[4, 0, 1, 3],  # Down
+		[2, 3, 5, 0],  # Left
 		[3, 2, 0, 5],  # Right
-		[4, 0, 1, 3],  # Bottom
 	])
-	adjacents = np.array([
+	adjacents = np.array([  # TODO
 		[6, 7, 0],
 		[2, 3, 4],
 		[4, 5, 6],
