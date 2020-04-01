@@ -51,6 +51,13 @@ class TickTock:
 	def stringify_time(cls, dt: float, unit="ms"):
 		str_ = f"{dt*cls._units[unit]:.3f} {unit}"
 		return cls.thousand_seps(str_)
+
+	def get_sections(self):
+		# Returns data parts of sections
+		return {kw: v for kw, v in self._sections.items() if kw != "tt"}
+
+	def get_section_times(self):
+		return {kw: v["elapsed"] for kw, v in self._sections.items()}
 	
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
