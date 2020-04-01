@@ -10,7 +10,8 @@ print(repopath)
 repo = git.Repo(repopath)
 commits = list(reversed([str(x) for x in repo.iter_commits()]))
 n_commits = np.arange(1, len(commits)+1)
-n_lines = np.zeros(len(commits))
+n_pylines = np.zeros(len(commits))
+n_texlines = np.zeros(len(commits))
 for i, commit in enumerate(commits):
 	cmd = f"git checkout {commit}"
 	print(f">>> {cmd}")
@@ -21,9 +22,23 @@ for i, commit in enumerate(commits):
 			lines = [x.strip() for x in py.readlines()]
 			for line in lines:
 				if line and not line.startswith("#"):
-					n_lines[i] += 1
-print(n_lines)
+					n_pylines[i] += 1
+	texfiles = list(Path(".").rglob("*.[tT][eE][xX]"))
+	for texfile in texfiles:
+		with open(str(texfile)) as tex:
+			lines = [x.strip() for x in tex.readlines()]
+			for line in lines:
+				if line and not line.startswith("%"):
+					n_texlines[i] += 1
+
 os.system("git checkout master")
+
+plt.plot(n_commits, n_pylines, "-o", label=".py")
+plt.plot(n_commits, n_texlines, "-o", label=".tex")
+plt.xlabel("Number of commits")
+plt.ylabel("Nummer of non-empty/comment lines")
+plt.legend(loc=2)
+plt.show()
 
 
 
