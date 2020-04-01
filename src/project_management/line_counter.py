@@ -33,11 +33,13 @@ for i, commit in enumerate(commits):
 
 os.system("git checkout master")
 
+plt.figure(figsize=(15, 10))
 plt.plot(n_commits, n_pylines, "-o", label=".py")
 plt.plot(n_commits, n_texlines, "-o", label=".tex")
 plt.xlabel("Number of commits")
 plt.ylabel("Nummer of non-empty/comment lines")
 plt.legend(loc=2)
+plt.grid(True)
 plt.show()
 
 
