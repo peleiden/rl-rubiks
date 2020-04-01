@@ -8,7 +8,7 @@ import src.rubiks.solving.agents as agents
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
-from src.rubiks.utils import gpu
+from src.rubiks.utils import gpu, seedsetter
 from src.rubiks.utils.logger import Logger, NullLogger
 from src.rubiks.utils.ticktock import TickTock
 
@@ -69,6 +69,8 @@ class Train:
 		"""
 		self.tt.tick()
 
+		#SET SEED
+		seedsetter()
 		if issubclass(self.agent_class, agents.TreeAgent):
 			agent = self.agent_class(net, self.evaluator.max_time)
 		else:

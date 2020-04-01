@@ -151,7 +151,8 @@ def parse(defaults: dict):
 	parser.add_argument('--agent', help="String corresponding to a deepagent class in src.rubiks.solving.agents", type=str, choices = ["PolicyCube", "DeepCube"])
 	parser.add_argument('--evaluations', help="Number of evaluations (each consisting of 1/4 og rollout_games) to be done during training", type=int)
 	parser.add_argument('--eval_max_time', help="Max time (seconds) for each game for the agent", type=int)
-	parser.add_argument('--eval_scrambling', help="Min<space>max number of scramblings to be run in evaluation. In evaluation during training, the mean of these is used", nargs=2,  type = int) #Bit ugly way to define list of two space-seperated integers
+	intlist_validator = lambda args: [int(args.split()[0]), int(args.split()[1])] #Ugly way to define list of two numbers
+	parser.add_argument('--eval_scrambling', help="Two space-seperated integers (given in string delimeters, such as --eval scrambling '10 20') denoting interval of number of scramblings to be run in evaluation. In evaluation during training, the mean of these is used", type=intlist_validator)
 	parser.add_argument('--final_evals', help="Number of games to be done in the evaluation after the training", type=int)
 
 	jobs = list()
