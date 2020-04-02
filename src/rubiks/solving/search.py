@@ -1,8 +1,19 @@
 import numpy as np
 from collections import deque, defaultdict
+from dataclasses import dataclass
 
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
+
+@dataclass
+class Node:
+	state: np.ndarray
+	N: np.ndarray
+	W: np.ndarray
+	L: np.ndarray
+	P: np.ndarray
+
+
 class Searcher:
 	def __init__(self, agent_class):
 		self.action_queue = deque()
@@ -28,6 +39,7 @@ class BFS(Searcher):
 
 class MCTS(Searcher):
 	def __init__(self, *args, **kwargs):
+		self.states = dict()
 		super().__init__(*args, **kwargs)
 		self.state_count = defaultdict(lambda: np.zeros(Cube.action_dim))
 		self.state_maxval = defaultdict(lambda: np.zeros(Cube.action_dim))
