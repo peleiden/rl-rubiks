@@ -79,8 +79,8 @@ class Cube:
 
 		return state, faces, dirs
 
-	@staticmethod
-	def sequence_scrambler(games: int, n: int):
+	@classmethod
+	def sequence_scrambler(cls, games: int, n: int):
 		"""
 		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
 		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
@@ -88,7 +88,7 @@ class Cube:
 		with mp.Pool(cpu_count()) as p:
 			res = p.map(_sequence_scrambler, [n]*games)
 			states = np.array([x[0] for x in res])
-			oh_states = torch.stack([x[1] for x in res]).view(-1, 480 if get_repr() else 288)
+			oh_states = torch.stack([x[1] for x in res]).view(-1, cls.get_oh_shape())
 		return states, oh_states
 
 	@classmethod
@@ -110,6 +110,14 @@ class Cube:
 		# Takes in n states and returns an n x 480 one-hot tensor
 		method = _Cube2024.as_oh if get_repr() else _Cube686.as_oh
 		return method(states)
+
+	@staticmethod
+	def get_oh_shape():
+		return 480 if get_repr() else 288
+
+	@staticmethod
+	def rev_action(action: int):
+		return action + 1 if action % 2 == 0 else action - 1
 
 	@classmethod
 	def as633(cls, state: np.ndarray):

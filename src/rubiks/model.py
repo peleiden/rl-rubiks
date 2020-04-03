@@ -1,11 +1,10 @@
 import json
 import os
-import zipfile
 import torch
 import torch.nn as nn
 from copy import deepcopy
 
-from src.rubiks import get_repr
+from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.logger import Logger, NullLogger
 
 from dataclasses import dataclass
@@ -49,7 +48,7 @@ class Model(nn.Module):
 		self.config = config
 		self.log = logger
 
-		shared_thiccness = [480 if get_repr() else 288, 4096, 2048]
+		shared_thiccness = [Cube.get_oh_shape(), 4096, 2048]
 		policy_thiccness = [shared_thiccness[-1], 512, 12]
 		value_thiccness = [shared_thiccness[-1], 512, 1]
 		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))

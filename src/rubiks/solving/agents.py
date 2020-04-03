@@ -90,6 +90,7 @@ class DeepCube(TreeAgent):
 	with_mt = False
 	def __init__(self, net, time_limit: int):
 		super().__init__(MCTS(net), time_limit)
+		# TODO: Methods from DeepAgent
 
 
 if __name__ == "__main__":
