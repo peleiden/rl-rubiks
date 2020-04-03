@@ -31,9 +31,8 @@ class Node:
 
 
 class Searcher:
-	def __init__(self, agent_class):
+	def __init__(self):
 		self.action_queue = deque()
-		self.agent_class = agent_class
 
 	def search(self, state: np.ndarray, time_limit: int):
 		raise NotImplementedError
@@ -54,9 +53,10 @@ class BFS(Searcher):
 		raise NotImplementedError
 
 class MCTS(Searcher):
-	def __init__(self, *args, **kwargs):
+	def __init__(self, net):
+		super().__init__()
 		self.states = dict()
-		super().__init__(*args, **kwargs)
+		self.net = net
 
 
 	def search(self, state: np.ndarray, time_limit: int):

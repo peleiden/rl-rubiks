@@ -19,26 +19,29 @@ class Agent:
 		return f"{self.__class__.__name__}"
 
 class DeepAgent(Agent):
-	def __init__(self, net: Model, **kwargs):
-		super().__init__(**kwargs)
+	def __init__(self, net: Model):
+		super().__init__()
 		self.net = net
+
+	def act(self, state: np.ndarray) -> (int, bool):
+		raise NotImplementedError
 
 	def update_net(self, net):
 		self.net = net
 
 	@classmethod
-	def from_saved(cls, loc: str, **kwargs):
+	def from_saved(cls, loc: str):
 		net = Model.load(loc)
 		net.to(gpu)
-		return cls(net, **kwargs)
+		return cls(net)
 
 class TreeAgent(Agent):
 	with_mt = True
-	def __init__(self, searcher: Searcher, time_limit: int, **kwargs):
+	def __init__(self, searcher: Searcher, time_limit: int):
 		"""
 		time_limit: Number of seconds that the tree search part of the algorithm is allowed to searc
 		"""
-		super().__init__(**kwargs)
+		super().__init__()
 		self.searcher = searcher
 		self.time_limit = time_limit
 		self.has_searched = False
@@ -52,18 +55,18 @@ class TreeAgent(Agent):
 		return Cube.action_space[self.searcher.action_queue.popleft()]
 
 class RandomAgent(TreeAgent):
-	def __init__(self, time_limit: int,  **kwargs):
-		super().__init__(RandomDFS(self), time_limit, **kwargs)
+	def __init__(self, time_limit: int):
+		super().__init__(RandomDFS(), time_limit)
 
-class SimpleBFS(Agent):
-	def __init__(self, time_limit: int,  **kwargs):
-		super().__init__(BFS(self), time_limit, **kwargs)
+class SimpleBFS(TreeAgent):
+	def __init__(self, time_limit: int):
+		super().__init__(BFS(), time_limit)
 
 
 class PolicyCube(DeepAgent):
 	# Pure neural net agent
-	def __init__(self, net, sample_policy=False, **kwargs):
-		super().__init__(net, **kwargs)
+	def __init__(self, net, sample_policy=False):
+		super().__init__(net)
 		self.sample_policy = sample_policy
 
 	def act(self, state: np.ndarray) -> (int, bool):
@@ -83,9 +86,13 @@ class PolicyCube(DeepAgent):
 		return Cube.action_space[action]
 
 
-class DeepCube(TreeAgent, DeepAgent):
+class DeepCube(TreeAgent):
 	with_mt = False
-	def __init__(self, net, time_limit: int,  **kwargs):
-		super().__init__(MCTS(self), time_limit, net, **kwargs)
+	def __init__(self, net, time_limit: int):
+		super().__init__(MCTS(net), time_limit)
+
+
+if __name__ == "__main__":
+	DeepCube(net=None, time_limit=1)
 
 
