@@ -5,6 +5,7 @@ import torch.nn as nn
 from copy import deepcopy
 
 from src.rubiks.cube.cube import Cube
+from src.rubiks.utils import cpu, gpu
 from src.rubiks.utils.logger import Logger, NullLogger
 
 from dataclasses import dataclass
@@ -105,7 +106,7 @@ class Model(nn.Module):
 		model_path = os.path.join(load_dir, "model.pt")
 		conf_path = os.path.join(load_dir, "config.json")
 		with open(conf_path, encoding="utf-8") as conf:
-			state_dict = torch.load(model_path)
+			state_dict = torch.load(model_path, map_location=gpu)
 			config = ModelConfig.from_json_dict(json.load(conf))
 		
 		model = Model(config)

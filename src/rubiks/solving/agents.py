@@ -49,9 +49,12 @@ class TreeAgent(Agent):
 	def act(self, state: np.ndarray) -> (int, bool):
 		if not self.searcher.action_queue:
 			if self.has_searched: return False
-			self.searcher.search(state, self.time_limit)
+			solution_found = self.searcher.search(state, self.time_limit)
 			self.has_searched = True
+			if not solution_found:
+				return None
 
+		# FIXME: Error is thrown if time limit is exceeded
 		return Cube.action_space[self.searcher.action_queue.popleft()]
 
 class RandomAgent(TreeAgent):
@@ -90,7 +93,16 @@ class DeepCube(TreeAgent):
 	with_mt = False
 	def __init__(self, net, time_limit: int):
 		super().__init__(MCTS(net), time_limit)
-		# TODO: Methods from DeepAgent
+		self.net = net
+
+	def update_net(self, net):
+		self.net = net
+
+	@classmethod
+	def from_saved(cls, loc: str, time_limit: int):
+		net = Model.load(loc)
+		net.to(gpu)
+		return cls(net, time_limit)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from src.rubiks.solving.agents import Agent, PolicyCube
 def _eval_game(cfg: (Agent, int, int)):
 	agent, max_time, depth = cfg
 	if hasattr(agent, 'has_searched'): agent.has_searched = False #Tree agents need to be reset
-	turns_to_complete = 0  # 0 for unfinished
+	turns_to_complete = -1  # -1 for unfinished
 	state, _, _ = Cube.scramble(depth)
 
 	tt = TickTock()
@@ -23,20 +23,20 @@ def _eval_game(cfg: (Agent, int, int)):
 	while tt.tock() < max_time:
 		turns_to_complete += 1
 		action = agent.act(state)
-		if not action: break #To allow stack-controlled agents to give up
+		if not action: break  # To allow stack-controlled agents to give up
 		state = Cube.rotate(state, *action)
 
-	if not Cube.is_solved(state): turns_to_complete = 0
+	if not Cube.is_solved(state): turns_to_complete = -1
 
 	return turns_to_complete
 
 
 class Evaluator:
 	def __init__(self,
-			n_games					= 420,  # Nice
-			max_time				= 600,
-			scrambling_depths			= range(1, 10),
-			logger: Logger				= NullLogger()
+				 n_games			= 420,  # Nice
+				 max_time			= 600,
+				 scrambling_depths	= range(1, 10),
+				 logger: Logger		= NullLogger()
 		):
 
 		self.n_games = n_games
@@ -65,6 +65,7 @@ class Evaluator:
 
 		# Builds configurations for runs
 		cfgs = []
+		# TODO: Pass a logger along to log progress
 		for i, d in enumerate(self.scrambling_depths):
 			for _ in range(self.n_games):
 				cfgs.append((agent, max_time, d))
@@ -81,10 +82,10 @@ class Evaluator:
 		self.log(f"Evaluation results")
 		for i, d in enumerate(self.scrambling_depths):
 			self.log(f"Scrambling depth {d}", with_timestamp=False)
-			self.log(f"\tShare completed: {np.count_nonzero(res[i]!=0)*100/len(res[i]):.2f} %", with_timestamp=False)
+			self.log(f"\tShare completed: {np.count_nonzero(res[i]!=-1)*100/len(res[i]):.2f} %", with_timestamp=False)
 			if res.any():
-				self.log(f"\tMean turns to complete (ex. unfinished): {res[i][res[i]!=0].mean():.2f}", with_timestamp=False)
-				self.log(f"\tMedian turns to complete (ex. unfinished): {np.median(res[i][res[i]!=0]):.2f}", with_timestamp=False)
+				self.log(f"\tMean turns to complete (ex. unfinished): {res[i][res[i]!=-1].mean():.2f}", with_timestamp=False)
+				self.log(f"\tMedian turns to complete (ex. unfinished): {np.median(res[i][res[i]!=-1]):.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
 		return res
@@ -97,12 +98,16 @@ class Evaluator:
 
 
 if __name__ == "__main__":
-	from src.rubiks.solving.agents import RandomAgent
-	e = Evaluator(n_games = 20,
-				  max_time = 2,
-				  logger = Logger("local_evaluation/randomagent.log", "Testing the RandomAgent", True),
-				  scrambling_depths = range(1, 2)
+	from src.rubiks.solving.agents import RandomAgent, DeepCube
+	e = Evaluator(n_games = 100,
+				  max_time = 1,
+				  logger = Logger("local_evaluation/mcts.log", "Testing MCTS", True),
+				  scrambling_depths = range(2, 7)
 	)
-	results = e.eval(RandomAgent(e.max_time))
+	# agent = DeepCube.from_saved("local_train", 1)
+	agent = PolicyCube.from_saved("local_train")
+	results = e.eval(agent, 1)
 	# results = e.eval(PolicyCube.from_saved("local_train"))
-	# TODO: Boxplot over completion turns for each scrambling depth
+	# TODO: Boxplot with completion turns for each scrambling depth
+
+
