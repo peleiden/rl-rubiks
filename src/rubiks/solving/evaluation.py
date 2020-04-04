@@ -20,8 +20,7 @@ def _eval_game(cfg: (Agent, int, int)):
 		solution_found = agent.generate_action_queue(state)
 		if solution_found:
 			return len(agent.searcher.action_queue)
-		else:
-			return unfinished
+		return unfinished
 	else:  # Evaluations of non-tree agents
 		tt = TickTock()
 		tt.tick()
@@ -60,10 +59,6 @@ class Evaluator:
 		Evaluates an agent
 		"""
 		max_time = self.max_time
-		if hasattr(agent, 'time_limit'):
-			assert agent.time_limit == max_time
-			max_time *= 2 #To be sure that the agent class is allowed to control the running time.
-
 		self.log(f"Evaluating {self.n_games*len(self.scrambling_depths)} games with agent {agent} with max time {self.max_time}. Expected time <~ {self.max_time*self.n_games*len(self.scrambling_depths)/60} minutes ")
 
 		# Builds configurations for runs

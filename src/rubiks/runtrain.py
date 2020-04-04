@@ -22,7 +22,7 @@ defaults  = {
 	'batch_size': 50,
 	'lr': 1e-5,
 	'optim_fn': 'RMSprop',
-	'agent': 'PolicyCube',
+	'agent': 'DeepCube',
 	'evaluations': 20,
 	'eval_max_time': 60,
 	'eval_scrambling': '10 25',
@@ -69,7 +69,7 @@ class TrainJob:
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
 		self.agent = getattr(agents, agent)
-		assert issubclass(self.agent, agents.DeepAgent)
+		assert hasattr(self.agent, 'from_saved')
 
 		self.evaluations = evaluations
 		assert self.evaluations <= self.rollouts
