@@ -18,7 +18,7 @@ n_commits = np.arange(0, len(commits)+1)
 n_lines = {kw: np.zeros(len(commits)+1) for kw in patterns}
 for i, commit in enumerate(commits):
 	cmd = f"git checkout {commit}"
-	print(f">>> {cmd}")
+	print(f"{i+1} / {len(commits)} >>> {cmd}")
 	os.system(cmd)
 	for kw, (pattern, comment) in patterns.items():
 		files = list(Path(".").rglob(pattern))
@@ -31,13 +31,13 @@ for i, commit in enumerate(commits):
 
 os.system("git checkout master")
 
-plt.figure(figsize=(15, 10))
 for kw, lines in n_lines.items():
 	plt.plot(n_commits, lines, "-o", label=kw)
 plt.xlabel("Number of commits")
 plt.ylabel("Nummer of non-empty/comment lines")
 plt.legend(loc=2)
 plt.grid(True)
+plt.savefig("line_counts.png")
 plt.show()
 
 
