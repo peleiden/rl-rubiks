@@ -105,13 +105,14 @@ class Evaluator:
 
 if __name__ == "__main__":
 	from src.rubiks.solving.agents import RandomAgent, PolicyCube, DeepCube
-	e = Evaluator(n_games = 100,
+	e = Evaluator(n_games = 200,
 				  max_time = 1,
 				  logger = Logger("local_evaluation/mcts.log", "Testing MCTS", True),
-				  scrambling_depths = range(1, 8)
+				  scrambling_depths = range(1, 11)
 	)
-	# agent = DeepCube.from_saved("local_train", 1)
 	agent = PolicyCube.from_saved("local_train")
+	results = e.eval(agent, 1)
+	agent = DeepCube.from_saved("local_train", 1)
 	results = e.eval(agent, 1)
 	# results = e.eval(PolicyCube.from_saved("local_train"))
 	# TODO: Boxplot with completion turns for each scrambling depth

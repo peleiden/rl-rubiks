@@ -2,8 +2,8 @@ import os
 import json
 import torch
 
+from src.rubiks import cpu, gpu
 from src.rubiks.model import Model, ModelConfig
-from src.rubiks.utils import cpu, gpu
 from src.rubiks.utils.logger import NullLogger
 
 def test_model_config():

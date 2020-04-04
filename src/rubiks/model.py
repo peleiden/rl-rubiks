@@ -5,7 +5,7 @@ import torch.nn as nn
 from copy import deepcopy
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks.utils import cpu, gpu
+from src.rubiks import cpu, gpu
 from src.rubiks.utils.logger import Logger, NullLogger
 
 from dataclasses import dataclass

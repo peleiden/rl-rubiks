@@ -3,9 +3,9 @@ from collections import deque
 import numpy as np
 import torch
 
+from src.rubiks import cpu, gpu
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model
-from src.rubiks.utils import cpu, gpu
 from src.rubiks.solving.search import Searcher, BFS, RandomDFS, MCTS
 
 

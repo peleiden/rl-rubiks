@@ -5,10 +5,11 @@ import torch
 from typing import List
 
 import src.rubiks.solving.agents as agents
+from src.rubiks import cpu, gpu, no_grad
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
-from src.rubiks.utils import gpu, seedsetter
+from src.rubiks.utils import seedsetter
 from src.rubiks.utils.logger import Logger, NullLogger
 from src.rubiks.utils.ticktock import TickTock
 
@@ -149,6 +150,7 @@ class Train:
 
 		return net
 
+	@no_grad
 	def ADI_traindata(self, net, games: int, sequence_length: int):
 		"""
 		Implements Autodidactic Iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
@@ -170,8 +172,6 @@ class Train:
 		loss_weights = np.empty(N_data)
 
 		net.eval()
-		prev_grad = torch.is_grad_enabled()
-		torch.set_grad_enabled(False)
 		# Plays a number of games
 		for i in range(games):
 			# For all states in the scrambled game
@@ -195,7 +195,6 @@ class Train:
 				value_targets[current_idx] = values[policy] if not Cube.is_solved(scrambled_state) else 0  # Max Lapan convergence fix
 
 				loss_weights[current_idx] = 1 / (j+1)  # TODO Is it correct?
-		torch.set_grad_enabled(prev_grad)
 
 		return oh_states, policy_targets, value_targets, loss_weights
 

@@ -3,7 +3,7 @@ import torch
 
 from src.rubiks.train import Train
 from src.rubiks.model import Model, ModelConfig
-from src.rubiks.utils import cpu, gpu
+from src.rubiks import cpu, gpu
 from src.rubiks.solving.agents import PolicyCube
 from src.rubiks.solving.evaluation import Evaluator
 class TestTrain:

@@ -4,9 +4,9 @@ from copy import deepcopy
 import numpy as np
 import torch
 
+from src.rubiks import cpu, gpu
 from src.rubiks.model import Model
 from src.rubiks.cube.cube import Cube
-from src.rubiks.utils import cpu, gpu
 from src.rubiks.utils.ticktock import TickTock
 
 class Node:
@@ -82,7 +82,7 @@ class MCTS(Searcher):
 		self.c = c
 		self.nu = nu
 
-
+	
 	def search(self, state: np.ndarray, time_limit: int) -> bool:
 		if Cube.is_solved(state):
 			return deque()

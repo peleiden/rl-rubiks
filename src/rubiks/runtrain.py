@@ -8,8 +8,7 @@ import torch
 
 import src.rubiks.solving.agents as agents
 from src.rubiks.utils.logger import Logger
-from src.rubiks.utils import cpu, gpu
-from src.rubiks import get_repr, set_repr
+from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.train import Train
 from src.rubiks.solving.evaluation import Evaluator
@@ -92,7 +91,7 @@ class TrainJob:
 
 	def execute(self):
 		self.logger(f"Starting job:\n{self.jobname}")
-		ini_repr = get_repr()
+		store_repr()
 		set_repr(self.is2024)
 
 		# Training
@@ -126,7 +125,7 @@ class TrainJob:
 		evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
 		evaluator.eval(self.agent(net))
 
-		set_repr(ini_repr)
+		restore_repr()
 
 		return train.train_rollouts, train.train_losses
 

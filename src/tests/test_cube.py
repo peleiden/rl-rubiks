@@ -1,4 +1,4 @@
-# Hacky import code needed to import from sibling dir
+from src.rubiks import get_repr, set_repr
 from src.rubiks.cube.cube import Cube
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 
@@ -12,10 +12,16 @@ class TestRubiksCube:
 		assert Cube.get_solved_instance().shape == (20,)
 
 	def test_cube(self):
+		set_repr(True)
+		self._rotation_tests()
+		# TODO Once _Cube686.as633 is implemented
+		# set_repr(False)
+		# self._rotation_tests()
+
+	def _rotation_tests(self):
 		state = Cube.get_solved()
 		for action in Cube.action_space:
 			state = Cube.rotate(state, *action)
-
 		# Tests that stringify and by extensions as633 works on assembled
 		state = Cube.get_solved()
 		assert Cube.stringify(state) == "\n".join([
