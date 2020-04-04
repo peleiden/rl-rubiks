@@ -11,6 +11,7 @@ repo = git.Repo(repopath)
 commits = list(reversed([str(x) for x in repo.iter_commits()]))
 patterns = {
 	".py": ("*.[pP][yY]", "#"),
+	".ts": ("*.[tT][sS]", "//"),
 	".tex": ("*.[tT][eE][xX]", "%"),
 	".md": ("*.[mM][dD]", "None"*10),
 }
