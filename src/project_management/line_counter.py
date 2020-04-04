@@ -23,6 +23,7 @@ for i, commit in enumerate(commits):
 	os.system(cmd)
 	for kw, (pattern, comment) in patterns.items():
 		files = list(Path(".").rglob(pattern))
+		files = [x for x in files if "/local" not in x and "node_modules" not in x]
 		for p in files:
 			with open(str(p)) as f:
 				lines = [x.strip() for x in f.readlines()]
