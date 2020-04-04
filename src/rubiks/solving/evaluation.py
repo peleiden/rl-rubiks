@@ -6,7 +6,7 @@ from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks.solving.agents import Agent, PolicyCube
+from src.rubiks.solving.agents import Agent
 
 # Multiprocessing is silly, so all functions have to be top-level
 # This also means all info has to be parsed in with a single argument
@@ -98,14 +98,14 @@ class Evaluator:
 
 
 if __name__ == "__main__":
-	from src.rubiks.solving.agents import RandomAgent, DeepCube
-	e = Evaluator(n_games = 100,
-				  max_time = 1,
+	from src.rubiks.solving.agents import RandomAgent, PolicyCube, DeepCube
+	e = Evaluator(n_games = 500,
+				  max_time = 2,
 				  logger = Logger("local_evaluation/mcts.log", "Testing MCTS", True),
-				  scrambling_depths = range(2, 7)
+				  scrambling_depths = range(1, 10)
 	)
-	# agent = DeepCube.from_saved("local_train", 1)
-	agent = PolicyCube.from_saved("local_train")
+	agent = DeepCube.from_saved("local_train", 2)
+	# agent = PolicyCube.from_saved("local_train")
 	results = e.eval(agent, 1)
 	# results = e.eval(PolicyCube.from_saved("local_train"))
 	# TODO: Boxplot with completion turns for each scrambling depth

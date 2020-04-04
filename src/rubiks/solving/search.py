@@ -56,7 +56,8 @@ class RandomDFS(Searcher):
 			state = Cube.rotate(state, *Cube.action_space[action])
 
 			self.action_queue.append(action)
-			if Cube.is_solved(state): break
+			if Cube.is_solved(state): return True
+		return False
 
 class BFS(Searcher):
 	def search(self, state: np.ndarray, time_limit: int):
@@ -80,6 +81,7 @@ class MCTS(Searcher):
 		with torch.no_grad():
 			p, v = self.net(oh)
 		self.states[tuple(state)] = Node(state, p.cpu().numpy().ravel(), float(v.cpu()))
+		del p, v
 		solve_action = self.expand_leaf(self.states[tuple(state)])
 		if solve_action != -1:
 			self.action_queue = deque([solve_action])
@@ -113,16 +115,16 @@ class MCTS(Searcher):
 		unknown_neighs = list(np.arange(len(no_neighs)))  # Some unknown neighbors may already be known but just not connected
 		new_states = np.empty((len(no_neighs), *Cube.get_solved_instance().shape), dtype=Cube.dtype)
 		for i in reversed(range(len(no_neighs))):
-			n = no_neighs[i]
-			new_states[i] = Cube.rotate(leaf.state, *Cube.action_space[n])
+			action = no_neighs[i]
+			new_states[i] = Cube.rotate(leaf.state, *Cube.action_space[action])
 			if Cube.is_solved(new_states[i]):
 				# print("SOLVED"*10)
-				return n
+				return action
 			# If new leaf state is already known, the tree is updated, and the neighbor is no longer considered
 			tstate = tuple(new_states[i])
 			if tstate in self.states:
-				leaf.neighs[n] = self.states[tstate]
-				self.states[tstate].neighs[Cube.rev_action(n)] = leaf
+				leaf.neighs[action] = self.states[tstate]
+				self.states[tstate].neighs[Cube.rev_action(action)] = leaf
 				unknown_neighs.pop(i)
 		no_neighs = no_neighs[unknown_neighs]
 		new_states = new_states[unknown_neighs]
@@ -136,9 +138,9 @@ class MCTS(Searcher):
 			p, v = self.net(new_states_oh)
 			p, v = p.cpu().numpy(), v.cpu().numpy()
 		# Generates new states
-		for i, a in enumerate(no_neighs):
-			new_leaf = Node(new_states[i], p[i], v[i], leaf, a)
-			leaf.neighs[a] = new_leaf
+		for i, action in enumerate(no_neighs):
+			new_leaf = Node(new_states[i], p[i], v[i], leaf, action)
+			leaf.neighs[action] = new_leaf
 			self.states[tuple(new_states[i])] = new_leaf
 		if any([x is None for x in leaf.neighs]): breakpoint()
 		leaf.is_leaf = False
