@@ -9,33 +9,30 @@ os.chdir(repopath)
 print(repopath)
 repo = git.Repo(repopath)
 commits = list(reversed([str(x) for x in repo.iter_commits()]))
+patterns = {
+	".py": ("*.[pP][yY]", "#"),
+	".tex": ("*.[tT][eE][xX]", "%"),
+}
 n_commits = np.arange(0, len(commits)+1)
-n_pylines = np.zeros(len(commits)+1)
-n_texlines = np.zeros(len(commits)+1)
+n_lines = {kw: np.zeros(len(commits)+1) for kw in patterns}
 for i, commit in enumerate(commits):
 	cmd = f"git checkout {commit}"
 	print(f">>> {cmd}")
 	os.system(cmd)
-	pyfiles = list(Path(".").rglob("*.[pP][yY]"))
-	for pyfile in pyfiles:
-		with open(str(pyfile)) as py:
-			lines = [x.strip() for x in py.readlines()]
-			for line in lines:
-				if line and not line.startswith("#"):
-					n_pylines[i+1] += 1
-	texfiles = list(Path(".").rglob("*.[tT][eE][xX]"))
-	for texfile in texfiles:
-		with open(str(texfile)) as tex:
-			lines = [x.strip() for x in tex.readlines()]
-			for line in lines:
-				if line and not line.startswith("%"):
-					n_texlines[i+1] += 1
+	for kw, (pattern, comment) in patterns.items():
+		files = list(Path(".").rglob(pattern))
+		for p in files:
+			with open(str(p)) as f:
+				lines = [x.strip() for x in f.readlines()]
+				for line in lines:
+					if line and not line.startswith(comment):
+						n_lines[kw][i+1] += 1
 
 os.system("git checkout master")
 
 plt.figure(figsize=(15, 10))
-plt.plot(n_commits, n_pylines, "-o", label=".py")
-plt.plot(n_commits, n_texlines, "-o", label=".tex")
+for kw, lines in n_lines.items():
+	plt.plot(n_commits, lines, "-o", label=kw)
 plt.xlabel("Number of commits")
 plt.ylabel("Nummer of non-empty/comment lines")
 plt.legend(loc=2)
