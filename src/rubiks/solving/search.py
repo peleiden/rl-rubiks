@@ -46,11 +46,15 @@ class Searcher:
 	def search(self, state: np.ndarray, time_limit: int) -> bool:
 		# Returns whether a path was found
 		raise NotImplementedError
+	
+	def reset_queue(self):
+		self.action_queue = deque()
 
 class RandomDFS(Searcher):
 	def search(self, state: np.ndarray, time_limit: int):
 		tt = TickTock()
 		tt.tick()
+		self.reset_queue()
 		while tt.tock() < time_limit:
 			action = np.random.randint(Cube.action_dim)
 			state = Cube.rotate(state, *Cube.action_space[action])
@@ -60,10 +64,17 @@ class RandomDFS(Searcher):
 		return False
 
 class BFS(Searcher):
-	def search(self, state: np.ndarray, time_limit: int):
+	def search(self, state: np.ndarray, time_limit: int) -> bool:
+		tt = TickTock()
+		tt.tick()
+		self.reset_queue()
+		while tt.tock() < time_limit:
+			# TODO
+			pass
 		raise NotImplementedError
 
 class MCTS(Searcher):
+	# TODO: Seemingly bug where many cubes of scrambling depth two are not solved
 	def __init__(self, net: Model, c: float=1, nu: float=0):
 		super().__init__()
 		self.states = dict()
@@ -72,11 +83,12 @@ class MCTS(Searcher):
 		self.nu = nu
 
 
-	def search(self, state: np.ndarray, time_limit: int):
+	def search(self, state: np.ndarray, time_limit: int) -> bool:
 		if Cube.is_solved(state):
 			return deque()
 		tt = TickTock()
 		tt.tick()
+		self.reset_queue()
 		oh = Cube.as_oh(state).to(gpu)
 		with torch.no_grad():
 			p, v = self.net(oh)
@@ -92,7 +104,9 @@ class MCTS(Searcher):
 			if solve_action != -1:
 				self.action_queue = path + deque([solve_action])
 				return True
-		return bool(self.action_queue)
+		# Deletes tree - otherwise memory will continue to be used
+		self.clean_tree()
+		return False
 
 	def search_leaf(self, node: Node) -> (list, Node):
 		# Finds leaf starting from state
@@ -146,6 +160,9 @@ class MCTS(Searcher):
 		leaf.is_leaf = False
 
 		return -1
+	
+	def clean_tree(self):
+		self.states = dict()
 
 
 

@@ -24,19 +24,20 @@ class TestRandomAgent:
 	def test_aot_agent(self):
 		np.random.seed(42)
 		a = RandomAgent(1)
-		state = Cube.scramble(10)
-		action = a.act(state)
-		if action is None:
-			for action in a.searcher.action_queue:
-				state = Cube.rotate(state, *action)
-		else:
+		state, _, _ = Cube.scramble(10)
+		solution_found = a.generate_action_queue(state)
+		if solution_found:
 			while not Cube.is_solved(state):
-				state = Cube.rotate(state, *action)
-				action = a.act(state)
+				state = Cube.rotate(state, *a.act(state))
+			assert Cube.is_solved(state)
+		else:
+			while a.searcher.action_queue:
+				state = Cube.rotate(state, *a.act(state))
+			assert not Cube.is_solved(state)
 			
 	def test_jit_agent(self):
 		np.random.seed(42)
-		a = PolicyCube.from_saved("local_train")
-		state = Cube.scramble(10)
+		a = PolicyCube.from_saved("src/rubiks/local_train")
+		state, _, _ = Cube.scramble(10)
 		for _ in range(10):
 			state = Cube.rotate(state, *a.act(state))

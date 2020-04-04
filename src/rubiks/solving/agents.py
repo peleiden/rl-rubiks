@@ -1,3 +1,5 @@
+from collections import deque
+
 import numpy as np
 import torch
 
@@ -14,6 +16,9 @@ class Agent:
 
 	def act(self, state: np.ndarray) -> (int, bool):
 		raise NotImplementedError
+	
+	def is_jit(self):
+		return issubclass(self.__class__, TreeAgent)
 
 	def __str__(self):
 		return f"{self.__class__.__name__}"
@@ -44,17 +49,12 @@ class TreeAgent(Agent):
 		super().__init__()
 		self.searcher = searcher
 		self.time_limit = time_limit
-		self.has_searched = False
+	
+	def generate_action_queue(self, state: np.ndarray) -> bool:
+		solution_found = self.searcher.search(state, self.time_limit)
+		return solution_found
 
 	def act(self, state: np.ndarray) -> (int, bool):
-		if not self.searcher.action_queue:
-			if self.has_searched: return False
-			solution_found = self.searcher.search(state, self.time_limit)
-			self.has_searched = True
-			if not solution_found:
-				return None
-
-		# FIXME: Error is thrown if time limit is exceeded
 		return Cube.action_space[self.searcher.action_queue.popleft()]
 
 class RandomAgent(TreeAgent):

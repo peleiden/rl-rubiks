@@ -13,22 +13,25 @@ from src.rubiks.solving.agents import Agent
 # https://stackoverflow.com/questions/3288595/multiprocessing-how-to-use-pool-map-on-a-function-defined-in-a-class
 def _eval_game(cfg: (Agent, int, int)):
 	agent, max_time, depth = cfg
-	if hasattr(agent, 'has_searched'): agent.has_searched = False #Tree agents need to be reset
-	turns_to_complete = -1  # -1 for unfinished
+	unfinished = -1
+	turns_to_complete = unfinished  # -1 for unfinished
 	state, _, _ = Cube.scramble(depth)
-
-	tt = TickTock()
-	tt.tick()
-
-	while tt.tock() < max_time:
-		turns_to_complete += 1
-		action = agent.act(state)
-		if not action: break  # To allow stack-controlled agents to give up
-		state = Cube.rotate(state, *action)
-
-	if not Cube.is_solved(state): turns_to_complete = -1
-
-	return turns_to_complete
+	if agent.is_jit():  # Evaluation of tree agents
+		solution_found = agent.generate_action_queue(state)
+		if solution_found:
+			return len(agent.searcher.action_queue)
+		else:
+			return unfinished
+	else:  # Evaluations of non-tree agents
+		tt = TickTock()
+		tt.tick()
+		while tt.tock() < max_time:
+			turns_to_complete += 1
+			action = agent.act(state)
+			state = Cube.rotate(state, *action)
+			if Cube.is_solved(state):
+				return turns_to_complete
+		return unfinished
 
 
 class Evaluator:
@@ -75,7 +78,10 @@ class Evaluator:
 			with mp.Pool(min(max_threads, cpu_count())) as p:
 				res = p.map(_eval_game, cfgs)
 		else:
-			res = [_eval_game(cfg) for cfg in cfgs]
+			res = []
+			for i, cfg in enumerate(cfgs):
+				self.log(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}")
+				res.append(_eval_game(cfg))
 		self.tt.end_section(f"Evaluation of {agent}")
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
 
@@ -99,13 +105,13 @@ class Evaluator:
 
 if __name__ == "__main__":
 	from src.rubiks.solving.agents import RandomAgent, PolicyCube, DeepCube
-	e = Evaluator(n_games = 500,
-				  max_time = 2,
+	e = Evaluator(n_games = 100,
+				  max_time = 1,
 				  logger = Logger("local_evaluation/mcts.log", "Testing MCTS", True),
-				  scrambling_depths = range(1, 10)
+				  scrambling_depths = range(1, 8)
 	)
-	agent = DeepCube.from_saved("local_train", 2)
-	# agent = PolicyCube.from_saved("local_train")
+	# agent = DeepCube.from_saved("local_train", 1)
+	agent = PolicyCube.from_saved("local_train")
 	results = e.eval(agent, 1)
 	# results = e.eval(PolicyCube.from_saved("local_train"))
 	# TODO: Boxplot with completion turns for each scrambling depth
