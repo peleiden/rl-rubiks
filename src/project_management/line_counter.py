@@ -12,6 +12,7 @@ commits = list(reversed([str(x) for x in repo.iter_commits()]))
 patterns = {
 	".py": ("*.[pP][yY]", "#"),
 	".tex": ("*.[tT][eE][xX]", "%"),
+	".md": ("*.[mM][dD]", "None"*10),
 }
 n_commits = np.arange(0, len(commits)+1)
 n_lines = {kw: np.zeros(len(commits)+1) for kw in patterns}
