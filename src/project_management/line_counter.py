@@ -31,6 +31,7 @@ for i, commit in enumerate(commits):
 
 os.system("git checkout master")
 
+plt.figure(figsize=(15, 10))
 for kw, lines in n_lines.items():
 	plt.plot(n_commits, lines, "-o", label=kw)
 plt.xlabel("Number of commits")
