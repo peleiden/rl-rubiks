@@ -1,13 +1,16 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonService } from '../common.service';
 
 @Component({
   selector: 'app-rubiks',
   templateUrl: './rubiks.component.html',
-  styleUrls: ['./rubiks.component.css']
+  styles: [
+    ".side { height: 100px; width: 100px; }"
+  ],
 })
 export class RubiksComponent implements OnInit {
 
-  constructor() { }
+  constructor(public commonService: CommonService) { }
 
   ngOnInit(): void {
   }

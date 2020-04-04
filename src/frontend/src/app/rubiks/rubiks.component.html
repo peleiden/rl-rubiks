@@ -1,1 +1,22 @@
-<p>rubiks works!</p>
+
+<div class="container" *ngIf="commonService.state">
+	<div class="row">
+		<div class="side col-3"></div>
+		<app-side class="side col-3" [side]="commonService.state[2]"></app-side>
+		<div class="side col-3"></div>
+		<div class="side col-3"></div>
+	</div>
+	<div class="row">
+		<app-side class="side col-3" [side]="commonService.state[4]"></app-side>
+		<app-side class="side col-3" [side]="commonService.state[0]"></app-side>
+		<app-side class="side col-3" [side]="commonService.state[5]"></app-side>
+		<app-side class="side col-3" [side]="commonService.state[1]"></app-side>
+	</div>
+	<div class="row">
+		<div class="side col-3"></div>
+		<app-side class="side col-3" [side]="commonService.state[3]"></app-side>
+		<div class="side col-3"></div>
+		<div class="side col-3"></div>
+	</div>
+</div>
+

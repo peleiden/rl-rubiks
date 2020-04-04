@@ -9,11 +9,14 @@ api = Api(app)
 CORS(app)
 
 class CubeService(Resource):
+	state = Cube.get_solved()
 	def get(self):
-		return Cube.get_solved().tolist()
+		self.state = Cube.get_solved()
+		return Cube.as633(self.state).tolist()
 	def post(self):
-		print(request.form)
-		return Cube.get_solved().tolist()
+		action = int(request.data)
+		self.state = Cube.rotate(self.state, *Cube.action_space[action])
+		return Cube.as633(self.state).tolist()
 
 api.add_resource(CubeService, "/cube")
 

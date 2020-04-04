@@ -1,6 +1,9 @@
 <div class="content">
   <h1>Hello there</h1>
   <app-rubiks></app-rubiks>
+  <button *ngFor="let action of commonService.actions" class="button button-secondary" (click)="act(action)">
+    Handling {{action}}
+  </button>
 </div>
 
 

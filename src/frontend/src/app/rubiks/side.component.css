@@ -1,0 +1,29 @@
+
+.sticker {
+	border: 2px solid black;
+	border-radius: 2px;
+}
+
+.red {
+	background-color: red;
+}
+
+.orange {
+	background-color: orange;
+}
+
+.white {
+	background-color: white;
+}
+
+.yellow {
+	background-color: yellow;
+}
+
+.green {
+	background-color: green;
+}
+
+.blue {
+	background-color: blue;
+}
