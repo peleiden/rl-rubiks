@@ -20,8 +20,7 @@ def _eval_game(cfg: (Agent, int, int)):
 		solution_found = agent.generate_action_queue(state)
 		if solution_found:
 			return len(agent.searcher.action_queue)
-		else:
-			return unfinished
+		return unfinished
 	else:  # Evaluations of non-tree agents
 		tt = TickTock()
 		tt.tick()
@@ -60,10 +59,6 @@ class Evaluator:
 		Evaluates an agent
 		"""
 		max_time = self.max_time
-		if hasattr(agent, 'time_limit'):
-			assert agent.time_limit == max_time
-			max_time *= 2 #To be sure that the agent class is allowed to control the running time.
-
 		self.log(f"Evaluating {self.n_games*len(self.scrambling_depths)} games with agent {agent} with max time {self.max_time}. Expected time <~ {self.max_time*self.n_games*len(self.scrambling_depths)/60} minutes ")
 
 		# Builds configurations for runs
@@ -73,16 +68,18 @@ class Evaluator:
 			for _ in range(self.n_games):
 				cfgs.append((agent, max_time, d))
 
-		self.tt.section(f"Evaluation of {agent}")
 		if agent.with_mt:
+			self.tt.section(f"Multithreaded evaluation of {agent}")
 			with mp.Pool(min(max_threads, cpu_count())) as p:
 				res = p.map(_eval_game, cfgs)
+			self.tt.end_section(f"Multithreaded evaluation of {agent}")
 		else:
 			res = []
 			for i, cfg in enumerate(cfgs):
+				self.tt.section(f"Evaluation of {agent}. Depth {cfg[2]}")
 				self.log(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}")
 				res.append(_eval_game(cfg))
-		self.tt.end_section(f"Evaluation of {agent}")
+				self.tt.end_section(f"Evaluation of {agent}. Depth {cfg[2]}")
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
 
 		self.log(f"Evaluation results")
@@ -105,14 +102,14 @@ class Evaluator:
 
 if __name__ == "__main__":
 	from src.rubiks.solving.agents import RandomAgent, PolicyCube, DeepCube
-	e = Evaluator(n_games = 200,
-				  max_time = 1,
+	e = Evaluator(n_games = 5,
+				  max_time = 2,
 				  logger = Logger("local_evaluation/mcts.log", "Testing MCTS", True),
 				  scrambling_depths = range(1, 11)
 	)
-	agent = PolicyCube.from_saved("local_train")
-	results = e.eval(agent, 1)
-	agent = DeepCube.from_saved("local_train", 1)
+	# agent = PolicyCube.from_saved("local_train")
+	# results = e.eval(agent, 1)
+	agent = DeepCube.from_saved("local_train", 2)
 	results = e.eval(agent, 1)
 	# results = e.eval(PolicyCube.from_saved("local_train"))
 	# TODO: Boxplot with completion turns for each scrambling depth

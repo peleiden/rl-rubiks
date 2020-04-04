@@ -16,7 +16,7 @@ class Agent:
 
 	def act(self, state: np.ndarray) -> (int, bool):
 		raise NotImplementedError
-	
+
 	def is_jit(self):
 		return issubclass(self.__class__, TreeAgent)
 
@@ -49,7 +49,7 @@ class TreeAgent(Agent):
 		super().__init__()
 		self.searcher = searcher
 		self.time_limit = time_limit
-	
+
 	def generate_action_queue(self, state: np.ndarray) -> bool:
 		solution_found = self.searcher.search(state, self.time_limit)
 		return solution_found
