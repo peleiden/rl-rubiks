@@ -11,7 +11,7 @@ from src.rubiks.utils.ticktock import TickTock
 
 class Node:
 	def __init__(self, state: np.ndarray, policy: np.ndarray, value: float, from_node=None, action_idx: int=None):
-		self.is_leaf = True #When initiated, the node is leaf of search graph
+		self.is_leaf = True  # When initiated, the node is leaf of search graph
 		self.state = state
 		self.P = policy
 		self.value = value
@@ -165,9 +165,15 @@ class MCTS(Searcher):
 			new_leaf = Node(new_states[i], p[i], v[i], leaf, action)
 			leaf.neighs[action] = new_leaf
 			self.states[tuple(new_states[i])] = new_leaf
-		if any([x is None for x in leaf.neighs]): breakpoint()
-		leaf.is_leaf = False
 
+		# Updates W in all non-leaf neighbors
+		max_val = max([x.value for x in leaf.neighs])
+		for action, neighbor in enumerate(leaf.neighs):
+			if neighbor.is_leaf:
+				continue
+			neighbor.W[Cube.rev_action(action)] = max_val
+
+		leaf.is_leaf = False
 		return -1
 
 	def clean_tree(self):
