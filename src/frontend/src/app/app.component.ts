@@ -13,6 +13,7 @@ export class AppComponent implements OnInit {
 
   scrambleDepth = 10;
   actions = ["F", "f", "B", "b", "T", "t", "D", "d", "L", "l", "R", "r"];
+  agentType: "state" | "tree" = "tree";
 
   constructor(private httpService: HttpService, public commonService: CommonService) { }
 

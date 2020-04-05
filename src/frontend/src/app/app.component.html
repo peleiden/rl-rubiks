@@ -1,41 +1,74 @@
 <div class="content">
-  <h1>Dybkube</h1>
-  <p>
-    Udviklet af Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
-    Søren Winkel Holm (<a href="mailto:s183911@student.dtu.dk">s183911@student.dtu.dk</a>) og
-    Anne Agathe Pedersen (<a href="mailto:s174300@student.dtu.dk">s174300@student.dtu.dk</a>).
-    Repository tilgængeligt på <a href="https://github.com/sorenmulli/rl-rubiks">GitHub</a>.
-  </p>
-  <h2 class="h5">Foretag handling</h2>
-  <!-- Træk -->
-  <div style="max-width: 450px;">
-    <div class="row my-1">
-      <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
-        <button class="btn btn-secondary btn-action" (click)="commonService.act(i)">
-          {{actions[i]}}
-        </button>
+  <div class="row">
+    <div class="col-4">
+      <h1>Dybkube</h1>
+      <p>
+        Udviklet af Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
+        Søren Winkel Holm (<a href="mailto:s183911@student.dtu.dk">s183911@student.dtu.dk</a>) og
+        Anne Agathe Pedersen (<a href="mailto:s174300@student.dtu.dk">s174300@student.dtu.dk</a>).
+        Repository tilgængeligt på <a href="https://github.com/sorenmulli/rl-rubiks">GitHub</a>.
+      </p>
+
+      <h2 class="h5 mt-4">Foretag handling</h2>
+      <!-- Træk -->
+      <!-- TODO: Overvej toolbar https://getbootstrap.com/docs/4.4/components/button-group/ -->
+      <div style="max-width: 450px;">
+        <div class="row my-1">
+          <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
+            <button class="btn btn-secondary btn-action" (click)="commonService.act(i)">
+              {{actions[i]}}
+            </button>
+          </div>
+        </div>
+        <div class="row my-1">
+          <div class="col-2" *ngFor="let i of [1, 3, 5, 7, 9, 11]">
+            <button class="btn btn-secondary btn-action" (click)="commonService.act(i)">
+              {{actions[i]}}
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="row my-1">
-      <div class="col-2" *ngFor="let i of [1, 3, 5, 7, 9, 11]">
-        <button class="btn btn-secondary btn-action" (click)="commonService.act(i)">
-          {{actions[i]}}
-        </button>
+      <!-- Nulstilling -->
+      <button class="btn btn-secondary my-1" (click)="commonService.getSolved()">Nulstil</button>
+      <!-- Scrambling -->
+      <form class="form-inline my-1" (ngSubmit)="commonService.scramble(scrambleDepth)">
+        <button class="btn btn-secondary" type="submit">Foretag</button>
+        <div class="form-group mx-2">
+          <input type="number" class="form-control" style="width: 8rem;" [(ngModel)]="scrambleDepth" [ngModelOptions]="{standalone: true}">
+        </div>
+        tilfældige træk.
+      </form>
+
+      <h2 class="h5 mt-4">Agenter</h2>
+      <p><strong>Træagenter</strong> opretter en kø af handlinger inden for en given tidsrammer.</p>
+      <p><strong>Tilstandsagenter</strong> foretager ét træk ad gangen ud fra den nuværende tilstand.</p>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" id="tree-based" value="tree" [(ngModel)]="agentType">
+        <label class="form-check-label" for="tree-based">Træagenter</label>
       </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" id="state-based" value="state" [(ngModel)]="agentType">
+        <label class="form-check-label" for="state-based">Tilstandsagenter</label>
+      </div>
+      <ng-container *ngTemplateOutlet="agentType === 'tree' ? treeAgent : stateAgent">
+
+      </ng-container>
+        
     </div>
-  </div>
-  <!-- Nulstilling -->
-  <button class="btn btn-secondary my-1" (click)="commonService.getSolved()">Nulstil</button>
-  <!-- Scrambling -->
-  <form class="form-inline my-1" (ngSubmit)="commonService.scramble(scrambleDepth)">
-    <button class="btn btn-secondary" type="submit">Foretag</button>
-    <div class="form-group mx-2">
-      <input type="number" class="form-control" style="width: 8rem;" [(ngModel)]="scrambleDepth" [ngModelOptions]="{standalone: true}">
+
+
+    <div class="col-8">
+      <div style="height: 100px;"></div>
+      <app-rubiks></app-rubiks>
     </div>
-    tilfældige træk.
-  </form>
-  <div class="my-4">
-    <app-rubiks></app-rubiks>
   </div>
 </div>
+
+<ng-template #treeAgent>
+  Træagent
+</ng-template>
+
+<ng-template #stateAgent>
+  Tilstandsagent
+</ng-template>
 

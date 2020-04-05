@@ -7,12 +7,12 @@ function Lock() {
   // If it already is true, the method is not applied
   return function(target: CommonService, key: string | symbol, descriptor: PropertyDescriptor) {
     const original = descriptor.value;
-    descriptor.value = function(...args: any[]) {
+    descriptor.value = async function(...args: any[]) {
       if (target.locked) {
         return;
       } else {
         target.locked = true;
-        const result = original.apply(this, args);
+        const result = await original.apply(this, args);
         target.locked = false;
         return result;
       }
@@ -53,7 +53,7 @@ export class CommonService {
     this.state20 = finalState20;
     for (const state of states) {
       const promise = new Promise<cube>((resolve, reject) => {
-        setTimeout(() => resolve(state), 100);
+        setTimeout(() => resolve(state), 1000 / states.length);
       })
       this.state = await promise;
     }
