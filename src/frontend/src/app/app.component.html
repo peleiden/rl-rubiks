@@ -1,23 +1,41 @@
 <div class="content">
   <h1>Dybkube</h1>
+  <p>
+    Udviklet af Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
+    Søren Winkel Holm (<a href="mailto:s183911@student.dtu.dk">s183911@student.dtu.dk</a>) og
+    Anne Agathe Pedersen (<a href="mailto:s174300@student.dtu.dk">s174300@student.dtu.dk</a>).
+    Repository tilgængeligt på <a href="https://github.com/sorenmulli/rl-rubiks">GitHub</a>.
+  </p>
   <h2 class="h5">Foretag handling</h2>
-  <div class="row my-1">
-    <button *ngFor="let action of actions | slice:0:6; let i = index"
-            class="button button-secondary col-2 m-0"
-            (click)="commonService.act(i)">
-      {{action}}
-    </button>
+  <!-- Træk -->
+  <div style="max-width: 450px;">
+    <div class="row my-1">
+      <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
+        <button class="btn btn-secondary btn-action" (click)="commonService.act(i)">
+          {{actions[i]}}
+        </button>
+      </div>
+    </div>
+    <div class="row my-1">
+      <div class="col-2" *ngFor="let i of [1, 3, 5, 7, 9, 11]">
+        <button class="btn btn-secondary btn-action" (click)="commonService.act(i)">
+          {{actions[i]}}
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="row my-1">
-    <button *ngFor="let action of actions | slice:6:12; let i = index"
-            class="button button-secondary col-2 m-0"
-            (click)="commonService.act(i)">
-      {{action}}
-    </button>
-  </div>
+  <!-- Nulstilling -->
+  <button class="btn btn-secondary my-1" (click)="commonService.getSolved()">Nulstil</button>
+  <!-- Scrambling -->
+  <form class="form-inline my-1" (ngSubmit)="commonService.scramble(scrambleDepth)">
+    <button class="btn btn-secondary" type="submit">Foretag</button>
+    <div class="form-group mx-2">
+      <input type="number" class="form-control" style="width: 8rem;" [(ngModel)]="scrambleDepth" [ngModelOptions]="{standalone: true}">
+    </div>
+    tilfældige træk.
+  </form>
   <div class="my-4">
     <app-rubiks></app-rubiks>
   </div>
 </div>
-
 

@@ -11,25 +11,48 @@ app = Flask(__name__)
 api = Api(app)
 CORS(app)
 
+def as69(state: np.ndarray):
+	# Nice
+	return Cube.as633(state).reshape((6, 9))
+
+
 def get_state_dict(state: np.ndarray or list):
-	if type(state) == list:
-		state = np.array(state)
+	state = np.array(state)
 	return jsonify({
-		"state": Cube.as633(state).tolist(),
+		"state": as69(state).tolist(),
 		"state20": state.tolist(),
 	})
 
-class CubeService(Resource):
-	def get(self):
-		return get_state_dict(Cube.get_solved())
-	def post(self):
-		data = literal_eval(request.data.decode("utf-8"))
-		action = data["action"]
-		state = data["state20"]
-		new_state = Cube.rotate(state, *Cube.action_space[action])
-		return get_state_dict(new_state)
+@app.route("/solved")
+def get_solved():
+	return get_state_dict(Cube.get_solved())
 
-api.add_resource(CubeService, "/cube")
+@app.route("/action", methods=["POST"])
+def act():
+	data = literal_eval(request.data.decode("utf-8"))
+	action = data["action"]
+	state = data["state20"]
+	new_state = Cube.rotate(state, *Cube.action_space[action])
+	return get_state_dict(new_state)
+
+@app.route("/scramble", methods=["POST"])
+def scramble():
+	data = literal_eval(request.data.decode("utf-8"))
+	depth = data["depth"]
+	state = np.array(data["state20"])
+	states = []
+	for _ in range(depth):
+		action = np.random.randint(12)
+		state = Cube.rotate(state, *Cube.action_space[action])
+		states.append(state)
+	finalOh = states[-1]
+	states = np.array([as69(state) for state in states])
+	return jsonify({
+		"states": states.tolist(),
+		"finalState20": finalOh.tolist(),
+	})
+
+
 
 if __name__ == "__main__":
 	app.run()

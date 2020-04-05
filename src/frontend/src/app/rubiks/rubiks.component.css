@@ -1,0 +1,32 @@
+
+.grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	height: calc(3 * var(--side-width) + 4 * var(--side-margin));
+	width: calc(4 * var(--side-width) + 5 * var(--side-margin));
+}
+.side {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	height: var(--side-width);
+	width: var(--side-width);
+	margin: var(--side-margin);
+}
+.sticker-letter {
+	height: 100%;
+	width: 100%;
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.sticker {
+	border: 2px solid black;
+	border-radius: 2px;
+}
+
+.red    { background-color: red; }
+.orange { background-color: orange; }
+.white  { background-color: white; }
+.yellow { background-color: yellow; }
+.green  { background-color: green; }
+.blue   { background-color: blue; }
