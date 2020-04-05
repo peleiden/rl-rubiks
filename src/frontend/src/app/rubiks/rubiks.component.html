@@ -1,6 +1,30 @@
 
-<div class="container" *ngIf="commonService.state">
-	<div class="row">
+<div class="container grid" *ngIf="commonService.state">
+	<div class="filler"></div>
+	<div class="side">
+		<div *ngFor="let i of indices" [class]="getClass(2, i)"></div>
+	</div>
+	<div></div>
+	<div></div>
+	<div class="side">
+		<div *ngFor="let i of indices" [class]="getClass(4, i)"></div>
+	</div>
+	<div class="side">
+		<div *ngFor="let i of indices" [class]="getClass(0, i)"></div>
+	</div>
+	<div class="side">
+		<div *ngFor="let i of indices" [class]="getClass(5, i)"></div>
+	</div>
+	<div class="side">
+		<div *ngFor="let i of indices" [class]="getClass(1, i)"></div>
+	</div>
+	<div class="filler"></div>
+	<div class="side">
+		<div *ngFor="let i of indices" [class]="getClass(3, i)"></div>
+	</div>
+	<div></div>
+	<div></div>
+	<!-- <div class="row">
 		<div class="side col-3"></div>
 		<app-side class="side col-3" [side]="commonService.state[2]"></app-side>
 		<div class="side col-3"></div>
@@ -17,6 +41,6 @@
 		<app-side class="side col-3" [side]="commonService.state[3]"></app-side>
 		<div class="side col-3"></div>
 		<div class="side col-3"></div>
-	</div>
+	</div> -->
 </div>
 

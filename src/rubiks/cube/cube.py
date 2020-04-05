@@ -106,7 +106,7 @@ class Cube:
 		return (state == cls.get_solved_instance()).all()
 
 	@classmethod
-	def as_oh(cls, states: np.ndarray):
+	def as_oh(cls, states: np.ndarray) -> torch.tensor:
 		# Takes in n states and returns an n x 480 one-hot tensor
 		method = _Cube2024.as_oh if get_repr() else _Cube686.as_oh
 		return method(states)
@@ -120,7 +120,7 @@ class Cube:
 		return action + 1 if action % 2 == 0 else action - 1
 
 	@classmethod
-	def as633(cls, state: np.ndarray):
+	def as633(cls, state: np.ndarray) -> np.ndarray:
 		"""
 		Order: F, B, T, D, L, R
 		"""
@@ -128,7 +128,7 @@ class Cube:
 		return method(state)
 
 	@classmethod
-	def stringify(cls, state: np.ndarray):
+	def stringify(cls, state: np.ndarray) -> str:
 		state633 = cls.as633(state)
 		stringarr = np.empty((9, 12), dtype=str)
 		stringarr[...] = " "

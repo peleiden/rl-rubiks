@@ -1,9 +1,23 @@
 <div class="content">
-  <h1>Hello there</h1>
-  <app-rubiks></app-rubiks>
-  <button *ngFor="let action of commonService.actions" class="button button-secondary" (click)="act(action)">
-    Handling {{action}}
-  </button>
+  <h1>Dybkube</h1>
+  <h2 class="h5">Foretag handling</h2>
+  <div class="row my-1">
+    <button *ngFor="let action of actions | slice:0:6; let i = index"
+            class="button button-secondary col-2 m-0"
+            (click)="commonService.act(i)">
+      {{action}}
+    </button>
+  </div>
+  <div class="row my-1">
+    <button *ngFor="let action of actions | slice:6:12; let i = index"
+            class="button button-secondary col-2 m-0"
+            (click)="commonService.act(i)">
+      {{action}}
+    </button>
+  </div>
+  <div class="my-4">
+    <app-rubiks></app-rubiks>
+  </div>
 </div>
 
 

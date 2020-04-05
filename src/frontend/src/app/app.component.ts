@@ -9,18 +9,12 @@ import { CommonService } from './common.service';
 })
 export class AppComponent implements OnInit {
 
+  actions = ["F", "B", "T", "D", "L", "R", "f", "b", "t", "d", "l", "r"];
+
   constructor(private httpService: HttpService, public commonService: CommonService) { }
 
   ngOnInit() {
-    this.getSolved();
+    this.commonService.getSolved();
   }
   // TODO: Før oh med over alt
-
-  private async getSolved() {
-    this.commonService.state = await this.httpService.getSolved();
-  }
-
-  public async act(action: number) {
-    this.commonService.state = await this.httpService.performAction(action);
-  }
 }
