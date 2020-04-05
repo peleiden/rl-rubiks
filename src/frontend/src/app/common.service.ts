@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { cube, cube20, IScrambleRequest } from './rubiks/rubiks';
 import { HttpService } from './http.service';
-import * as _ from "lodash";
 
 function Lock() {
   // Sets CommonService.locked to true while method is applied
