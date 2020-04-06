@@ -1,15 +1,25 @@
+import os, sys
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 from flask_cors import CORS
 
 from ast import literal_eval
 import numpy as np
+import torch
 
+from src.rubiks.solving.agents import RandomAgent, SimpleBFS, DeepCube, PolicyCube
 from src.rubiks.cube.cube import Cube
 
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
+
+net_loc = os.path.join(sys.path[0], "rubiks", "local_train")
+tree_agents = {
+	"Random": RandomAgent,
+	"BFS": SimpleBFS,
+	"DeepCube": DeepCube
+}
 
 def as69(state: np.ndarray):
 	# Nice
@@ -22,6 +32,15 @@ def get_state_dict(state: np.ndarray or list):
 		"state": as69(state).tolist(),
 		"state20": state.tolist(),
 	})
+
+@app.route("/info")
+def get_info():
+	return jsonify({
+		"cuda": torch.cuda.is_available(),
+		"treeAgents": ["Random", "BFS", "DeepCube"],
+		"stateAgents": ["PolicyCube"],
+	})
+
 
 @app.route("/solved")
 def get_solved():

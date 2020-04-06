@@ -4,7 +4,7 @@ from copy import deepcopy
 import numpy as np
 import torch
 
-from src.rubiks import cpu, gpu
+from src.rubiks import cpu, gpu, no_grad
 from src.rubiks.model import Model
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
@@ -40,33 +40,61 @@ class Node:
 
 
 class Searcher:
+	with_mt = False
+
 	def __init__(self):
 		self.action_queue = deque()
 
-	def search(self, state: np.ndarray, time_limit: int) -> bool:
-		# Returns whether a path was found
+	@no_grad
+	def search(self, state: np.ndarray, time_limit: float) -> bool:
+		# Returns whether a path was found and generates action queue
+		# Implement _step method for searchers that look one step ahead, otherwise overwrite this method
+		self.reset_queue()
+		tt = TickTock()
+		tt.tick()
+		if Cube.is_solved(state): return True
+		while tt.tock() < time_limit:
+			state, solution_found = self._step(state)
+			if solution_found: return True
+		return False
+
+	def _step(self, state: np.ndarray) -> (np.ndarray, bool):
 		raise NotImplementedError
 
 	def reset_queue(self):
 		self.action_queue = deque()
 
+	def __str__(self):
+		raise NotImplementedError
+
+
+class DeepSearcher(Searcher):
+	def __init__(self, net: Model):
+		super().__init__()
+		self.net = net
+
+	@classmethod
+	def from_saved(cls, loc: str):
+		net = Model.load(loc)
+		net.to(gpu)
+		return cls(net)
+
+	def _step(self, state: np.ndarray) -> (np.ndarray, bool):
+		raise NotImplementedError
+
+
 class RandomDFS(Searcher):
-	def search(self, state: np.ndarray, time_limit: int):
-		self.reset_queue()
-		tt = TickTock()
-		tt.tick()
+	with_mt = True  # TODO: Implement multithreading natively in search method
+	def _step(self, state: np.ndarray) -> (np.ndarray, bool):
+		action = np.random.randint(Cube.action_dim)
+		state = Cube.rotate(state, *Cube.action_space[action])
+		return state, Cube.is_solved(state)
 
-		if Cube.is_solved(state): return True
-		while tt.tock() < time_limit:
-			action = np.random.randint(Cube.action_dim)
-			state = Cube.rotate(state, *Cube.action_space[action])
-
-			self.action_queue.append(action)
-			if Cube.is_solved(state): return True
-		return False
+	def __str__(self):
+		return "Random depth-first search"
 
 class BFS(Searcher):
-	def search(self, state: np.ndarray, time_limit: int) -> bool:
+	def search(self, state: np.ndarray, time_limit: float) -> (np.ndarray, bool):
 		self.reset_queue()
 		tt = TickTock()
 		tt.tick()
@@ -77,10 +105,37 @@ class BFS(Searcher):
 			# TODO
 			pass
 
-class MCTS(Searcher):
+	def __str__(self):
+		return "Breadth-first search"
+
+
+class PolicySearch(DeepSearcher):
+	with_mt = not torch.cuda.is_available()
+
+	def __init__(self, net: Model, sample_policy=False):
+		super().__init__(net)
+		self.sample_policy = sample_policy
+
+	def _step(self, state: np.ndarray) -> (np.ndarray, bool):
+		assert not torch.is_grad_enabled()  # TODO: Remove after test
+		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state), value=False).cpu(), dim=1).numpy().squeeze()
+		action = np.random.choice(Cube.action_dim, p=policy) if self.sample_policy else policy.argmax()
+		state = Cube.rotate(state, *Cube.action_space[action])
+		return state, Cube.is_solved(state)
+
+	@classmethod
+	def from_saved(cls, loc: str, sample_policy=False):
+		net = Model.load(loc)
+		net.to(gpu)
+		return cls(net, sample_policy)
+
+	def __str__(self):
+		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
+
+class MCTS(DeepSearcher):
 	# TODO: Seemingly bug where many cubes of scrambling depth two are not solved
 	def __init__(self, net: Model, c: float=1, nu: float=0):
-		super().__init__()
+		super().__init__(net)
 		#Hyper parameters: c controls exploration and nu controls virtual loss updation us
 		self.c = c
 		self.nu = nu
@@ -88,18 +143,17 @@ class MCTS(Searcher):
 		self.states = dict()
 		self.net = net
 
-
-	def search(self, state: np.ndarray, time_limit: int) -> bool:
+	@no_grad
+	def search(self, state: np.ndarray, time_limit: float) -> bool:
 		self.clean_tree()  # Otherwise memory will continue to be used between runs
-
 		self.reset_queue()
+
 		tt = TickTock()
 		tt.tick()
 		if Cube.is_solved(state): return True
 		#First state is evaluated  and expanded individually
 		oh = Cube.as_oh(state).to(gpu)
-		with torch.no_grad():
-			p, v = self.net(oh) #Policy and value
+		p, v = self.net(oh)  # Policy and value
 		self.states[tuple(state)] = Node(state, p.cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
 		solve_action = self.expand_leaf(self.states[tuple(state)])
@@ -131,6 +185,7 @@ class MCTS(Searcher):
 	def expand_leaf(self, leaf: Node) -> int:
 		# Expands at leaf node and checks if solved state in new states
 		# Returns -1 if no action gives solved state else action index
+		assert not torch.is_grad_enabled()  # TODO: Fjern efter test
 
 		no_neighs = np.array([i for i in range(12) if leaf.neighs[i] is None])  # Neighbors that have to be expanded to
 		unknown_neighs = list(np.arange(len(no_neighs)))  # Some unknown neighbors may already be known but just not connected
@@ -156,9 +211,8 @@ class MCTS(Searcher):
 		for i in range(len(no_neighs)):
 			new_states_oh[i] = Cube.as_oh(new_states[i])
 		new_states_oh = new_states_oh.to(gpu)
-		with torch.no_grad():
-			p, v = self.net(new_states_oh)
-			p, v = p.cpu().numpy(), v.cpu().numpy()
+		p, v = self.net(new_states_oh)
+		p, v = p.cpu().numpy(), v.cpu().numpy()
 
 		# Generates new states
 		for i, action in enumerate(no_neighs):
@@ -179,4 +233,5 @@ class MCTS(Searcher):
 	def clean_tree(self):
 		self.states = dict()
 
-
+	def __str__(self):
+		return "Monte Carlo Tree Search"

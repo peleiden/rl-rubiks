@@ -70,7 +70,7 @@ class Model(nn.Module):
 		
 		return layers
 	
-	def forward(self, x, policy = True, value = True):
+	def forward(self, x, policy=True, value=True):
 		assert policy or value
 		x = self.shared_net(x)
 		return_values = []

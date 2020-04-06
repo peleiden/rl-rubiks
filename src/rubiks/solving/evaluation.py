@@ -2,6 +2,7 @@ from os import cpu_count
 import torch.multiprocessing as mp
 import numpy as np
 
+from src.rubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS
 from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 
@@ -13,30 +14,18 @@ from src.rubiks.solving.agents import Agent
 # https://stackoverflow.com/questions/3288595/multiprocessing-how-to-use-pool-map-on-a-function-defined-in-a-class
 def _eval_game(cfg: (Agent, int, int)):
 	agent, max_time, depth = cfg
-	unfinished = -1
-	turns_to_complete = unfinished  # -1 for unfinished
+	turns_to_complete = -1  # -1 for unfinished
 	state, _, _ = Cube.scramble(depth)
-	if agent.is_jit():  # Evaluation of tree agents
-		solution_found = agent.generate_action_queue(state)
-		if solution_found:
-			return len(agent.searcher.action_queue)
-		return unfinished
-	else:  # Evaluations of non-tree agents
-		tt = TickTock()
-		tt.tick()
-		while tt.tock() < max_time:
-			turns_to_complete += 1
-			action = agent.act(state)
-			state = Cube.rotate(state, *action)
-			if Cube.is_solved(state):
-				return turns_to_complete
-		return unfinished
+	solution_found, n_actions = agent.generate_action_queue(state, max_time)
+	if solution_found:
+		turns_to_complete = n_actions
+	return turns_to_complete
 
 
 class Evaluator:
 	def __init__(self,
 				 n_games			= 420,  # Nice
-				 max_time			= 600,
+				 max_time			= 600,  # Max time to completion per game
 				 scrambling_depths	= range(1, 10),
 				 logger: Logger		= NullLogger()
 		):
@@ -54,25 +43,28 @@ class Evaluator:
 			f"Scrambling depths: {scrambling_depths}",
 		]))
 
-	def eval(self, agent: Agent, max_threads=1):
+	def eval(self, agent: Agent, max_threads=None):
 		"""
 		Evaluates an agent
 		"""
-		max_time = self.max_time
-		self.log(f"Evaluating {self.n_games*len(self.scrambling_depths)} games with agent {agent} with max time {self.max_time}. Expected time <~ {self.max_time*self.n_games*len(self.scrambling_depths)/60} minutes ")
+		self.log.section(f"Evaluation of {agent}")
+		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <~ {self.max_time*self.n_games*len(self.scrambling_depths)/60:.2f} min")
 
 		# Builds configurations for runs
 		cfgs = []
 		# TODO: Pass a logger along to log progress
 		for i, d in enumerate(self.scrambling_depths):
 			for _ in range(self.n_games):
-				cfgs.append((agent, max_time, d))
+				cfgs.append((agent, self.max_time, d))
 
-		if agent.with_mt:
-			self.tt.section(f"Multithreaded evaluation of {agent}")
-			with mp.Pool(min(max_threads, cpu_count())) as p:
+		if agent.allow_mt():
+			max_threads = max_threads or cpu_count()
+			threads = min(max_threads, cpu_count())
+			self.log(f"Evaluating {agent} on {threads} threads")
+			self.tt.section(f"Evaluating {agent} on {threads} threads")
+			with mp.Pool(threads) as p:
 				res = p.map(_eval_game, cfgs)
-			self.tt.end_section(f"Multithreaded evaluation of {agent}")
+			self.tt.end_section(f"Evaluating {agent} on {threads} threads")
 		else:
 			res = []
 			for i, cfg in enumerate(cfgs):
@@ -101,16 +93,22 @@ class Evaluator:
 
 
 if __name__ == "__main__":
-	from src.rubiks.solving.agents import RandomAgent, PolicyCube, DeepCube
+	from src.rubiks.solving.agents import Agent, DeepAgent
 	e = Evaluator(n_games = 5,
-				  max_time = 2,
-				  logger = Logger("local_evaluation/mcts.log", "Testing MCTS", True),
-				  scrambling_depths = range(1, 11)
+				  max_time = 1,
+				  logger = Logger("local_evaluation/evaluations.log", "Testing MCTS", True),
+				  scrambling_depths = range(1, 5)
 	)
 	# agent = PolicyCube.from_saved("local_train")
 	# results = e.eval(agent, 1)
-	agent = DeepCube.from_saved("local_train", 2)
-	results = e.eval(agent, 1)
+	agents = [
+		Agent(RandomDFS()),
+		DeepAgent(PolicySearch.from_saved("local_train", False)),
+		DeepAgent(PolicySearch.from_saved("local_train", True)),
+		DeepAgent(MCTS.from_saved("local_train"))
+	]
+	for agent in agents:
+		e.eval(agent)
 	# results = e.eval(PolicyCube.from_saved("local_train"))
 	# TODO: Boxplot with completion turns for each scrambling depth
 

@@ -31,7 +31,7 @@ class TestRandomAgent:
 				state = Cube.rotate(state, *a.act(state))
 			assert Cube.is_solved(state)
 		else:
-			while a.searcher.action_queue:
+			while a._searcher.action_queue:
 				state = Cube.rotate(state, *a.act(state))
 			assert not Cube.is_solved(state)
 			
