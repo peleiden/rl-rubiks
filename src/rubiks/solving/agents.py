@@ -1,12 +1,7 @@
-from collections import deque
-
 import numpy as np
-import torch
 
-from src.rubiks import cpu, gpu
 from src.rubiks.cube.cube import Cube
-from src.rubiks.model import Model
-from src.rubiks.solving.search import Searcher, DeepSearcher, BFS, RandomDFS, MCTS
+from src.rubiks.solving.search import Searcher, DeepSearcher
 
 
 class Agent:
@@ -21,7 +16,7 @@ class Agent:
 		solution_found = self._searcher.search(state, time_limit)
 		return solution_found, len(self._searcher.action_queue)
 
-	def act(self) -> (int, bool):
+	def action(self) -> (int, bool):
 		return Cube.action_space[self._searcher.action_queue.popleft()]
 
 	def allow_mt(self):

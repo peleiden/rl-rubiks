@@ -61,6 +61,6 @@ class NullLogger(Logger):
 	def log(self, *tolog, **kwargs):
 		pass
 
-	def section(self):
+	def section(self, title=""):
 		pass
 

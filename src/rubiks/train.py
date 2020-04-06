@@ -48,7 +48,7 @@ class Train:
 		self.evaluations = np.unique(np.linspace(0, self.rollouts, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
 		self.evaluations.sort()
 
-		self.agent_class = agent
+		self.agent = agent
 
 		self.optim = optim_fn
 		self.lr	= lr
@@ -70,12 +70,8 @@ class Train:
 		"""
 		self.tt.tick()
 
-		#SET SEED
+		# SET SEED
 		seedsetter()
-		if issubclass(self.agent_class, agents.TreeAgent):
-			agent = self.agent_class(net, self.evaluator.max_time)
-		else:
-			agent = self.agent_class(net)  # FIXME
 
 		self.moves_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
@@ -138,8 +134,8 @@ class Train:
 				# FIXME
 				self.tt.section("Evaluation")
 				net.eval()
-				agent.update_net(net)
-				eval_results = self.evaluator.eval(agent)
+				self.agent.update_net(net)
+				eval_results = self.evaluator.eval(self.agent)
 				eval_reward = (eval_results != 0).mean()
 
 				self.eval_rewards.append(eval_reward)

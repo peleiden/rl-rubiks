@@ -57,14 +57,13 @@ class Evaluator:
 			for _ in range(self.n_games):
 				cfgs.append((agent, self.max_time, d))
 
+		max_threads = max_threads or cpu_count()
+		threads = min(max_threads, cpu_count()) if agent.allow_mt() else 1
+		self.tt.section(f"Evaluating {agent} on {threads} threads")
 		if agent.allow_mt():
-			max_threads = max_threads or cpu_count()
-			threads = min(max_threads, cpu_count())
 			self.log(f"Evaluating {agent} on {threads} threads")
-			self.tt.section(f"Evaluating {agent} on {threads} threads")
 			with mp.Pool(threads) as p:
 				res = p.map(_eval_game, cfgs)
-			self.tt.end_section(f"Evaluating {agent} on {threads} threads")
 		else:
 			res = []
 			for i, cfg in enumerate(cfgs):
@@ -73,6 +72,7 @@ class Evaluator:
 				res.append(_eval_game(cfg))
 				self.tt.end_section(f"Evaluation of {agent}. Depth {cfg[2]}")
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
+		self.tt.end_section(f"Evaluating {agent} on {threads} threads")
 
 		self.log(f"Evaluation results")
 		for i, d in enumerate(self.scrambling_depths):
