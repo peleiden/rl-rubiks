@@ -18,7 +18,7 @@ CORS(app)
 net_loc = os.path.join(sys.path[0], "rubiks", "local_train")
 agents = [
 	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
-	# { "name": "BFS", "agent": Agent(BFS()) },
+	{ "name": "BFS", "agent": Agent(BFS()) },
 	{ "name": "Deterministisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
 	{ "name": "Stokastisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, True)) },
 	{ "name": "Dybkube", "agent": DeepAgent(MCTS.from_saved(net_loc)) },

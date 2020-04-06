@@ -10,6 +10,7 @@ def test_agents():
 	path = os.path.join(sys.path[0], "src", "rubiks", "local_train")
 	agents = [
 		Agent(RandomDFS()),
+		Agent(BFS()),
 		DeepAgent(PolicySearch.from_saved(path, False)),
 		DeepAgent(PolicySearch.from_saved(path, True)),
 		DeepAgent(MCTS.from_saved(path))

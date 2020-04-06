@@ -252,5 +252,19 @@ class MCTS(DeepSearcher):
 	def clean_tree(self):
 		self.states = dict()
 
+	@classmethod
+	def from_saved(cls, loc: str, c: float=1, nu: float=1):
+		net = Model.load(loc)
+		net.to(gpu)
+		return cls(net, c, nu)
+
 	def __str__(self):
 		return "Monte Carlo Tree Search"
+
+class ShortMCTS(MCTS):
+	@no_grad
+	def search(self, state: np.ndarray, time_limit: float) -> bool:
+		solution_found = super().search(state, time_limit)
+		if not solution_found: return False
+		# TODO Implement BFS through self.states to simplify self.action_queue
+
