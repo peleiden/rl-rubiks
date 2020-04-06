@@ -11,14 +11,20 @@ import { CommonService } from './common.service';
 })
 export class AppComponent implements OnInit {
 
+  hasData = false;
   scrambleDepth = 10;
-  actions = ["F", "f", "B", "b", "T", "t", "D", "d", "L", "l", "R", "r"];
-  agentType: "state" | "tree" = "tree";
 
-  constructor(private httpService: HttpService, public commonService: CommonService) { }
+  constructor(public commonService: CommonService) { }
 
   ngOnInit() {
-    this.commonService.getSolved();
+    this.getInitData();
   }
-  // TODO: Før oh med over alt
+
+  private async getInitData() {
+    await Promise.all([
+      this.commonService.getInfo(),
+      this.commonService.getSolved(),
+    ]);
+    this.hasData = true;
+  }
 }

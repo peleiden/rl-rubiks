@@ -6,6 +6,8 @@
 
 .content {
 	max-width: 1400px;
+	padding-left: 1rem;
+	padding-right: 1rem;
 	margin: auto;
 	margin-top: 2rem;
 }

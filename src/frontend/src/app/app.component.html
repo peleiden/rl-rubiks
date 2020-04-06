@@ -1,4 +1,4 @@
-<div class="content">
+<div class="content" *ngIf="hasData">
   <div class="row">
     <div class="col-4">
       <h1>Dybkube</h1>
@@ -16,14 +16,14 @@
         <div class="row my-1">
           <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
             <button class="btn btn-secondary btn-action" (click)="commonService.act(i)">
-              {{actions[i]}}
+              {{commonService.actions[i]}}
             </button>
           </div>
         </div>
         <div class="row my-1">
           <div class="col-2" *ngFor="let i of [1, 3, 5, 7, 9, 11]">
             <button class="btn btn-secondary btn-action" (click)="commonService.act(i)">
-              {{actions[i]}}
+              {{commonService.actions[i]}}
             </button>
           </div>
         </div>
@@ -34,28 +34,37 @@
       <form class="form-inline my-1" (ngSubmit)="commonService.scramble(scrambleDepth)">
         <button class="btn btn-secondary" type="submit">Foretag</button>
         <div class="form-group mx-2">
-          <input type="number" class="form-control" style="width: 8rem;" [(ngModel)]="scrambleDepth" [ngModelOptions]="{standalone: true}">
+          <input type="number" class="form-control" style="width: 6rem;" [(ngModel)]="scrambleDepth" [ngModelOptions]="{standalone: true}">
         </div>
         tilfældige træk.
       </form>
 
       <h2 class="h5 mt-4">Agenter</h2>
-      <p><strong>Træagenter</strong> opretter en kø af handlinger inden for en given tidsrammer.</p>
-      <p><strong>Tilstandsagenter</strong> foretager ét træk ad gangen ud fra den nuværende tilstand.</p>
-      <div class="form-check form-check-inline">
-        <input class="form-check-input" type="radio" id="tree-based" value="tree" [(ngModel)]="agentType">
-        <label class="form-check-label" for="tree-based">Træagenter</label>
+      <p>Agenterne opretter en kø af træk, der giver den løste tilstand, såfremt den er fundet.</p>
+      <p *ngIf="!commonService.cuda">
+        Vær opmærksom på, at cuda ikke er tilgængelig på din computer, så agenter med neuralt netværk vil køre forholdsvist langsomt.
+      </p>
+      <form class="form-inline" (ngSubmit)="commonService.solve()">
+        <button type="submit" class="btn btn-secondary mr-2">Forsøg</button>
+        at løse på
+        <div class="form-group mx-2">
+          <input type="number"
+                 class="form-control"
+                 style="width: 6rem;"
+                 [(ngModel)]="commonService.timeLimit"
+                 [ngModelOptions]="{standalone: true}">
+        </div>
+        sekunder med
+        <select class="my-2" [(ngModel)]="commonService.selectedAgent" [ngModelOptions]="{standalone: true}">
+          <option *ngFor="let agent of commonService.agents; let i = index" [ngValue]="i">{{agent}}</option>
+        </select>
+      </form>
+      <div *ngIf="commonService.hasSearchedForSolution">
+        <p *ngIf="commonService.hasSolution">En løsning på {{commonService.solveActions.length}} træk blev fundet.</p>
+        <p *ngIf="commonService.hasSolution">Træk: {{commonService.solveActions.join(" ")}}</p>
+        <p *ngIf="!commonService.hasSolution">{{commonService.solveActions.length}} træk blev foretaget, men en løsning blev ikke fundet.</p>
       </div>
-      <div class="form-check form-check-inline">
-        <input class="form-check-input" type="radio" id="state-based" value="state" [(ngModel)]="agentType">
-        <label class="form-check-label" for="state-based">Tilstandsagenter</label>
-      </div>
-      <ng-container *ngTemplateOutlet="agentType === 'tree' ? treeAgent : stateAgent">
-
-      </ng-container>
-        
     </div>
-
 
     <div class="col-8">
       <div style="height: 100px;"></div>
@@ -64,11 +73,11 @@
   </div>
 </div>
 
-<ng-template #treeAgent>
-  Træagent
+<ng-template #solved>
+  Løst
 </ng-template>
 
-<ng-template #stateAgent>
-  Tilstandsagent
+<ng-template #notSolved>
+  Ikke løst
 </ng-template>
 

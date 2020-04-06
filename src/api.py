@@ -7,7 +7,8 @@ from ast import literal_eval
 import numpy as np
 import torch
 
-from src.rubiks.solving.agents import RandomAgent, SimpleBFS, DeepCube, PolicyCube
+from src.rubiks.solving.agents import Agent, DeepAgent
+from src.rubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS
 from src.rubiks.cube.cube import Cube
 
 app = Flask(__name__)
@@ -15,11 +16,13 @@ api = Api(app)
 CORS(app)
 
 net_loc = os.path.join(sys.path[0], "rubiks", "local_train")
-tree_agents = {
-	"Random": RandomAgent,
-	"BFS": SimpleBFS,
-	"DeepCube": DeepCube
-}
+agents = [
+	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
+	# { "name": "BFS", "agent": Agent(BFS()) },
+	{ "name": "Deterministisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
+	{ "name": "Stokastisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, True)) },
+	{ "name": "Dybkube", "agent": DeepAgent(MCTS.from_saved(net_loc)) },
+]
 
 def as69(state: np.ndarray):
 	# Nice
@@ -37,10 +40,8 @@ def get_state_dict(state: np.ndarray or list):
 def get_info():
 	return jsonify({
 		"cuda": torch.cuda.is_available(),
-		"treeAgents": ["Random", "BFS", "DeepCube"],
-		"stateAgents": ["PolicyCube"],
+		"agents": [x["name"] for x in agents],
 	})
-
 
 @app.route("/solved")
 def get_solved():
@@ -61,7 +62,7 @@ def scramble():
 	state = np.array(data["state20"])
 	states = []
 	for _ in range(depth):
-		action = np.random.randint(12)
+		action = np.random.randint(Cube.action_dim)
 		state = Cube.rotate(state, *Cube.action_space[action])
 		states.append(state)
 	finalOh = states[-1]
@@ -71,6 +72,27 @@ def scramble():
 		"finalState20": finalOh.tolist(),
 	})
 
+@app.route("/solve", methods=["POST"])
+def solve():
+	data = literal_eval(request.data.decode("utf-8"))
+	time_limit = data["timeLimit"]
+	agent = agents[data["agentIdx"]]["agent"]
+	state = np.array(data["state20"])
+	solution_found, steps = agent.generate_action_queue(state, time_limit)
+	actions = [agent.action() for _ in range(steps)]
+	states = []
+	if solution_found:
+		for action in actions:
+			state = Cube.rotate(state, *action)
+			states.append(state)
+	finalOh = states[-1] if states else state
+	states = np.array([as69(state) for state in states])
+	return jsonify({
+		"solution": solution_found,
+		"actions": actions,
+		"states": states.tolist(),
+		"finalState20": finalOh.tolist(),
+	})
 
 
 if __name__ == "__main__":

@@ -54,11 +54,12 @@ class Searcher:
 		tt.tick()
 		if Cube.is_solved(state): return True
 		while tt.tock() < time_limit:
-			state, solution_found = self._step(state)
+			action, state, solution_found = self._step(state)
+			self.action_queue.append(action)
 			if solution_found: return True
 		return False
 
-	def _step(self, state: np.ndarray) -> (np.ndarray, bool):
+	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		raise NotImplementedError
 
 	def reset_queue(self):
@@ -79,16 +80,16 @@ class DeepSearcher(Searcher):
 		net.to(gpu)
 		return cls(net)
 
-	def _step(self, state: np.ndarray) -> (np.ndarray, bool):
+	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		raise NotImplementedError
 
 
 class RandomDFS(Searcher):
 	with_mt = True  # TODO: Implement multithreading natively in search method
-	def _step(self, state: np.ndarray) -> (np.ndarray, bool):
+	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		action = np.random.randint(Cube.action_dim)
 		state = Cube.rotate(state, *Cube.action_space[action])
-		return state, Cube.is_solved(state)
+		return action, state, Cube.is_solved(state)
 
 	def __str__(self):
 		return "Random depth-first search"
@@ -116,12 +117,12 @@ class PolicySearch(DeepSearcher):
 		super().__init__(net)
 		self.sample_policy = sample_policy
 
-	def _step(self, state: np.ndarray) -> (np.ndarray, bool):
+	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		assert not torch.is_grad_enabled()  # TODO: Remove after test
 		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state), value=False).cpu(), dim=1).numpy().squeeze()
 		action = np.random.choice(Cube.action_dim, p=policy) if self.sample_policy else policy.argmax()
 		state = Cube.rotate(state, *Cube.action_space[action])
-		return state, Cube.is_solved(state)
+		return action, state, Cube.is_solved(state)
 
 	@classmethod
 	def from_saved(cls, loc: str, sample_policy=False):
