@@ -102,10 +102,11 @@ if __name__ == "__main__":
 	# agent = PolicyCube.from_saved("local_train")
 	# results = e.eval(agent, 1)
 	agents = [
-		Agent(RandomDFS()),
-		DeepAgent(PolicySearch.from_saved("local_train", False)),
-		DeepAgent(PolicySearch.from_saved("local_train", True)),
-		DeepAgent(MCTS.from_saved("local_train"))
+		# Agent(RandomDFS()),
+		Agent(BFS()),
+		# DeepAgent(PolicySearch.from_saved("local_train", False)),
+		# DeepAgent(PolicySearch.from_saved("local_train", True)),
+		# DeepAgent(MCTS.from_saved("local_train"))
 	]
 	for agent in agents:
 		e.eval(agent)

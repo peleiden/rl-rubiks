@@ -9,6 +9,7 @@ from src.rubiks.model import Model
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
 
+
 class Node:
 	def __init__(self, state: np.ndarray, policy: np.ndarray, value: float, from_node=None, action_idx: int=None):
 		self.is_leaf = True  # When initiated, the node is leaf of search graph
@@ -36,7 +37,6 @@ class Node:
 			f"Neighbors: {[id(x) if x is not None else None for x in self.neighs]}",
 			"----------------",
 		])
-
 
 
 class Searcher:
@@ -101,10 +101,28 @@ class BFS(Searcher):
 		tt.tick()
 
 		if Cube.is_solved(state): return True
-		raise NotImplementedError
+
+		# Each element contains the state from which it came and the corresponding action
+		states = { tuple(state): (None, None) }
+		queue = deque([state])
 		while tt.tock() < time_limit:
-			# TODO
-			pass
+			state = queue.popleft()
+			tstate = tuple(state)
+			for i, action in enumerate(Cube.action_space):
+				new_state = Cube.rotate(state, *action)
+				new_tstate = tuple(new_state)
+				if new_tstate in states:
+					continue
+				elif Cube.is_solved(new_state):
+					self.action_queue.appendleft(i)
+					while states[tstate][0] is not None:
+						self.action_queue.appendleft(states[tstate][1])
+						tstate = states[tstate][0]
+					return True
+				else:
+					states[new_tstate] = (tstate, i)
+					queue.append(new_state)
+		return False
 
 	def __str__(self):
 		return "Breadth-first search"
