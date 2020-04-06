@@ -17,10 +17,10 @@ class Node:
 		self.value = value
 		# self.neighs[i] is a tuple containing the state obtained by the action Cube.action_space[i]
 		# Tuples are used, so they can be used for lookups
-		self.neighs = [None] * 12
-		self.N = np.zeros(12)
-		self.W = np.zeros(12)
-		self.L = np.zeros(12)
+		self.neighs = [None] * Cube.action_dim
+		self.N = np.zeros(Cube.action_dim)
+		self.W = np.zeros(Cube.action_dim)
+		self.L = np.zeros(Cube.action_dim)
 		if action_idx is not None:
 			from_action_idx = Cube.rev_action(action_idx)
 			self.neighs[from_action_idx] = from_node
@@ -188,7 +188,7 @@ class MCTS(DeepSearcher):
 		# Returns -1 if no action gives solved state else action index
 		assert not torch.is_grad_enabled()  # TODO: Fjern efter test
 
-		no_neighs = np.array([i for i in range(12) if leaf.neighs[i] is None])  # Neighbors that have to be expanded to
+		no_neighs = np.array([i for i in range(Cube.action_dim) if leaf.neighs[i] is None])  # Neighbors that have to be expanded to
 		unknown_neighs = list(np.arange(len(no_neighs)))  # Some unknown neighbors may already be known but just not connected
 		new_states = np.empty((len(no_neighs), *Cube.get_solved_instance().shape), dtype=Cube.dtype)
 
