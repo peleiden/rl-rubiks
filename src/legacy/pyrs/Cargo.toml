@@ -1,0 +1,13 @@
+[package]
+name = "pyrs"
+version = "0.1.0"
+authors = ["Asger Schultz <s183912@student.dtu.dk>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[lib]
+name = "pyrs"
+crate-type = ["dylib"]
