@@ -44,9 +44,6 @@ patterns = {
 n_commits = np.arange(0, len(commits)+1)
 n_lines = {kw: np.zeros(len(commits)+1) for kw in patterns}
 
-# files = get_files(patterns)
-# [print(len(x)) for x in files.values()]
-
 for i, commit in enumerate(commits):
 	cmd = f"git checkout {commit}"
 	print(f"{i+1} / {len(commits)} >>> {cmd}")
