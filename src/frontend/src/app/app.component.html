@@ -42,7 +42,7 @@
       <h2 class="h5 mt-4">Agenter</h2>
       <p>Agenterne opretter en kø af træk, der giver den løste tilstand, såfremt den er fundet.</p>
       <p *ngIf="!commonService.cuda">
-        Vær opmærksom på, at cuda ikke er tilgængelig på din computer, så agenter med neuralt netværk vil køre forholdsvist langsomt.
+        Vær opmærksom på, at cuda ikke er tilgængelig på din maskine, så agenter med neuralt netværk vil køre forholdsvist langsomt.
       </p>
       <form class="form-inline" (ngSubmit)="commonService.solve()">
         <button type="submit" class="btn btn-secondary mr-2">Forsøg</button>
@@ -64,6 +64,7 @@
         <p *ngIf="commonService.hasSolution">Træk: {{commonService.solveActions.join(" ")}}</p>
         <p *ngIf="!commonService.hasSolution">{{commonService.solveActions.length}} træk blev foretaget, men en løsning blev ikke fundet.</p>
       </div>
+      <input [(ngModel)]="httpService.ip">
     </div>
 
     <div class="col-8">

@@ -14,7 +14,7 @@ export class AppComponent implements OnInit {
   hasData = false;
   scrambleDepth = 10;
 
-  constructor(public commonService: CommonService) { }
+  constructor(public commonService: CommonService, public httpService: HttpService) { }
 
   ngOnInit() {
     this.getInitData();
