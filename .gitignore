@@ -13,12 +13,12 @@ src/configs/local.ini
 *.DS_Store
 *.out
 **/local*/
-notes/project_description/tex/Billeder/sign_*
+/docs/notes/project_description/tex/Billeder/sign_*
 
-notes/project_description/tex/description.pdf
-report/main.pdf
-report/sections/*.pdf
-report/report.pdf
+docs/notes/project_description/tex/description.pdf
+docs/report/main.pdf
+docs/report/sections/*.pdf
+docs/report/report.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
