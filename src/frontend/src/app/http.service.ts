@@ -16,7 +16,7 @@ const urls = {
 export class HttpService {
 
   ip = "127.0.0.1";
-  port = "51226";
+  port = "5000";
 
   constructor(private http: HttpClient) { }
 
