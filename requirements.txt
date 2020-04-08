@@ -1,6 +1,7 @@
 numpy
 matplotlib
-https://download.pytorch.org/whl/cpu/torch-1.4.0%2Bcpu-cp36-cp36m-linux_x86_64.whl
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==1.4.0+cpu
 flask
 flask_restful
 flask_cors
