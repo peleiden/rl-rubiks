@@ -1,0 +1,9 @@
+numpy
+matplotlib
+torch
+flask
+flask_restful
+flask_cors
+dataclasses
+gunicorn
+
