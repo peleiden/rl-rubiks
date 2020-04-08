@@ -15,7 +15,7 @@ app = Flask(__name__)
 api = Api(app)
 CORS(app)
 print(os.getcwd(), sys.path[0])
-net_loc = os.path.join(sys.path[0], "rubiks", "local_train")
+net_loc = "trained_model"
 agents = [
 	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
 	{ "name": "BFS", "agent": Agent(BFS()) },
@@ -35,6 +35,10 @@ def get_state_dict(state: np.ndarray or list):
 		"state": as69(state).tolist(),
 		"state20": state.tolist(),
 	})
+
+@app.route("/")
+def index():
+    return "<a href='https://asgerius.github.io/rl-rubiks'>Gå til hovedside</a>"
 
 @app.route("/info")
 def get_info():
@@ -96,6 +100,6 @@ def solve():
 
 
 if __name__ == "__main__":
-	app.run(port="5000")
+	app.run()
 
 
