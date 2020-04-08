@@ -14,7 +14,7 @@ from src.rubiks.cube.cube import Cube
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
-
+print(os.getcwd(), sys.path[0])
 net_loc = os.path.join(sys.path[0], "rubiks", "local_train")
 agents = [
 	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
