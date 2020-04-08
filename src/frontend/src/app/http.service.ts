@@ -21,7 +21,8 @@ export class HttpService {
   constructor(private http: HttpClient) { }
 
   private getUrl(path: string) {
-    return `http://${this.ip}:${this.port}/${path}`
+    return `https://rl-rubiks.herokuapp.com/${path}`;
+    // return `http://${this.ip}:${this.port}/${path}`;
   }
 
   public async getInfo() {
