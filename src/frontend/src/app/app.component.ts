@@ -11,7 +11,6 @@ import { CommonService } from './common.service';
 })
 export class AppComponent implements OnInit {
 
-  hasData = false;
   scrambleDepth = 10;
 
   constructor(public commonService: CommonService, public httpService: HttpService) { }
@@ -23,8 +22,8 @@ export class AppComponent implements OnInit {
   private async getInitData() {
     await Promise.all([
       this.commonService.getInfo(),
-      this.commonService.getSolved(),
+      this.commonService.getSolved(true),
     ]);
-    this.hasData = true;
+    this.commonService.status.hasData = true;
   }
 }
