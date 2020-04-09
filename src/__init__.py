@@ -1,32 +1,3 @@
-# import os
-# import numpy as np
-# from flask import Flask, request, jsonify, render_template
-# from flask_restful import Api
-# from flask_cors import CORS
-# from ast import literal_eval
-# print(os.listdir())
-
-# app = Flask(__name__)
-# api = Api(app)
-# CORS(app)
-
-# with open("src/test.txt") as f:
-#     d = f.read()
-
-# data = {
-# 	"array": np.arange(5).tolist()
-# }
-
-# @app.route("/")
-# def index():
-# 	return "<h1>Hello there</h1>"
-
-# @app.route("/array")
-# def get_array():
-# 	return jsonify(literal_eval(d))
-
-# if __name__ == "__main__":
-# 	app.run()
 import os, sys
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
@@ -44,7 +15,7 @@ app = Flask(__name__)
 api = Api(app)
 CORS(app)
 print(os.getcwd(), sys.path[0])
-net_loc = "trained_model"
+net_loc = "src/trained_model"
 agents = [
 	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
 	{ "name": "BFS", "agent": Agent(BFS()) },
