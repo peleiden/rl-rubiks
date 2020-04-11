@@ -1,7 +1,7 @@
 #!/bin/sh
 #BSUB -q gpuv100
 #BSUB -gpu "num=1"
-#BSUB -J Training procedure
+#BSUB -J "Training_procedure"
 #BSUB -R "rusage[mem=10GB]"
 #BSUB -n 1
 #BSUB -W 20:00
@@ -14,3 +14,4 @@
 echo "Running job"
 python3 src/rubiks/runtrain.py --config src/configs/hpc_run.ini
 echo "Finished running job"
+
