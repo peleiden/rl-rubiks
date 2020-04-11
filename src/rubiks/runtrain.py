@@ -195,8 +195,6 @@ def parse(defaults: dict):
 	with open(f"{save_location}/used_config.ini", 'a') as f: f.write(f"#{' '.join(sys.argv)}")
 	return jobs
 
-
-
 if __name__ == "__main__":
 	
 	# SET SEED
