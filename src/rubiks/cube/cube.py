@@ -82,6 +82,7 @@ class Cube:
 	@classmethod
 	def sequence_scrambler(cls, games: int, n: int):
 		"""
+		TODO: Undersøg, om multithreading er overheaden værd
 		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
 		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
 		"""

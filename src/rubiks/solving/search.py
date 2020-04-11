@@ -186,7 +186,7 @@ class MCTS(DeepSearcher):
 			solve_action = self.expand_leaf(leaf)
 			if solve_action != -1:
 				self.action_queue = path + deque([solve_action])
-				if self.search_graf: self._shortest_action_queue()
+				if self.search_graf: self._shorten_action_queue()
 				return True
 		return False
 
@@ -251,7 +251,7 @@ class MCTS(DeepSearcher):
 		leaf.is_leaf = False
 		return -1
 
-	def _shortest_action_queue(self):
+	def _shorten_action_queue(self):
 		# TODO
 		# Generates new action queue with BFS through self.states
 		pass
