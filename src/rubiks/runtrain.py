@@ -121,12 +121,13 @@ class TrainJob:
 
 		train.plot_training(self.location)
 
-		# Evaluation
-		self.logger.section()
-		evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
-		evaluator.eval(DeepAgent(self.searcher(net)))
+		if self.final_evals:
+			# Evaluation
+			self.logger.section()
+			evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
+			evaluator.eval(DeepAgent(self.searcher(net)))
 
-		restore_repr()
+			restore_repr()
 
 		return train.train_rollouts, train.train_losses
 
