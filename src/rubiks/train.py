@@ -72,9 +72,6 @@ class Train:
 		"""
 		self.tt.tick()
 
-		# SET SEED
-		seedsetter()
-
 		self.moves_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
 		self.log("\n".join([

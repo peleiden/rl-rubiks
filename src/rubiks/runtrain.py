@@ -6,7 +6,8 @@ from configparser import ConfigParser
 import numpy as np
 import torch
 
-import src.rubiks.solving.search as search
+from src.rubiks.solving import search
+from src.rubiks.utils import seedsetter
 from src.rubiks.utils.logger import Logger
 from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr
 from src.rubiks.model import Model, ModelConfig
@@ -102,15 +103,15 @@ class TrainJob:
 
 		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=self.eval_max_time, scrambling_depths=[train_scramble], logger=self.logger)
 		train = Train(self.rollouts,
-				batch_size	=self.batch_size,
-				rollout_games	=self.rollout_games,
-				rollout_depth	=self.rollout_depth,
-				optim_fn	=self.optim_fn,
-				lr		=self.lr,
-				searcher_class	=self.searcher,
-				logger		=self.logger,
-				evaluations	=self.evaluations,
-				evaluator	=train_evaluator,
+				batch_size		= self.batch_size,
+				rollout_games	= self.rollout_games,
+				rollout_depth	= self.rollout_depth,
+				optim_fn		= self.optim_fn,
+				lr				= self.lr,
+				searcher_class	= self.searcher,
+				logger			= self.logger,
+				evaluations		= self.evaluations,
+				evaluator		= train_evaluator,
 		)
 
 
@@ -194,7 +195,9 @@ def parse(defaults: dict):
 
 
 if __name__ == "__main__":
-
+	
+	# SET SEED
+	seedsetter()
 	jobs = parse(defaults)
 	for job in jobs:
 		job.execute()
