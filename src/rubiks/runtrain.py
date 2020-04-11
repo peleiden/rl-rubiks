@@ -194,18 +194,6 @@ def parse(defaults: dict):
 
 if __name__ == "__main__":
 
-	# Minirun
-	defaults = {
-		**defaults,
-		'rollouts': 5,
-		'location': 'src/rubiks/local_train',
-		'rollout_games': 10,
-		'rollout_depth': 10,
-		'batch_size': 10,
-		'evaluations': 0,
-		'final_evals': 0,
-	}
-
 	jobs = parse(defaults)
 	for job in jobs:
 		job.execute()
