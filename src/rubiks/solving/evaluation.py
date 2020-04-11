@@ -49,7 +49,7 @@ class Evaluator:
 		Evaluates an agent
 		"""
 		self.log.section(f"Evaluation of {agent}")
-		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <~ {self.max_time*self.n_games*len(self.scrambling_depths)/60:.2f} min")
+		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <~ {self.approximate_time()/60:.2f} min")
 
 		# Builds configurations for runs
 		cfgs = []
@@ -85,6 +85,9 @@ class Evaluator:
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
 		return res
+
+	def approximate_time(self):
+		return self.max_time*self.n_games*len(self.scrambling_depths)
 
 	def eval_hists(self, eval_results: dict):
 		"""
