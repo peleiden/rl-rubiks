@@ -137,7 +137,7 @@ class PolicySearch(DeepSearcher):
 
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		assert not torch.is_grad_enabled()  # TODO: Remove after test
-		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state), value=False).cpu(), dim=1).numpy().squeeze()
+		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state).to(gpu), value=False).cpu(), dim=1).numpy().squeeze()
 		action = np.random.choice(Cube.action_dim, p=policy) if self.sample_policy else policy.argmax()
 		state = Cube.rotate(state, *Cube.action_space[action])
 		return action, state, Cube.is_solved(state)
