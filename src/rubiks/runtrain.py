@@ -6,13 +6,13 @@ from configparser import ConfigParser
 import numpy as np
 import torch
 
-import src.rubiks.solving.agents as agents
+import src.rubiks.solving.search as search
 from src.rubiks.utils.logger import Logger
 from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.train import Train
 from src.rubiks.solving.evaluation import Evaluator
-
+from src.rubiks.solving.agents import DeepAgent
 
 defaults  = {
 	'rollouts': 1000,
@@ -22,7 +22,7 @@ defaults  = {
 	'batch_size': 50,
 	'lr': 1e-5,
 	'optim_fn': 'RMSprop',
-	'agent': 'DeepCube',
+	'searcher': 'MCTS',
 	'evaluations': 20,
 	'eval_max_time': 60,
 	'eval_scrambling': '10 25',
@@ -40,7 +40,7 @@ class TrainJob:
 			batch_size: int,
 			lr: float,
 			optim_fn: str,
-			agent: str,
+			searcher: str,
 			evaluations: int,
 			eval_max_time: int,
 			eval_scrambling: list,
@@ -68,8 +68,9 @@ class TrainJob:
 
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
-		self.agent = getattr(agents, agent)
-		assert hasattr(self.agent, 'from_saved')
+
+		self.searcher = getattr(search, searcher)
+		assert issubclass(self.searcher, search.DeepSearcher)
 
 		self.evaluations = evaluations
 		assert self.evaluations <= self.rollouts
@@ -106,7 +107,7 @@ class TrainJob:
 				rollout_depth	=self.rollout_depth,
 				optim_fn	=self.optim_fn,
 				lr		=self.lr,
-				agent		=self.agent,
+				searcher_class	=self.searcher,
 				logger		=self.logger,
 				evaluations	=self.evaluations,
 				evaluator	=train_evaluator,
@@ -123,7 +124,7 @@ class TrainJob:
 		# Evaluation
 		self.logger.section()
 		evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
-		evaluator.eval(self.agent(net))
+		evaluator.eval(DeepAgent(self.searcher(net)))
 
 		restore_repr()
 
@@ -147,7 +148,7 @@ def parse(defaults: dict):
 	parser.add_argument('--batch_size', help="Number of training examples to be used at the same time in parameter update", type=int)
 	parser.add_argument('--lr', help="Learning rate of parameter update", type=float)
 	parser.add_argument('--optim_fn', help="String corresponding to a class in torch.optim", type=str)
-	parser.add_argument('--agent', help="String corresponding to a deepagent class in src.rubiks.solving.agents", type=str, choices = ["PolicyCube", "DeepCube"])
+	parser.add_argument('--searcher', help="String corresponding to a deepsearcher class in src.rubiks.solving.search", type=str, choices = ["MCTS", "PolicySearch",])
 	parser.add_argument('--evaluations', help="Number of evaluations (each consisting of 1/4 og rollout_games) to be done during training", type=int)
 	parser.add_argument('--eval_max_time', help="Max time (seconds) for each game for the agent", type=int)
 	intlist_validator = lambda args: [int(args.split()[0]), int(args.split()[1])] #Ugly way to define list of two numbers

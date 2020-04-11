@@ -4,7 +4,9 @@ import numpy as np
 import torch
 from typing import List
 
-import src.rubiks.solving.agents as agents
+
+from src.rubiks.solving.search import DeepSearcher
+from src.rubiks.solving.agents import DeepAgent
 from src.rubiks import cpu, gpu, no_grad
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
@@ -31,7 +33,7 @@ class Train:
 			rollout_depth: int,
 			optim_fn,
 			lr: float,
-			agent: agents.DeepAgent,
+			searcher_class: DeepSearcher,
 			evaluator: Evaluator,
 			evaluations: int,
 			logger: Logger			= NullLogger(),
@@ -48,7 +50,7 @@ class Train:
 		self.evaluations = np.unique(np.linspace(0, self.rollouts, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
 		self.evaluations.sort()
 
-		self.agent = agent
+		self.searcher_class = searcher_class
 
 		self.optim = optim_fn
 		self.lr	= lr
@@ -83,6 +85,8 @@ class Train:
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		self.train_rollouts, self.train_losses = np.arange(self.rollouts), np.empty(self.rollouts)
+
+		agent = DeepAgent(self.searcher_class(net))
 
 		for rollout in range(self.rollouts):
 			torch.cuda.empty_cache()
@@ -134,8 +138,8 @@ class Train:
 				# FIXME
 				self.tt.section("Evaluation")
 				net.eval()
-				self.agent.update_net(net)
-				eval_results = self.evaluator.eval(self.agent)
+				agent.update_net(net)
+				eval_results = self.evaluator.eval(agent)
 				eval_reward = (eval_results != 0).mean()
 
 				self.eval_rewards.append(eval_reward)
