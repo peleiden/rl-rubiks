@@ -166,11 +166,15 @@ class _Cube2024(Cube):
 	def as_oh(cls, states: np.ndarray):
 		# Takes in n states and returns an n x 480 one-hot tensor
 		if len(states.shape) == 1:
-			states = np.expand_dims(states, 0)
-		oh = torch.zeros(states.shape[0], 480)
-		idcs = np.array([np.arange(20) * 24 + state for state in states])
-		for i in range(len(idcs)):
-			oh[i, idcs[i]] = 1
+			oh = torch.zeros(1, len(states.shape))
+			idcs = np.arange(20) * 24 + states
+			oh[0, idcs] = 1
+		else:
+			oh = torch.zeros(states.shape[0], 480)
+			idcs = np.array([np.arange(20) * 24 + state for state in states])
+			all_idcs = np.arange(len(idcs))
+			for i in idcs.T:
+				oh[all_idcs, i] = 1
 		return oh
 	
 	@classmethod

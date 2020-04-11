@@ -160,57 +160,43 @@ class Train:
 		torch.tensor: `states` contains the rubiks state for each data point
 		np.arrays: `policy_targets` and `value_targets` contains optimal value and policy targets for each training point
 		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
-		TODO: Figure out why mp doesn't work
-		TODO: Remove asserts
 		"""
 
-		N_data = games * sequence_length
+		net.eval()
 		self.tt.section("Scrambling")
 		states, oh_states = Cube.sequence_scrambler(games, sequence_length)
 		self.tt.end_section("Scrambling")
-		policy_targets = np.empty(N_data, dtype=np.int64)
-		# value_targets = torch.empty(games * sequence_length, dtype=np.float32)
-		loss_weights = np.empty(N_data)
 
-		net.eval()
-		n_states = games * sequence_length * Cube.action_dim
-		substates = np.empty((n_states, *Cube.get_solved_instance().shape), dtype=Cube.dtype)
-		rewards = torch.empty(n_states)
 		# Keeps track of solved states - Max Lapan's convergence fix
-		ss_is_solved = np.zeros(games*sequence_length, dtype=bool)
-
-		# Plays a number of games
-		# TODO: Consider multithreading this part
+		solved_scrambled_states = np.array([
+			Cube.is_solved(scrambled_state)
+			for game_states in states
+			for scrambled_state in game_states
+		], dtype=bool)
+		# Generates possible substates for all scrambled states
 		self.tt.section("ADI substates")
-		c = 0  # Counts number of visited states
-		for i in range(games):
-			# For all states in the scrambled game
-			for j, scrambled_state in enumerate(states[i]):
-				if Cube.is_solved(scrambled_state):  # Max Lapan's convergence fix
-					ss_is_solved = True
-				# Explore 12 substates
-				for k, action in enumerate(Cube.action_space):
-					substates[c] = Cube.rotate(scrambled_state, *action)
-					rewards[c] = 1 if Cube.is_solved(substates[c]) else -1
-					c += 1
-
-		self.tt.end_section("ADI substates")
-		assert c == n_states
-		# TODO: Split into batches if it requires too much vram
+		substates = np.array([
+			Cube.rotate(scrambled_state, *action)
+			for game_states in states
+			for scrambled_state in game_states
+			for action in Cube.action_space
+		], dtype=Cube.dtype)
 		substates_oh = Cube.as_oh(substates).to(gpu)
+		self.tt.end_section("ADI substates")
+
+		# TODO: Split into batches if it requires too much vram
+		# Generates policy and value targets
+		rewards = torch.tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
 		self.tt.section("ADI feedforward")
-		values = net(substates_oh, policy=False).squeeze().cpu()
+		values = net(substates_oh, policy=False, value=True).squeeze().cpu()
 		self.tt.end_section("ADI feedforward")
-		assert len(values) == n_states
 		values += rewards
 		values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
-		value_targets[ss_is_solved] = 0
-		assert policy_targets.shape == value_targets.shape
-		assert len(policy_targets) == len(oh_states)
-		loss_weights = np.repeat(1/np.arange(1, sequence_length+1), games)
-
+		value_targets[solved_scrambled_states] = 0
+		loss_weights = np.tile(1/np.arange(1, sequence_length+1), games)
+		
 		return oh_states, policy_targets, value_targets, loss_weights
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
