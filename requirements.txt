@@ -1,3 +1,4 @@
+# Do not use this file to install dependencies. It is designed for heroku only
 Flask
 flask_restful
 flask_cors
