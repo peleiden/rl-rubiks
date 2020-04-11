@@ -95,7 +95,7 @@ class Train:
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
 																		 value_targets.to(gpu),\
 																		 policy_targets.to(gpu),\
-																		 torch.from_numpy(loss_weights).to(gpu)
+																		 loss_weights.to(gpu)
 			self.tt.end_section("Training data to device")
 
 			self.tt.section("Training loop")
@@ -194,7 +194,7 @@ class Train:
 		value_targets[solved_scrambled_states] = 0
 		loss_weights = np.tile(1/np.arange(1, sequence_length+1), games)
 		
-		return oh_states, policy_targets, value_targets, loss_weights
+		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights)
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
