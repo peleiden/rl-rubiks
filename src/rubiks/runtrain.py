@@ -121,12 +121,13 @@ class TrainJob:
 
 		train.plot_training(self.location)
 
-		# Evaluation
-		self.logger.section()
-		evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
-		evaluator.eval(DeepAgent(self.searcher(net)))
+		if self.final_evals:
+			# Evaluation
+			self.logger.section()
+			evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
+			evaluator.eval(DeepAgent(self.searcher(net)))
 
-		restore_repr()
+			restore_repr()
 
 		return train.train_rollouts, train.train_losses
 
@@ -193,18 +194,6 @@ def parse(defaults: dict):
 
 
 if __name__ == "__main__":
-
-	# Minirun
-	defaults = {
-		**defaults,
-		'rollouts': 5,
-		'location': 'src/rubiks/local_train',
-		'rollout_games': 10,
-		'rollout_depth': 10,
-		'batch_size': 10,
-		'evaluations': 0,
-		'final_evals': 0,
-	}
 
 	jobs = parse(defaults)
 	for job in jobs:
