@@ -85,7 +85,6 @@ class TrainJob:
 		self.logger = Logger(f"{self.location}/{self.jobname}.log", jobname, verbose) #Already creates logger at init to test whether path works
 		self.logger.log(f"Initialized {self.jobname}")
 
-
 		self.is2024 = is2024
 		self.model_cfg = model_cfg
 		assert isinstance(self.model_cfg, ModelConfig)
@@ -98,9 +97,14 @@ class TrainJob:
 		# Training
 		self.logger.section()
 
-		train_scramble = int(np.mean(self.eval_scrambling))
 
+		if self.final_evals:
+			final_evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
+			self.logger(f"Rough estimate of final evaluation time: {final_evaluator.approximate_time()/60:.2f} min.")
+
+		train_scramble = int(np.mean(self.eval_scrambling))
 		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=self.eval_max_time, scrambling_depths=[train_scramble], logger=self.logger)
+		self.logger(f"Rough estimate of total evaluation time during training: {train_evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
 				batch_size	=self.batch_size,
 				rollout_games	=self.rollout_games,
@@ -114,7 +118,6 @@ class TrainJob:
 		)
 
 
-
 		net = Model(self.model_cfg, self.logger).to(gpu)
 		net = train.train(net)
 		net.save(self.location)
@@ -124,8 +127,8 @@ class TrainJob:
 		if self.final_evals:
 			# Evaluation
 			self.logger.section()
-			evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
-			evaluator.eval(DeepAgent(self.searcher(net)))
+
+			final_evaluator.eval(DeepAgent(self.searcher(net)))
 
 			restore_repr()
 
