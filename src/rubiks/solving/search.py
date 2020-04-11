@@ -233,7 +233,7 @@ class MCTS(DeepSearcher):
 			new_states_oh[i] = Cube.as_oh(new_states[i])
 		new_states_oh = new_states_oh.to(gpu)
 		p, v = self.net(new_states_oh)
-		p, v = p.cpu().numpy(), v.cpu().numpy()
+		p, v = torch.nn.functional.softmax(p.cpu()).numpy(), v.cpu().numpy()
 
 		# Generates new states
 		for i, action in enumerate(no_neighs):
