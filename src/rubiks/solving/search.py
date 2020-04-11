@@ -153,11 +153,12 @@ class PolicySearch(DeepSearcher):
 
 class MCTS(DeepSearcher):
 	# TODO: Seemingly bug where many cubes of scrambling depth two are not solved
-	def __init__(self, net: Model, c: float=1, nu: float=0):
+	def __init__(self, net: Model, c: float=1, nu: float=0, search_graph=True):
 		super().__init__(net)
 		#Hyper parameters: c controls exploration and nu controls virtual loss updation us
 		self.c = c
 		self.nu = nu
+		self.search_graf = search_graph
 
 		self.states = dict()
 		self.net = net
@@ -185,6 +186,7 @@ class MCTS(DeepSearcher):
 			solve_action = self.expand_leaf(leaf)
 			if solve_action != -1:
 				self.action_queue = path + deque([solve_action])
+				if self.search_graf: self._shortest_action_queue()
 				return True
 		return False
 
@@ -249,22 +251,21 @@ class MCTS(DeepSearcher):
 		leaf.is_leaf = False
 		return -1
 
+	def _shortest_action_queue(self):
+		# TODO
+		# Generates new action queue with BFS through self.states
+		pass
+
 	def clean_tree(self):
 		self.states = dict()
 
 	@classmethod
-	def from_saved(cls, loc: str, c: float=1, nu: float=1):
+	def from_saved(cls, loc: str, c: float=1, nu: float=1, search_graph=True):
 		net = Model.load(loc)
 		net.to(gpu)
-		return cls(net, c, nu)
+		return cls(net, c, nu, search_graph)
 
 	def __str__(self):
 		return "Monte Carlo Tree Search"
 
-class ShortMCTS(MCTS):
-	@no_grad
-	def search(self, state: np.ndarray, time_limit: float) -> bool:
-		solution_found = super().search(state, time_limit)
-		if not solution_found: return False
-		# TODO Implement BFS through self.states to simplify self.action_queue
 
