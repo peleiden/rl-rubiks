@@ -66,8 +66,7 @@ plt.xlabel("Number of commits")
 plt.ylabel("Nummer of non-empty/comment lines")
 plt.legend(loc=2)
 plt.grid(True)
-os.makedirs(f"{repopath}/src/project_management/local_line_counts", exist_ok=True)
-plt.savefig(f"{repopath}/src/project_management/local_line_counts/line_counts.png")
+plt.savefig(f"{repopath}/src/legacy/project_management/local_line_counts.png")
 plt.show()
 
 
