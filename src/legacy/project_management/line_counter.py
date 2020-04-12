@@ -30,7 +30,7 @@ def get_files(patterns: dict):
 	return files
 			
 
-repopath = os.path.realpath(os.path.join(os.getcwd(), "..", ".."))
+repopath = os.path.realpath(os.path.join(os.getcwd(), "..", "..", ".."))
 os.chdir(repopath)
 print(repopath)
 repo = git.Repo(repopath)
