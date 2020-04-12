@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.multiprocessing as mp
 
-from src.rubiks import get_repr
+from src.rubiks import get_repr, set_repr
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
 
 
@@ -70,13 +70,16 @@ class Cube:
 		return method(current_state, face, pos_rev)
 
 	@classmethod
-	def scramble(cls, n: int):
+	def scramble(cls, n: int, force_not_solved=False):
 		faces = np.random.randint(6, size=(n,))
 		dirs = np.random.randint(2, size=(n,)).astype(bool)
 		state = cls.get_solved()
 		for face, d in zip(faces, dirs):
 			state = cls.rotate(state, face, d)  # Uses rotate instead of move as checking for victory is not needed here
-
+		
+		if force_not_solved and cls.is_solved(state):
+			return cls.scramble(n, True)
+		
 		return state, faces, dirs
 
 	@classmethod
@@ -214,12 +217,12 @@ class _Cube686(Cube):
 
 	# The i'th index contain the neighbors of the i'th side in positive direction
 	neighbours = np.array([
-		[1, 5, 4, 2],  # Front
-		[5, 1, 2, 4],  # Back
-		[0, 4, 3, 1],  # Top
-		[4, 0, 1, 3],  # Down
-		[2, 3, 5, 0],  # Left
-		[3, 2, 0, 5],  # Right
+		[4, 3, 5, 2],  # Front
+		[3, 4, 2, 5],  # Back
+		[0, 5, 1, 4],  # Top
+		[5, 0, 4, 1],  # Down
+		[2, 1, 3, 0],  # Left
+		[1, 2, 0, 3],  # Right
 	])
 	adjacents = np.array([  # TODO
 		[6, 7, 0],
@@ -227,6 +230,10 @@ class _Cube686(Cube):
 		[4, 5, 6],
 		[0, 1, 2],
 	])
+	# Maps an 8 long vector starting at (0, 0) in 3x3 onto a 9 long vector which can be reshaped to 3x3
+	map633 = np.array([0, 3, 6, 7, 8, 5, 2, 1])
+	# Number of times the 8 long vector has to be shifted to the left to start at (0, 0) in 3x3
+	shifts = np.array([0, 6, 6, 4, 2, 4])
 
 	@staticmethod
 	def _shift_left(a: np.ndarray, num_elems: int):
@@ -245,8 +252,8 @@ class _Cube686(Cube):
 		# if not 0 <= face <= 5:
 		# 	raise IndexError("Face should be 0-5, not %i" % face)
 		altered_state = current_state.copy()
-		altered_state[face] = cls._shift_right(cls.get_solved_instance()[face], 2)\
-			if pos_rev else cls._shift_left(cls.get_solved_instance()[face], 2)
+		altered_state[face] = cls._shift_right(current_state[face], 2)\
+			if pos_rev else cls._shift_left(current_state[face], 2)
 
 		ini_state = current_state[cls.neighbours[face]]
 
@@ -267,20 +274,27 @@ class _Cube686(Cube):
 		states = torch.from_numpy(states.reshape(-1, 288))
 		return states
 
+	@classmethod
 	def as633(cls, state: np.ndarray):
-		# TODO: Unpack state unto state633
-		state633 = (np.ones((3, 3, 6)) * np.arange(6)).transpose(2, 1, 0).astype(int)
-
+		state68 = np.where(state == 1)[2].reshape((6, 8))
+		state69 = (np.ones((9, 6)) * np.arange(6)).astype(int).T  # Nice
+		for i in range(6):
+			print(cls._shift_right(state68[i], cls.shifts[i]))
+			state69[i, cls.map633] = cls._shift_left(state68[i], cls.shifts[i])
+			print(state69[i])
+		return state69.reshape((6, 3, 3))
 
 
 if __name__ == "__main__":
 	
+	set_repr(False)
 	state = Cube.get_solved()
 	# print(Cube.as633(state))
 	# print(Cube.stringify(state))
 	# print()
-	state = Cube.rotate(state, 2, True)
-	Cube.as633(state)
+	state = Cube.rotate(state, 0, True)
+	state68 = np.where(state == 1)[2].reshape((6, 8))
+	print(state68)
 	print(Cube.stringify(state))
 	# print()
 	# state = Cube.rotate(state, 0, False)

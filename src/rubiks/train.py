@@ -195,7 +195,7 @@ class Train:
 		while True:
 			try:
 				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
-				values = torch.cat(value_parts)
+				values = torch.cat(value_parts).cpu()
 				assert values.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
 				break
 			except RuntimeError:  # Caused by running out of vram

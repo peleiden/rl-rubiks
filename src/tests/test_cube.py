@@ -15,8 +15,9 @@ class TestRubiksCube:
 		set_repr(True)
 		self._rotation_tests()
 		# TODO Once _Cube686.as633 is implemented
-		# set_repr(False)
-		# self._rotation_tests()
+		set_repr(False)
+		self._rotation_tests()
+		set_repr(True)
 
 	def _rotation_tests(self):
 		state = Cube.get_solved()
