@@ -46,6 +46,7 @@ class Train:
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
 		self.depths = np.arange(1, rollout_depth)
+		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Reduces vram usage
 
 		self.evaluations = np.unique(np.linspace(0, self.rollouts, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
 		self.evaluations.sort()
@@ -89,7 +90,7 @@ class Train:
 			torch.cuda.empty_cache()
 
 			self.tt.section("Training data")
-			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, self.rollout_games, self.rollout_depth)
+			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net)
 			self.tt.end_section("Training data")
 			self.tt.section("Training data to device")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
@@ -147,8 +148,15 @@ class Train:
 
 		return net
 
+	def get_adi_ff_slices(self):
+		data_points = self.rollout_games * self.rollout_depth * Cube.action_dim
+		slice_size = data_points // self.adi_ff_batches + 1
+		# Final slice may have overflow, however this is simply ignored when indexing
+		slices = [slice(i*slice_size, (i+1)*slice_size) for i in range(self.adi_ff_batches)]
+		return slices
+
 	@no_grad
-	def ADI_traindata(self, net, games: int, sequence_length: int):
+	def ADI_traindata(self, net):
 		"""
 		Implements Autodidactic Iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
 
@@ -161,7 +169,7 @@ class Train:
 
 		net.eval()
 		self.tt.section("Scrambling")
-		states, oh_states = Cube.sequence_scrambler(games, sequence_length)
+		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
 		self.tt.end_section("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
@@ -185,14 +193,21 @@ class Train:
 		# Generates policy and value targets
 		rewards = torch.tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
 		self.tt.section("ADI feedforward")
-		values = net(substates_oh, policy=False, value=True).squeeze().cpu()
+		while True:
+			try:
+				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
+				values = torch.cat(value_parts)
+				assert values.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
+				break
+			except RuntimeError:  # Caused by running out of vram
+				self.adi_ff_batches *= 2
 		self.tt.end_section("ADI feedforward")
 		values += rewards
 		values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
-		loss_weights = np.tile(1/np.arange(1, sequence_length+1), games)
+		loss_weights = np.tile(1/np.arange(1, self.rollout_depth+1), self.rollout_games)
 
 		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights)
 
