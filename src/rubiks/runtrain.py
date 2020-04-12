@@ -120,8 +120,9 @@ class TrainJob:
 
 
 		net = Model(self.model_cfg, self.logger).to(gpu)
-		net = train.train(net)
+		net, min_net = train.train(net)
 		net.save(self.location)
+		min_net.save(self.location, True)
 
 		train.plot_training(self.location)
 		train.plot_value_targets(self.location)
@@ -129,10 +130,9 @@ class TrainJob:
 		if self.final_evals:
 			# Evaluation
 			self.logger.section()
-
 			final_evaluator.eval(DeepAgent(self.searcher(net)))
 
-			restore_repr()
+		restore_repr()
 
 		return train.train_rollouts, train.train_losses
 
@@ -201,7 +201,7 @@ def parse(defaults: dict):
 if __name__ == "__main__":
 
 	# SET SEED
-	seedsetter()
+	# seedsetter()
 	jobs = parse(defaults)
 	for job in jobs:
 		job.execute()

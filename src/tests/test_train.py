@@ -18,7 +18,7 @@ class TestTrain(MainTest):
 		train = Train(rollouts=2, batch_size=2, rollout_games=2, rollout_depth=3, optim_fn=torch.optim.Adam, searcher_class=PolicySearch, lr=1e-6, evaluations=1, evaluator=evaluator)
 
 		# Current
-		net = train.train(net)
+		net, min_net = train.train(net)
 
 		train.plot_training("local_tests/local_train_test")
 		assert os.path.exists("local_tests/local_train_test/training.png")

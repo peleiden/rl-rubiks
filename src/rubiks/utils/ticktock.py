@@ -14,6 +14,7 @@ class TickTock:
 
 	_start: float
 	_sections = {}
+	_section_depth = 0
 	_units = {"ms": 1000, "s": 1, "m": 1/60}
 
 	def tick(self):
@@ -27,13 +28,15 @@ class TickTock:
 
 	def section(self, name: str):
 		if name not in self._sections:
-			self._sections[name] = {"tt": TickTock(), "elapsed": 0, "n": 0}
+			self._sections[name] = {"tt": TickTock(), "elapsed": 0, "n": 0, "depth": self._section_depth}
+		self._section_depth += 1
 		self._sections[name]["n"] += 1
 		self._sections[name]["tt"].tick()
 	
 	def end_section(self, name: str):
 		dt = self._sections[name]["tt"].tock()
 		self._sections[name]["elapsed"] += dt
+		self._section_depth -= 1
 	
 	@staticmethod
 	def thousand_seps(numstr: str or float or int) -> str:
@@ -64,7 +67,7 @@ class TickTock:
 		strs = [["Execution times", "Total time", "Hits", "Avg. time"]]
 		for kw, v in self._sections.items():
 			strs.append([
-				kw,
+				"- " * v["depth"] + kw,
 				self.stringify_time(v["elapsed"], unit),
 				self.thousand_seps(v["n"]),
 				self.stringify_time(v["elapsed"] / v["n"], "ms")

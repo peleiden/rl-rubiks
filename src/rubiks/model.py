@@ -81,19 +81,30 @@ class Model(nn.Module):
 			value = self.value_net(x)
 			return_values.append(value)
 		return return_values if len(return_values) > 1 else return_values[0]
+
+	def clone(self):
+		new_state_dict = {}
+		for kw, v in self.state_dict().items():
+			new_state_dict[kw] = v.cpu().clone()
+		new_net = Model(self.config)
+		new_net.load_state_dict(new_state_dict)
+		return new_net
 	
-	def save(self, save_dir: str):
+	def save(self, save_dir: str, is_min=False):
 		"""
 		Save the model and configuration to the given directory
 		The folder will include a pytorch model, and a json configuration file
-		A zip is also included
 		"""
 		
 		os.makedirs(save_dir, exist_ok=True)
+		if is_min:
+			model_path = os.path.join(save_dir, "model-min.pt")
+			torch.save(self.state_dict(), model_path)
+			self.log(f"Saved min model to {model_path}")
 		model_path = os.path.join(save_dir, "model.pt")
+		torch.save(self.state_dict(), model_path)
 		conf_path = os.path.join(save_dir, "config.json")
 		with open(conf_path, "w", encoding="utf-8") as conf:
-			torch.save(self.state_dict(), model_path)
 			json.dump(self.config.as_json_dict(), conf)
 		self.log(f"Saved model to {model_path} and configuration to {conf_path}")
 	

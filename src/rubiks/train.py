@@ -66,7 +66,7 @@ class Train:
 
 		self.evaluator = evaluator
 
-	def train(self, net: Model) -> Model:
+	def train(self, net: Model) -> (Model, Model):
 		"""
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
@@ -79,6 +79,7 @@ class Train:
 			f"Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}",
 			f"Evaluations: {len(self.evaluations)}",
 		]))
+		lowest_loss = float("inf")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		self.train_rollouts, self.train_losses = np.arange(self.rollouts), np.empty(self.rollouts)
@@ -86,10 +87,10 @@ class Train:
 		agent = DeepAgent(self.searcher_class(net))
 
 		for rollout in range(self.rollouts):
-			torch.cuda.empty_cache()
+			# torch.cuda.empty_cache()
 
 			self.tt.section("Training data")
-			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net)
+			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
 			self.tt.end_section("Training data")
 			self.tt.section("Training data to device")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
@@ -100,27 +101,31 @@ class Train:
 
 			self.tt.section("Training loop")
 			net.train()
-			batch_losses = list()
-			for batch in self._gen_batches_idcs(self.moves_per_rollout, self.batch_size):
+			batches = self._get_batches(self.moves_per_rollout, self.batch_size)
+			batch_loss = 0
+			for i, batch in enumerate(batches):
 				optimizer.zero_grad()
-
-				# print(training_data[batch].shape)
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
 
-				#Use loss on both policy and value
+				# Use loss on both policy and value
 				losses = self.policy_criterion(policy_pred, policy_targets[batch])
 				losses += self.value_criterion(value_pred.squeeze(), value_targets[batch])
 
-				#Weighteing of losses according to move importance
-				loss = ( losses * loss_weights[batch] ).mean()
+				# Weighting of losses according to move importance
+				loss = losses @ loss_weights[batch]
 				loss.backward()
 				optimizer.step()
 
-				batch_losses.append(float(loss))
-			self.train_losses[rollout] = np.mean(batch_losses)
-			self.tt.end_section("Training loop")
+				batch_loss += loss.cpu().detach()
 
-			torch.cuda.empty_cache()
+			self.train_losses[rollout] = batch_loss / loss_weights.sum()
+			self.tt.end_section("Training loop")
+			
+			if self.train_losses[rollout] < lowest_loss:
+				lowest_loss = self.train_losses[rollout]
+				min_net = net.clone()
+
+			# torch.cuda.empty_cache()
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}")
 
@@ -132,7 +137,7 @@ class Train:
 					idcs = np.arange(self.rollout_games) * self.rollout_depth + depth
 					self.avg_value_targets[-1][i] = targets[idcs].mean()
 				self.tt.end_section("Target value average")
-				# FIXME
+				
 				self.tt.section("Evaluation")
 				net.eval()
 				agent.update_net(net)
@@ -143,9 +148,10 @@ class Train:
 				self.tt.end_section("Evaluation")
 
 		self.log.verbose(self.tt)
+		self.log(f"Best net found to have loss of {lowest_loss}")
 		self.log(f"Total training time: {self.tt.stringify_time(self.tt.tock(), 's')}")
 
-		return net
+		return net, min_net
 
 	def get_adi_ff_slices(self):
 		data_points = self.rollout_games * self.rollout_depth * Cube.action_dim
@@ -155,7 +161,7 @@ class Train:
 		return slices
 
 	@no_grad
-	def ADI_traindata(self, net):
+	def ADI_traindata(self, net, rollout: int):
 		"""
 		Implements Autodidactic Iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
 
@@ -206,9 +212,10 @@ class Train:
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
+		# TODO: Make adaptive
 		loss_weights = np.tile(1/np.arange(1, self.rollout_depth+1), self.rollout_games)
 
-		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights)
+		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
@@ -258,15 +265,16 @@ class Train:
 		self.log(f"Saved plot to {path}")
 
 	@staticmethod
-	def _gen_batches_idcs(size: int, bsize: int):
+	def _get_batches(size: int, bsize: int):
 		"""
 		Generates indices for batch
 		"""
-		nbatches = size // bsize
+		nbatches = int(np.ceil(size/bsize))
 		idcs = np.arange(size)
 		np.random.shuffle(idcs)
-		for batch in range(nbatches):
-			yield idcs[batch * bsize:(batch + 1) * bsize]
+		batches = [slice(batch*bsize, (batch+1)*bsize) for batch in range(nbatches)]
+		batches[-1] = slice(batches[-1].start, size)
+		return batches
 
 
 
