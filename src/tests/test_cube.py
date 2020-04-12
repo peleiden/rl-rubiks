@@ -1,4 +1,4 @@
-from src.tests.main import MainTest
+from src.tests import MainTest
 
 from src.rubiks import get_repr, set_repr
 from src.rubiks.cube.cube import Cube

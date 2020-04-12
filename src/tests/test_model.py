@@ -2,19 +2,12 @@ import os
 import json
 import torch
 
-from src.tests.main import MainTest
+from src.tests import MainTest
 
 from src.rubiks import cpu, gpu
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.utils.logger import NullLogger
 
-def test_model_config():
-	cf = ModelConfig(torch.nn.ReLU())
-	with open("local_tests/test_config.json", "w") as f:
-		json.dump(cf.as_json_dict(), f)
-	with open("local_tests/test_config.json") as f:
-		cf = ModelConfig.from_json_dict(json.load(f))
-	assert type(cf.activation_function) == type(torch.nn.ReLU())
 
 class TestModel(MainTest):
 	def test_model(self):
@@ -41,3 +34,10 @@ class TestModel(MainTest):
 		assert next(model.parameters()).device.type == gpu.type
 
 
+	def test_model_config(self):
+		cf = ModelConfig(torch.nn.ReLU())
+		with open("local_tests/test_config.json", "w") as f:
+			json.dump(cf.as_json_dict(), f)
+		with open("local_tests/test_config.json") as f:
+			cf = ModelConfig.from_json_dict(json.load(f))
+		assert type(cf.activation_function) == type(torch.nn.ReLU())
