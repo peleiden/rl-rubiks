@@ -17,7 +17,7 @@ from src.rubiks.solving.agents import DeepAgent
 
 defaults  = {
 	'rollouts': 1000,
-	'location': 'local_train',
+	'location': 'data/local_train',
 	'rollout_games': 1000,
 	'rollout_depth': 100,
 	'batch_size': 50,

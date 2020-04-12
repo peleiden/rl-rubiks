@@ -103,18 +103,18 @@ if __name__ == "__main__":
 				  logger = Logger("local_evaluation/evaluations.log", "Testing MCTS", True),
 				  scrambling_depths = range(1, 5)
 	)
-	# agent = PolicyCube.from_saved("local_train")
+	# agent = PolicyCube.from_saved("data/local_train")
 	# results = e.eval(agent, 1)
 	agents = [
 		Agent(RandomDFS()),
 		Agent(BFS()),
-		DeepAgent(PolicySearch.from_saved("local_train", False)),
-		DeepAgent(PolicySearch.from_saved("local_train", True)),
-		DeepAgent(MCTS.from_saved("local_train"))
+		DeepAgent(PolicySearch.from_saved("data/local_train", False)),
+		DeepAgent(PolicySearch.from_saved("data/local_train", True)),
+		DeepAgent(MCTS.from_saved("data/local_train"))
 	]
 	for agent in agents:
 		e.eval(agent)
-	# results = e.eval(PolicyCube.from_saved("local_train"))
+	# results = e.eval(PolicyCube.from_saved("data/local_train"))
 	# TODO: Boxplot with completion turns for each scrambling depth
 
 
