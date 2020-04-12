@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import torch
 
-from src.tests.main import MainTest
+from src.tests import MainTest
 
 from src.rubiks.cube.cube import Cube
 from src.rubiks.solving.agents import Agent, DeepAgent

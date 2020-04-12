@@ -1,7 +1,7 @@
 import os
 import torch
 
-from src.tests.main import MainTest
+from src.tests import MainTest
 from src.rubiks.train import Train
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks import cpu, gpu

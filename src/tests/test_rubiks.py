@@ -1,5 +1,5 @@
 import torch
-from src.tests.main import MainTest
+from src.tests import MainTest
 from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr, no_grad
 
 
