@@ -1,5 +1,6 @@
 from src.rubiks.utils.ticktock import TickTock
 
+
 import numpy as np
 from time import sleep
 
@@ -15,4 +16,4 @@ def test_tt():
 	secs = tt.get_section_times()
 	assert np.isclose(0.03, secs["test0"], .1)
 	assert np.isclose(0.01, secs["test1"], .1)
-	
+

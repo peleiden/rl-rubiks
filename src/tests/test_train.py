@@ -1,13 +1,14 @@
 import os
 import torch
 
+from src.tests.main import MainTest
 from src.rubiks.train import Train
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks import cpu, gpu
 from src.rubiks.solving.agents import Agent, DeepAgent
 from src.rubiks.solving.search import PolicySearch
 from src.rubiks.solving.evaluation import Evaluator
-class TestTrain:
+class TestTrain(MainTest):
 
 	def test_train(self):
 		torch.manual_seed(42)

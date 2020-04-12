@@ -2,6 +2,8 @@ import os
 import json
 import torch
 
+from src.tests.main import MainTest
+
 from src.rubiks import cpu, gpu
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.utils.logger import NullLogger
@@ -15,8 +17,7 @@ def test_model_config():
 	os.remove("test_config.json")
 	assert type(cf.activation_function) == type(torch.nn.ReLU())
 
-class TestModel:
-
+class TestModel(MainTest):
 	def test_model(self):
 		config = ModelConfig()
 		model = Model(config).to(gpu)
