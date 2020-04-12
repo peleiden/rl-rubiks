@@ -8,7 +8,7 @@ class MainTest:
 
 	@classmethod
 	def teardown_test(cls):
-		rmtree('local_tests', onerror=self.ignore_absentee)
+		rmtree('local_tests', onerror=cls.ignore_absentee)
 
 	@staticmethod
 	def ignore_absentee(func, path, exc_inf):
