@@ -2,6 +2,8 @@ import os
 import json
 import torch
 
+from src.tests.main import MainTest
+
 from src.rubiks import cpu, gpu
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.utils.logger import NullLogger
@@ -15,8 +17,7 @@ def test_model_config():
 	os.remove("test_config.json")
 	assert type(cf.activation_function) == type(torch.nn.ReLU())
 
-class TestModel:
-	
+class TestModel(MainTest):
 	def test_model(self):
 		config = ModelConfig()
 		model = Model(config).to(gpu)
@@ -26,18 +27,18 @@ class TestModel:
 		model(x)
 		model.train()
 		model(x)
-	
+
 	def test_save_and_load(self):
 		torch.manual_seed(42)
-		
+
 		config = ModelConfig()
 		model = Model(config, logger=NullLogger()).to(gpu)
-		model_dir = "local_tests/local_model_test"
+		model_dir = "data/local_tests/local_model_test"
 		model.save(model_dir)
 		assert os.path.exists(f"{model_dir}/config.json")
 		assert os.path.exists(f"{model_dir}/model.pt")
-		
+
 		model = Model.load(model_dir).to(gpu)
 		assert next(model.parameters()).device.type == gpu.type
-		
+
 

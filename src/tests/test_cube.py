@@ -1,11 +1,14 @@
+from src.tests.main import MainTest
+
 from src.rubiks import get_repr, set_repr
 from src.rubiks.cube.cube import Cube
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 
+
 import numpy as np
 import torch
 
-class TestRubiksCube:
+class TestRubiksCube(MainTest):
 	def test_init(self):
 		state = Cube.get_solved()
 		assert Cube.is_solved(state)

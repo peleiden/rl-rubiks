@@ -166,7 +166,9 @@ def parse(defaults: dict):
 	if args.config:
 		with_config = True
 		config = ConfigParser()
-		config.read([args.config])
+		if not config.read([args.config]):
+			raise FileNotFoundError(f"Could not find config file {args.config}")
+
 		# If user sets a DEFAULT section, then this overwrites the defaults
 		defaults = {**defaults, **dict(config.items("DEFAULT"))}
 
