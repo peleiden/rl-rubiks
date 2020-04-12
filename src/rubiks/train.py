@@ -193,7 +193,7 @@ class Train:
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
 		loss_weights = np.tile(1/np.arange(1, sequence_length+1), games)
-		
+
 		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights)
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):

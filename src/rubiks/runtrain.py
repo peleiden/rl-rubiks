@@ -124,6 +124,7 @@ class TrainJob:
 		net.save(self.location)
 
 		train.plot_training(self.location)
+		train.plot_value_targets(self.location)
 
 		if self.final_evals:
 			# Evaluation
@@ -196,7 +197,7 @@ def parse(defaults: dict):
 	return jobs
 
 if __name__ == "__main__":
-	
+
 	# SET SEED
 	seedsetter()
 	jobs = parse(defaults)
