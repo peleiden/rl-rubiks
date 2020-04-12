@@ -201,7 +201,7 @@ def parse(defaults: dict):
 if __name__ == "__main__":
 
 	# SET SEED
-	# seedsetter()
+	seedsetter()
 	jobs = parse(defaults)
 	for job in jobs:
 		job.execute()
