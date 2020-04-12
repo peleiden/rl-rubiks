@@ -12,7 +12,6 @@ class TestTrain(MainTest):
 
 	def test_train(self):
 		torch.manual_seed(42)
-
 		#The standard test
 		net = Model(ModelConfig()).to(gpu)
 		evaluator = Evaluator(2, 2, [2])
@@ -21,8 +20,8 @@ class TestTrain(MainTest):
 		# Current
 		net = train.train(net)
 
-		train.plot_training("data/local_tests/local_train_test")
-		assert os.path.exists("data/local_tests/local_train_test/training.png")
+		train.plot_training("local_tests/local_train_test")
+		assert os.path.exists("local_tests/local_train_test/training.png")
 
 		# optim = torch.optim.Adam
 		# policy_loss = torch.nn.CrossEntropyLoss

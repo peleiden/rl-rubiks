@@ -1,9 +1,11 @@
+import os
 from src.rubiks.utils import seedsetter
 from shutil import rmtree
 
 class MainTest:
 	@classmethod
 	def setup_test(cls):
+		os.makedirs("local_tests")
 		seedsetter()
 
 	@classmethod

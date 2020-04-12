@@ -10,11 +10,10 @@ from src.rubiks.utils.logger import NullLogger
 
 def test_model_config():
 	cf = ModelConfig(torch.nn.ReLU())
-	with open("test_config.json", "w") as f:
+	with open("local_tests/test_config.json", "w") as f:
 		json.dump(cf.as_json_dict(), f)
-	with open("test_config.json") as f:
+	with open("local_tests/test_config.json") as f:
 		cf = ModelConfig.from_json_dict(json.load(f))
-	os.remove("test_config.json")
 	assert type(cf.activation_function) == type(torch.nn.ReLU())
 
 class TestModel(MainTest):
@@ -33,7 +32,7 @@ class TestModel(MainTest):
 
 		config = ModelConfig()
 		model = Model(config, logger=NullLogger()).to(gpu)
-		model_dir = "data/local_tests/local_model_test"
+		model_dir = "local_tests/local_model_test"
 		model.save(model_dir)
 		assert os.path.exists(f"{model_dir}/config.json")
 		assert os.path.exists(f"{model_dir}/model.pt")
