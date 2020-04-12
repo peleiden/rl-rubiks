@@ -48,7 +48,7 @@ class Train:
 		self.depths = np.arange(1, rollout_depth)
 		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Reduces vram usage
 
-		self.evaluations = np.unique(np.linspace(0, self.rollouts, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
+		self.evaluations = np.unique(np.linspace(0, self.rollouts-1, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
 		self.evaluations.sort()
 
 		self.searcher_class = searcher_class
@@ -72,7 +72,6 @@ class Train:
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
 		self.tt.tick()
-
 		self.moves_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
 		self.log("\n".join([
@@ -138,7 +137,7 @@ class Train:
 				net.eval()
 				agent.update_net(net)
 				eval_results = self.evaluator.eval(agent)
-				eval_reward = (eval_results != 0).mean()
+				eval_reward = (eval_results != -1).mean()
 
 				self.eval_rewards.append(eval_reward)
 				self.tt.end_section("Evaluation")
@@ -223,12 +222,12 @@ class Train:
 		loss_ax.plot(self.train_rollouts, self.train_losses, label="Training loss", color = color)
 		loss_ax.tick_params(axis='y', labelcolor = color)
 
-		# if self.eval_rollouts: TODO
-		# 	color = 'blue'
-		# 	reward_ax = loss_ax.twinx()
-		# 	reward_ax.set_ylabel("Number of games won", color=color)
-		# 	reward_ax.plot(self.eval_rollouts, self.eval_rewards, color=color, label="Evaluation reward")
-		# 	reward_ax.tick_params(axis='y', labelcolor=color)
+		if len(self.evaluations):
+			color = 'blue'
+			reward_ax = loss_ax.twinx()
+			reward_ax.set_ylabel("Fraction of games won when evaluating", color=color)
+			reward_ax.plot(self.evaluations, self.eval_rewards, color=color, label="Evaluation reward")
+			reward_ax.tick_params(axis='y', labelcolor=color)
 
 		fig.tight_layout()
 		plt.title(title if title else "Training")
