@@ -85,7 +85,7 @@ class DeepSearcher(Searcher):
 
 
 class RandomDFS(Searcher):
-	with_mt = True  # TODO: Implement multithreading natively in search method
+	with_mt = True  # TODO: Implement multithreading natively in search method and set to False
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		action = np.random.randint(Cube.action_dim)
 		state = Cube.rotate(state, *Cube.action_space[action])
@@ -136,7 +136,6 @@ class PolicySearch(DeepSearcher):
 		self.sample_policy = sample_policy
 
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
-		assert not torch.is_grad_enabled()  # TODO: Remove after test
 		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state).to(gpu), value=False).cpu(), dim=1).numpy().squeeze()
 		action = np.random.choice(Cube.action_dim, p=policy) if self.sample_policy else policy.argmax()
 		state = Cube.rotate(state, *Cube.action_space[action])
@@ -152,7 +151,6 @@ class PolicySearch(DeepSearcher):
 		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
 
 class MCTS(DeepSearcher):
-	# TODO: Seemingly bug where many cubes of scrambling depth two are not solved
 	def __init__(self, net: Model, c: float=1, nu: float=0, search_graph=True):
 		super().__init__(net)
 		#Hyper parameters: c controls exploration and nu controls virtual loss updation us
@@ -206,7 +204,6 @@ class MCTS(DeepSearcher):
 	def expand_leaf(self, leaf: Node) -> int:
 		# Expands at leaf node and checks if solved state in new states
 		# Returns -1 if no action gives solved state else action index
-		assert not torch.is_grad_enabled()  # TODO: Fjern efter test
 
 		no_neighs = np.array([i for i in range(Cube.action_dim) if leaf.neighs[i] is None])  # Neighbors that have to be expanded to
 		unknown_neighs = list(np.arange(len(no_neighs)))  # Some unknown neighbors may already be known but just not connected

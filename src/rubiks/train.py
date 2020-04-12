@@ -189,7 +189,6 @@ class Train:
 		substates_oh = Cube.as_oh(substates).to(gpu)
 		self.tt.end_section("ADI substates")
 
-		# TODO: Split into batches if it requires too much vram
 		# Generates policy and value targets
 		rewards = torch.tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
 		self.tt.section("ADI feedforward")

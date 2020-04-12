@@ -53,7 +53,6 @@ class Evaluator:
 
 		# Builds configurations for runs
 		cfgs = []
-		# TODO: Pass a logger along to log progress
 		for i, d in enumerate(self.scrambling_depths):
 			for _ in range(self.n_games):
 				cfgs.append((agent, self.max_time, d))

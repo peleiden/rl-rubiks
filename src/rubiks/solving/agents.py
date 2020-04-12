@@ -21,7 +21,6 @@ class Agent:
 
 	def allow_mt(self):
 		# NN based agents see very little gain but much higher compute usage with standard mt implementation
-		# TODO: Either stick to ST for these agents or find better solution
 		return self._searcher.with_mt
 
 	def __str__(self):
