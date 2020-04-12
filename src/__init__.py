@@ -15,7 +15,7 @@ app = Flask(__name__)
 api = Api(app)
 CORS(app)
 print(os.getcwd(), sys.path[0])
-net_loc = "src/trained_model"
+net_loc = "data/hpc-20-04-12"
 agents = [
 	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
 	{ "name": "BFS", "agent": Agent(BFS()) },
