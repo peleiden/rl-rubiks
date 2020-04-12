@@ -6,6 +6,7 @@ class MainTest:
 	@classmethod
 	def setup_test(cls):
 		os.makedirs("local_tests")
+		open("TEST.txt","w")
 		seedsetter()
 
 	@classmethod

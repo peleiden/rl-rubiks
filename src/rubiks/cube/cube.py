@@ -62,7 +62,7 @@ class Cube:
 	action_dim = len(action_space)
 
 	@classmethod
-	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool):
+	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool) -> np.ndarray:
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
@@ -271,7 +271,7 @@ class _Cube686(Cube):
 		# This representation is already one-hot encoded, so only ravelling is done
 		if len(states.shape) == 1:
 			states = np.expand_dims(states, 0)
-		states = torch.from_numpy(states.reshape(-1, 288))
+		states = torch.from_numpy(states.reshape(-1, 288)).float()
 		return states
 
 	@classmethod

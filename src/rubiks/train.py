@@ -197,7 +197,8 @@ class Train:
 				values = torch.cat(value_parts).cpu()
 				assert values.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
 				break
-			except RuntimeError:  # Caused by running out of vram
+			except RuntimeError as r:  # Caused by running out of vram
+				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
 				self.adi_ff_batches *= 2
 		self.tt.end_section("ADI feedforward")
 		values += rewards

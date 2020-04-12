@@ -103,14 +103,14 @@ class BFS(Searcher):
 		if Cube.is_solved(state): return True
 
 		# Each element contains the state from which it came and the corresponding action
-		states = { tuple(state): (None, None) }
+		states = { state.tostring(): (None, None) }
 		queue = deque([state])
 		while tt.tock() < time_limit:
 			state = queue.popleft()
-			tstate = tuple(state)
+			tstate = state.tostring()
 			for i, action in enumerate(Cube.action_space):
 				new_state = Cube.rotate(state, *action)
-				new_tstate = tuple(new_state)
+				new_tstate = new_state.tostring()
 				if new_tstate in states:
 					continue
 				elif Cube.is_solved(new_state):
@@ -172,15 +172,15 @@ class MCTS(DeepSearcher):
 		#First state is evaluated  and expanded individually
 		oh = Cube.as_oh(state).to(gpu)
 		p, v = self.net(oh)  # Policy and value
-		self.states[tuple(state)] = Node(state, p.cpu().numpy().ravel(), float(v.cpu()))
+		self.states[state.tostring()] = Node(state, p.cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
-		solve_action = self.expand_leaf(self.states[tuple(state)])
+		solve_action = self.expand_leaf(self.states[state.tostring()])
 		if solve_action != -1:
 			self.action_queue = deque([solve_action])
 			return True
 		while tt.tock() < time_limit:
 			#Continually searching and expanding leaves
-			path, leaf = self.search_leaf(self.states[tuple(state)])
+			path, leaf = self.search_leaf(self.states[state.tostring()])
 			solve_action = self.expand_leaf(leaf)
 			if solve_action != -1:
 				self.action_queue = path + deque([solve_action])
@@ -215,10 +215,10 @@ class MCTS(DeepSearcher):
 			if Cube.is_solved(new_states[i]): return action
 
 			# If new leaf state is already known, the tree is updated, and the neighbor is no longer considered
-			tstate = tuple(new_states[i])
-			if tstate in self.states:
-				leaf.neighs[action] = self.states[tstate]
-				self.states[tstate].neighs[Cube.rev_action(action)] = leaf
+			state_str = new_states[i].tostring()
+			if state_str in self.states:
+				leaf.neighs[action] = self.states[state_str]
+				self.states[state_str].neighs[Cube.rev_action(action)] = leaf
 				unknown_neighs.pop(i)
 
 		no_neighs = no_neighs[unknown_neighs]
@@ -236,7 +236,7 @@ class MCTS(DeepSearcher):
 		for i, action in enumerate(no_neighs):
 			new_leaf = Node(new_states[i], p[i], v[i], leaf, action)
 			leaf.neighs[action] = new_leaf
-			self.states[tuple(new_states[i])] = new_leaf
+			self.states[new_states[i].tostring()] = new_leaf
 
 		# Updates W in all non-leaf neighbors
 		max_val = max([x.value for x in leaf.neighs])
