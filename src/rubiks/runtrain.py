@@ -105,7 +105,7 @@ class TrainJob:
 
 		train_scramble = int(np.mean(self.eval_scrambling))
 		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=self.eval_max_time, scrambling_depths=[train_scramble], logger=self.logger)
-		self.logger(f"Rough estimate of total evaluation time during training: {train_evaluator.approximate_time()/60:.2f} min")
+		self.logger(f"Rough estimate of total evaluation time during training: {self.evaluations*train_evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
 				batch_size		= self.batch_size,
 				rollout_games	= self.rollout_games,
