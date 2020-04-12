@@ -1,5 +1,5 @@
 from datetime import datetime
-from time import time
+from time import perf_counter
 
 def get_timestamp(for_file=False):
 	# Returns a timestamp
@@ -18,11 +18,11 @@ class TickTock:
 	_units = {"ms": 1000, "s": 1, "m": 1/60}
 
 	def tick(self):
-		self._start = time()
+		self._start = perf_counter()
 		return self._start
 	
 	def tock(self, with_print = False):
-		end = time()
+		end = perf_counter()
 		passed_time = end - self._start
 		return passed_time
 
