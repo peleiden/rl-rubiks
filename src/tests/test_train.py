@@ -20,8 +20,8 @@ class TestTrain:
 		# Current
 		net = train.train(net)
 
-		train.plot_training("local_tests/local_train_test")
-		assert os.path.exists("local_tests/local_train_test/training.png")
+		train.plot_training("data/local_tests/local_train_test")
+		assert os.path.exists("data/local_tests/local_train_test/training.png")
 
 		# optim = torch.optim.Adam
 		# policy_loss = torch.nn.CrossEntropyLoss
