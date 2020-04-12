@@ -12,5 +12,5 @@ python src/rubiks/runtrain.py --help
 ```
 for help on options. In many cases, using the parameters from a configuration file is preferable. An example of using this to run two trainings, can be seen be running
 ```
-python src/rubiks/runtrain.py --config src/configs/train_ex.ini
+python src/rubiks/runtrain.py --config data/configs/train_ex.ini
 ```
