@@ -206,9 +206,9 @@ def parse(defaults: dict):
 
 	# For reproduceability: Save config file and arguments
 	if with_config:
-		with open(f"{save_location}/used_config.ini", 'w') as f: config.write(f)
+		with open(f"{save_location}/used_config.ini", 'w', encoding="utf-8") as f: config.write(f)
 
-	with open(f"{save_location}/used_config.ini", 'a') as f:
+	with open(f"{save_location}/used_config.ini", 'a', encoding="utf-8") as f:
 		f.write(f"# Run command\n# {' '.join(sys.argv)}\n")
 		defs = pformat(defaults).replace('\n', '\n# ')
 		f.write(f"\n# All configuration values\n# {defs}\n")
