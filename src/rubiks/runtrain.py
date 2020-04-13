@@ -1,4 +1,4 @@
-import sys
+import sys, os
 
 from argparse import ArgumentParser
 from configparser import ConfigParser
@@ -9,6 +9,7 @@ import torch
 
 from src.rubiks.solving import search
 from src.rubiks.utils import seedsetter
+from src.rubiks.utils.ticktock import get_timestamp
 from src.rubiks.utils.logger import Logger
 from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr
 from src.rubiks.model import Model, ModelConfig
@@ -18,7 +19,7 @@ from src.rubiks.solving.agents import DeepAgent
 
 defaults  = {
 	'rollouts': 1000,
-	'location': 'data/local_train',
+	'location': 'data/local_train'+get_timestamp(for_file=True),
 	'rollout_games': 1000,
 	'rollout_depth': 100,
 	'batch_size': 50,
@@ -88,8 +89,8 @@ class TrainJob:
 		self.final_evals = final_evals
 		assert isinstance(self.final_evals, int)
 
-		self.location = location
-		self.logger = Logger(f"{self.location}/{self.jobname}.log", jobname, verbose) #Already creates logger at init to test whether path works
+		self.location = os.path.join(location, self.jobname.lower())
+		self.logger = Logger(f"{self.location}/runlog.log", jobname, verbose) #Already creates logger at init to test whether path works
 		self.logger.log(f"Initialized {self.jobname}")
 
 		self.is2024 = is2024
@@ -106,11 +107,11 @@ class TrainJob:
 
 		if self.final_evals:
 			final_evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
-			self.logger(f"Rough estimate of final evaluation time: {final_evaluator.approximate_time()/60:.2f} min.")
+			self.logger(f"Rough upper bound on final evaluation time: {final_evaluator.approximate_time()/60:.2f} min.")
 
 		train_scramble = int(np.mean(self.eval_scrambling))
 		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=self.eval_max_time, scrambling_depths=[train_scramble], logger=self.logger)
-		self.logger(f"Rough estimate of total evaluation time during training: {self.evaluations*train_evaluator.approximate_time()/60:.2f} min")
+		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*train_evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
 				batch_size		= self.batch_size,
 				rollout_games	= self.rollout_games,
@@ -123,7 +124,6 @@ class TrainJob:
 				evaluations		= self.evaluations,
 				evaluator		= train_evaluator,
 		)
-		print(get_repr(), self.is2024)
 
 		net = Model(self.model_cfg, self.logger).to(gpu)
 		net, min_net = train.train(net)
