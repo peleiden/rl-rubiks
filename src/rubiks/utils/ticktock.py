@@ -13,10 +13,14 @@ def get_timestamp(for_file=False):
 
 class TickTock:
 
+	mu = u"\u03BC"
+	sigma = u"\u03C3"
+	pm = u"\u00B1"
+
 	_start: float
 	_sections = {}
 	_section_depth = 0
-	_units = {"ns": 1e9, "mu_s": 1e6, "ms": 1e3, "s": 1, "m": 1/60}
+	_units = {"ns": 1e9, f"{mu}s": 1e6, "ms": 1e3, "s": 1, "m": 1/60}
 
 	def tick(self):
 		self._start = perf_counter()
@@ -45,9 +49,8 @@ class TickTock:
 		if "." in decs:
 			rest = decs[decs.index("."):]
 			decs = decs[:decs.index(".")]
-		for i in range((len(decs)-1)//3):
-			idx = len(decs) - i * 3 - 3
-			decs = decs[:idx] + "," + decs[idx:]  # FIXME
+		for i in range(len(decs)-3, 0, -3):
+			decs = decs[:i] + "," + decs[i:]
 		return decs + rest
 
 	@classmethod
@@ -64,7 +67,7 @@ class TickTock:
 
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
-		strs = [["Execution times", "Total time", "Hits", "Avg. time +/- 2sigma"]]
+		strs = [["Execution times", "Total time", "Hits", f"Avg. time {self.pm} 2{self.sigma}"]]
 		std_strs = []
 		for kw, v in self._sections.items():
 			elapsed = np.sum(v["hits"])
@@ -75,7 +78,7 @@ class TickTock:
 				"- " * v["depth"] + kw,
 				self.stringify_time(elapsed, unit),
 				self.thousand_seps(len(v["hits"])),
-				self.stringify_time(avg, "ms") + " ± "
+				self.stringify_time(avg, "ms") + f" {self.pm} "
 			])
 		longest_std = max(len(x) for x in std_strs)
 		std_strs = [" " * (longest_std-len(x)) + x for x in std_strs]
@@ -96,11 +99,9 @@ class TickTock:
 
 if __name__ == "__main__":
 	tt = TickTock()
-	for i in range(10_000):
+	for i in range(100_000):
 		tt.section("Test")
 		tt.end_section("Test")
-		tt.section("Test2")
-		tt.end_section("Test2")
 	print(tt)
 
 
