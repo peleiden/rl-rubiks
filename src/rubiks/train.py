@@ -31,6 +31,7 @@ class Train:
 			batch_size: int, # Required to be > 1 when training with batchnorm
 			rollout_games: int,
 			rollout_depth: int,
+			loss_weighting: str,
 			optim_fn,
 			lr: float,
 			searcher_class: DeepSearcher,
@@ -46,6 +47,8 @@ class Train:
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
 		self.depths = np.arange(1, rollout_depth)
+		self.loss_weighting = loss_weighting
+		assert self.loss_weighting in ["none", "weighted", "adaptive"]
 		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Reduces vram usage
 
 		self.evaluations = np.unique(np.linspace(0, self.rollouts-1, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
@@ -61,7 +64,14 @@ class Train:
 
 		self.log = logger
 		self.log(f"Created trainer with optimizer: {self.optim}, policy and value criteria: {self.policy_criterion}, {self.value_criterion}. Learning rate: {self.lr}")
-		self.log(f"Training procedure:\nRollouts: {self.rollouts}\nBatch size: {self.batch_size}\nRollout games: {self.rollout_games}\nRollout depth: {self.rollout_depth}")
+		self.log("\n".join([
+			"Training procedure",
+			f"Rollouts: {self.rollouts}",
+			f"Batch size: {self.batch_size}",
+			f"Rollout games: {self.rollout_games}",
+			f"Rollout depth: {self.rollout_depth}",
+			f"Loss weighting: {self.loss_weighting}",
+		]))
 		self.tt = TickTock()
 
 		self.evaluator = evaluator
@@ -111,14 +121,12 @@ class Train:
 				losses = self.policy_criterion(policy_pred, policy_targets[batch])
 				losses += self.value_criterion(value_pred.squeeze(), value_targets[batch])
 
-				# Weighting of losses according to move importance
-				loss = losses @ loss_weights[batch]
+				loss = losses @ loss_weights[batch]  # Weighting of losses according to move importance
 				loss.backward()
 				optimizer.step()
-
 				batch_loss += loss.cpu().detach()
 
-			self.train_losses[rollout] = batch_loss / loss_weights.sum()
+			self.train_losses[rollout] = batch_loss / len(batches)
 			self.tt.end_section("Training loop")
 			
 			if self.train_losses[rollout] < lowest_loss:
@@ -203,7 +211,7 @@ class Train:
 				values = torch.cat(value_parts).cpu()
 				assert values.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
 				break
-			except RuntimeError as r:  # Caused by running out of vram
+			except RuntimeError:  # Caused by running out of vram
 				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
 				self.adi_ff_batches *= 2
 		self.tt.end_section("ADI feedforward")
@@ -212,12 +220,17 @@ class Train:
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
-		weighted = np.tile(1 / np.arange(1, self.rollout_depth + 1), self.rollout_games)
-		unweighted = np.ones_like(weighted)
-		alpha = rollout / self.rollouts
-		loss_weights = (1-alpha) * weighted + alpha * unweighted
-		# TODO: Old way, make configurable
-		# loss_weights = np.tile(1/np.arange(1, self.rollout_depth+1), self.rollout_games)
+		if self.loss_weighting == "adaptive":
+			weighted = np.tile(1 / np.arange(1, self.rollout_depth + 1), self.rollout_games)
+			unweighted = np.ones_like(weighted)
+			alpha = rollout / self.rollouts
+			loss_weights = (1-alpha) * weighted + alpha * unweighted
+		elif self.loss_weighting == "weighted":
+			loss_weights = np.tile(1 / np.arange(1, self.rollout_depth + 1), self.rollout_games)
+		else:
+			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
+		loss_weights /= loss_weights.sum()
+		assert np.isclose(loss_weights.sum(), 1)
 
 		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
 

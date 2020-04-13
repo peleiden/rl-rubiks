@@ -2,6 +2,7 @@ import sys
 
 from argparse import ArgumentParser
 from configparser import ConfigParser
+from pprint import pformat
 
 import numpy as np
 import torch
@@ -21,6 +22,7 @@ defaults  = {
 	'rollout_games': 1000,
 	'rollout_depth': 100,
 	'batch_size': 50,
+	'loss_weighting': 'weighted',
 	'lr': 1e-5,
 	'optim_fn': 'RMSprop',
 	'searcher': 'MCTS',
@@ -38,6 +40,7 @@ class TrainJob:
 			rollouts: int,
 			rollout_games: int,
 			rollout_depth: int,
+			loss_weighting: str,
 			batch_size: int,
 			lr: float,
 			optim_fn: str,
@@ -61,9 +64,11 @@ class TrainJob:
 		assert self.rollout_games > 0
 		self.rollout_depth = rollout_depth
 		assert rollout_depth > 0
+		self.loss_weighting = loss_weighting
+		assert loss_weighting in ["adaptive", "weighted", "none"]
 
 		self.batch_size = batch_size
-		assert self.batch_size > 0 and self.batch_size <= self.rollout_games * self.rollout_depth
+		assert 0 < self.batch_size <= self.rollout_games * self.rollout_depth
 		self.lr = lr
 		assert float(lr) and lr <= 1
 
@@ -98,7 +103,6 @@ class TrainJob:
 		# Training
 		self.logger.section()
 
-
 		if self.final_evals:
 			final_evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
 			self.logger(f"Rough estimate of final evaluation time: {final_evaluator.approximate_time()/60:.2f} min.")
@@ -110,6 +114,7 @@ class TrainJob:
 				batch_size		= self.batch_size,
 				rollout_games	= self.rollout_games,
 				rollout_depth	= self.rollout_depth,
+				loss_weighting	= self.loss_weighting,
 				optim_fn		= self.optim_fn,
 				lr				= self.lr,
 				searcher_class	= self.searcher,
@@ -151,6 +156,7 @@ def parse(defaults: dict):
 	parser.add_argument('--location', help="Save location for logs and plots", type=str)
 	parser.add_argument('--rollout_games', help="Number of games in ADI in each rollout", type=int)
 	parser.add_argument('--rollout_depth', help="Number of scramblings applied to each game in ADI", type=int)
+	parser.add_argument('--loss_weighting', help="Weighting of different scrambling depths", type=str, choices=['adaptive', 'weighted', 'none'])
 	parser.add_argument('--batch_size', help="Number of training examples to be used at the same time in parameter update", type=int)
 	parser.add_argument('--lr', help="Learning rate of parameter update", type=float)
 	parser.add_argument('--optim_fn', help="String corresponding to a class in torch.optim", type=str)
@@ -195,7 +201,10 @@ def parse(defaults: dict):
 	if with_config:
 		with open(f"{save_location}/used_config.ini", 'w') as f: config.write(f)
 
-	with open(f"{save_location}/used_config.ini", 'a') as f: f.write(f"#{' '.join(sys.argv)}")
+	with open(f"{save_location}/used_config.ini", 'a') as f:
+		f.write(f"# Run command\n# {' '.join(sys.argv)}\n")
+		defs = pformat(defaults).replace('\n', '\n# ')
+		f.write(f"\n# All configuration values\n# {defs}\n")
 	return jobs
 
 if __name__ == "__main__":
