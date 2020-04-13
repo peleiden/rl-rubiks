@@ -100,8 +100,13 @@ Godt flow med at starte med den gamle repræsentation og så gå videre til den 
 
 Uddybning af kritisk spm 3: Hvordan vil vi sikre os i diskussionen at vi kan forklare hvor vores resultater kommer fra? 
 
+### Uge 10
+#### 13/4-20
+Vi vil snakke med Mikkel om frontend, MCTS, reproducerbarhed. Lossvægte? Hvordan synes han vi skal evaluere det? Asgers AUC-idé.
 
+Anne undersøger CNNs ift one-hot-encoding (om det overhovedet kan lade sig gøre). 
 
+Hjemmesiden skal være på engelsk. 
 
 
 ## Vejledermøder

@@ -96,7 +96,7 @@ class Train:
 		agent = DeepAgent(self.searcher_class(net))
 
 		for rollout in range(self.rollouts):
-			# torch.cuda.empty_cache()
+			torch.cuda.empty_cache()
 
 			self.tt.section("Training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
@@ -132,7 +132,7 @@ class Train:
 				lowest_loss = self.train_losses[rollout]
 				min_net = net.clone()
 
-			# torch.cuda.empty_cache()
+			torch.cuda.empty_cache()
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}")
 
