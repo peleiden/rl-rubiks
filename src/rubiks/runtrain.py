@@ -110,7 +110,7 @@ class TrainJob:
 			self.logger(f"Rough upper bound on final evaluation time: {final_evaluator.approximate_time()/60:.2f} min.")
 
 		train_scramble = int(np.mean(self.eval_scrambling))
-		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=5 scrambling_depths=[train_scramble], logger=self.logger)
+		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=min(self.eval_max_time, 5), scrambling_depths=[train_scramble], logger=self.logger)
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*train_evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
 				batch_size		= self.batch_size,
