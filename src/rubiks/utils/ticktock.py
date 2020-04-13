@@ -9,19 +9,19 @@ def get_timestamp(for_file=False):
 		return "-".join(str(datetime.now()).split(".")[0].split(":")).replace(" ", "_")
 	else:
 		return str(datetime.now())
-	
+
 
 class TickTock:
 
 	_start: float
 	_sections = {}
 	_section_depth = 0
-	_units = {"ns": 1e9, "μs": 1e6, "ms": 1e3, "s": 1, "m": 1/60}
+	_units = {"ns": 1e9, "mu_s": 1e6, "ms": 1e3, "s": 1, "m": 1/60}
 
 	def tick(self):
 		self._start = perf_counter()
 		return self._start
-	
+
 	def tock(self):
 		end = perf_counter()
 		passed_time = end - self._start
@@ -32,12 +32,12 @@ class TickTock:
 			self._sections[name] = {"tt": TickTock(), "hits": [], "depth": self._section_depth}
 		self._section_depth += 1
 		self._sections[name]["tt"].tick()
-	
+
 	def end_section(self, name: str):
 		dt = self._sections[name]["tt"].tock()
 		self._sections[name]["hits"].append(dt)
 		self._section_depth -= 1
-	
+
 	@staticmethod
 	def thousand_seps(numstr: str or float or int) -> str:
 		decs = str(numstr)
@@ -49,7 +49,7 @@ class TickTock:
 			idx = len(decs) - i * 3 - 3
 			decs = decs[:idx] + "," + decs[idx:]  # FIXME
 		return decs + rest
-	
+
 	@classmethod
 	def stringify_time(cls, dt: float, unit="ms"):
 		str_ = f"{dt*cls._units[unit]:.3f} {unit}"
@@ -61,10 +61,10 @@ class TickTock:
 
 	def get_section_times(self):
 		return {kw: np.sum(v["hits"]) for kw, v in self._sections.items()}
-	
+
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
-		strs = [["Execution times", "Total time", "Hits", "Avg. time ± 2σ"]]
+		strs = [["Execution times", "Total time", "Hits", "Avg. time +/- 2sigma"]]
 		std_strs = []
 		for kw, v in self._sections.items():
 			elapsed = np.sum(v["hits"])
@@ -90,7 +90,7 @@ class TickTock:
 		for i in range(len(strs)):
 			strs[i] = " | ".join(strs[i])
 		return "\n".join(strs)
-	
+
 	def __str__(self):
 		return self.stringify_sections("s")
 
