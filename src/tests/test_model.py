@@ -36,8 +36,8 @@ class TestModel(MainTest):
 
 	def test_model_config(self):
 		cf = ModelConfig(torch.nn.ReLU())
-		with open("local_tests/test_config.json", "w") as f:
+		with open("local_tests/test_config.json", "w", encoding="utf-8") as f:
 			json.dump(cf.as_json_dict(), f)
-		with open("local_tests/test_config.json") as f:
+		with open("local_tests/test_config.json", encoding="utf-8") as f:
 			cf = ModelConfig.from_json_dict(json.load(f))
 		assert type(cf.activation_function) == type(torch.nn.ReLU())

@@ -24,7 +24,7 @@ class Logger:
 	def log(self, *tolog, with_timestamp=True):
 
 		time = get_timestamp()
-		with open(self.fpath, "a") as logfile:
+		with open(self.fpath, "a", encoding="utf-8") as logfile:
 			tolog = " ".join([str(x) for x in tolog])
 			spaces = len(time) * " "
 			logs = tolog.split("\n")
