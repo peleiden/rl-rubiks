@@ -60,7 +60,7 @@ class TickTock:
 		return {kw: v for kw, v in self._sections.items() if kw != "tt"}
 
 	def get_section_times(self):
-		return {kw: np.sum() for kw, v in self._sections.items()}
+		return {kw: np.sum(v["hits"]) for kw, v in self._sections.items()}
 	
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
