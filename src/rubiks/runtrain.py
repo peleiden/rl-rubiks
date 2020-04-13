@@ -1,4 +1,4 @@
-import sys
+import sys, os
 
 from argparse import ArgumentParser
 from configparser import ConfigParser
@@ -9,6 +9,7 @@ import torch
 
 from src.rubiks.solving import search
 from src.rubiks.utils import seedsetter
+from src.rubiks.utils.ticktock import get_timestamp
 from src.rubiks.utils.logger import Logger
 from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr
 from src.rubiks.model import Model, ModelConfig
@@ -18,7 +19,7 @@ from src.rubiks.solving.agents import DeepAgent
 
 defaults  = {
 	'rollouts': 1000,
-	'location': 'data/local_train',
+	'location': 'data/local_train'+get_timestamp(for_file=True),
 	'rollout_games': 1000,
 	'rollout_depth': 100,
 	'batch_size': 50,
@@ -55,6 +56,8 @@ class TrainJob:
 			# Currently not set by argparser/configparser
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
+			train_eval_games = 50,
+			max_train_eval_time = 2.5,
 			):
 		self.jobname = jobname
 		assert isinstance(self.jobname, str)
@@ -88,6 +91,11 @@ class TrainJob:
 		self.final_evals = final_evals
 		assert isinstance(self.final_evals, int)
 
+		self.train_eval_games = train_eval_games
+		assert isinstance(self.train_eval_games, int)
+		self.max_train_eval_time = max_train_eval_time
+		assert self.max_train_eval_time > 0
+
 		self.location = location
 		self.logger = Logger(f"{self.location}/{self.jobname}.log", jobname, verbose) #Already creates logger at init to test whether path works
 		self.logger.log(f"Initialized {self.jobname}")
@@ -106,11 +114,11 @@ class TrainJob:
 
 		if self.final_evals:
 			final_evaluator = Evaluator(n_games=self.final_evals, max_time=self.eval_max_time, scrambling_depths=self.eval_scrambling, logger=self.logger)
-			self.logger(f"Rough estimate of final evaluation time: {final_evaluator.approximate_time()/60:.2f} min.")
+			self.logger(f"Rough upper bound on final evaluation time: {final_evaluator.approximate_time()/60:.2f} min.")
 
 		train_scramble = int(np.mean(self.eval_scrambling))
-		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=self.eval_max_time, scrambling_depths=[train_scramble], logger=self.logger)
-		self.logger(f"Rough estimate of total evaluation time during training: {self.evaluations*train_evaluator.approximate_time()/60:.2f} min")
+		train_evaluator = Evaluator(n_games=self.train_eval_games, max_time=min(self.eval_max_time, self.max_train_eval_time), scrambling_depths=[train_scramble], logger=self.logger)
+		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*train_evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
 				batch_size		= self.batch_size,
 				rollout_games	= self.rollout_games,
@@ -123,7 +131,6 @@ class TrainJob:
 				evaluations		= self.evaluations,
 				evaluator		= train_evaluator,
 		)
-		print(get_repr(), self.is2024)
 
 		net = Model(self.model_cfg, self.logger).to(gpu)
 		net, min_net = train.train(net)
@@ -192,7 +199,7 @@ def parse(defaults: dict):
 
 			job_args = parser.parse_args(remaining_args)
 			save_location = job_args.location #Save for dump at the end
-			job_args.location = f"{job_args.location}/{jobname}" # Give unique location to each run
+			job_args.location = f"{job_args.location}/{jobname.lower()}" # Give unique location to each run
 			del job_args.config
 			jobs.append(TrainJob(jobname, **vars(job_args)))
 
@@ -206,9 +213,9 @@ def parse(defaults: dict):
 
 	# For reproduceability: Save config file and arguments
 	if with_config:
-		with open(f"{save_location}/used_config.ini", 'w') as f: config.write(f)
+		with open(f"{save_location}/used_config.ini", 'w', encoding="utf-8") as f: config.write(f)
 
-	with open(f"{save_location}/used_config.ini", 'a') as f:
+	with open(f"{save_location}/used_config.ini", 'a', encoding="utf-8") as f:
 		f.write(f"# Run command\n# {' '.join(sys.argv)}\n")
 		defs = pformat(defaults).replace('\n', '\n# ')
 		f.write(f"\n# All configuration values\n# {defs}\n")

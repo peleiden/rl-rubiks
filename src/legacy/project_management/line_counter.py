@@ -51,7 +51,7 @@ for i, commit in enumerate(commits):
 	files = get_files(patterns)
 	for ext, fs in files.items():
 		for p in fs:
-			with open(str(p)) as f:
+			with open(str(p), encoding="utf-8") as f:
 				lines = [x.strip() for x in f.readlines()]
 				for line in lines:
 					if line and not line.startswith(patterns[ext][1]):

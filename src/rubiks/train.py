@@ -127,7 +127,7 @@ class Train:
 
 			self.train_losses[rollout] = batch_loss
 			self.tt.end_section("Training loop")
-			
+
 			if self.train_losses[rollout] < lowest_loss:
 				lowest_loss = self.train_losses[rollout]
 				min_net = net.clone()
@@ -144,7 +144,7 @@ class Train:
 					idcs = np.arange(self.rollout_games) * self.rollout_depth + depth
 					self.avg_value_targets[-1][i] = targets[idcs].mean()
 				self.tt.end_section("Target value average")
-				
+
 				self.tt.section("Evaluation")
 				net.eval()
 				agent.update_net(net)
@@ -249,7 +249,7 @@ class Train:
 		if len(self.evaluations):
 			color = 'blue'
 			reward_ax = loss_ax.twinx()
-			reward_ax.set_ylabel("Fraction of games won when evaluating", color=color)
+			reward_ax.set_ylabel(f"Fraction of games won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
 			reward_ax.plot(self.evaluations, self.eval_rewards, color=color, label="Evaluation reward")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 
