@@ -91,7 +91,7 @@ class Train:
 		lowest_loss = float("inf")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
-		self.train_rollouts, self.train_losses = np.arange(self.rollouts), np.empty(self.rollouts)
+		self.train_rollouts, self.train_losses, self.eval_rewards, self.avg_value_targets = np.arange(self.rollouts), np.empty(self.rollouts), list(), list()
 
 		agent = DeepAgent(self.searcher_class(net))
 
