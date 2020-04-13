@@ -69,13 +69,13 @@ class TickTock:
 		for kw, v in self._sections.items():
 			elapsed = np.sum(v["hits"])
 			avg = elapsed / len(v["hits"])
-			std = self.stringify_time(2*np.std(v["hits"]), "μs")
+			std = self.stringify_time(2*np.std(v["hits"]), "ms")
 			std_strs.append(std)
 			strs.append([
 				"- " * v["depth"] + kw,
 				self.stringify_time(elapsed, unit),
 				self.thousand_seps(len(v["hits"])),
-				self.stringify_time(avg, "μs") + " ± "
+				self.stringify_time(avg, "ms") + " ± "
 			])
 		longest_std = max(len(x) for x in std_strs)
 		std_strs = [" " * (longest_std-len(x)) + x for x in std_strs]
