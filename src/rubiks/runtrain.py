@@ -56,6 +56,8 @@ class TrainJob:
 			# Currently not set by argparser/configparser
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
+			train_eval_games = 50,
+			max_train_eval_time = 2.5,
 			):
 		self.jobname = jobname
 		assert isinstance(self.jobname, str)
@@ -89,6 +91,11 @@ class TrainJob:
 		self.final_evals = final_evals
 		assert isinstance(self.final_evals, int)
 
+		self.train_eval_games = train_eval_games
+		assert isinstance(self.train_eval_games, int)
+		self.max_train_eval_time = max_train_eval_time
+		assert self.max_train_eval_time > 0
+
 		self.location = os.path.join(location, self.jobname.lower())
 		self.logger = Logger(f"{self.location}/runlog.log", jobname, verbose) #Already creates logger at init to test whether path works
 		self.logger.log(f"Initialized {self.jobname}")
@@ -110,7 +117,7 @@ class TrainJob:
 			self.logger(f"Rough upper bound on final evaluation time: {final_evaluator.approximate_time()/60:.2f} min.")
 
 		train_scramble = int(np.mean(self.eval_scrambling))
-		train_evaluator = Evaluator(n_games=int(np.ceil(1/4*self.rollout_games)), max_time=min(self.eval_max_time, 5), scrambling_depths=[train_scramble], logger=self.logger)
+		train_evaluator = Evaluator(n_games=self.train_eval_games, max_time=min(self.eval_max_time, self.max_train_eval_time), scrambling_depths=[train_scramble], logger=self.logger)
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*train_evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
 				batch_size		= self.batch_size,
