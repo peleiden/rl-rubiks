@@ -96,8 +96,8 @@ class TrainJob:
 		self.max_train_eval_time = max_train_eval_time
 		assert self.max_train_eval_time > 0
 
-		self.location = os.path.join(location, self.jobname.lower())
-		self.logger = Logger(f"{self.location}/runlog.log", jobname, verbose) #Already creates logger at init to test whether path works
+		self.location = location
+		self.logger = Logger(f"{self.location}/{self.jobname}.log", jobname, verbose) #Already creates logger at init to test whether path works
 		self.logger.log(f"Initialized {self.jobname}")
 
 		self.is2024 = is2024
@@ -199,7 +199,7 @@ def parse(defaults: dict):
 
 			job_args = parser.parse_args(remaining_args)
 			save_location = job_args.location #Save for dump at the end
-			job_args.location = f"{job_args.location}/{jobname}" # Give unique location to each run
+			job_args.location = f"{job_args.location}/{jobname.lower()}" # Give unique location to each run
 			del job_args.config
 			jobs.append(TrainJob(jobname, **vars(job_args)))
 
