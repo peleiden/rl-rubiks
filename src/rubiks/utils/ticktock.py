@@ -13,14 +13,10 @@ def get_timestamp(for_file=False):
 
 class TickTock:
 
-	mu = u"\u03BC"
-	sigma = u"\u03C3"
-	pm = u"\u00B1"
-
 	_start: float
 	_sections = {}
 	_section_depth = 0
-	_units = {"ns": 1e9, f"{mu}s": 1e6, "ms": 1e3, "s": 1, "m": 1/60}
+	_units = {"ns": 1e9, "mus": 1e6, "ms": 1e3, "s": 1, "m": 1/60}
 
 	def tick(self):
 		self._start = perf_counter()
@@ -67,7 +63,7 @@ class TickTock:
 
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
-		strs = [["Execution times", "Total time", "Hits", f"Avg. time {self.pm} 2{self.sigma}"]]
+		strs = [["Execution times", "Total time", "Hits", f"Avg. time p/m 2 std."]]
 		std_strs = []
 		for kw, v in self._sections.items():
 			elapsed = np.sum(v["hits"])
@@ -78,7 +74,7 @@ class TickTock:
 				"- " * v["depth"] + kw,
 				self.stringify_time(elapsed, unit),
 				self.thousand_seps(len(v["hits"])),
-				self.stringify_time(avg, "ms") + f" {self.pm} "
+				self.stringify_time(avg, "ms") + " p/m "
 			])
 		longest_std = max(len(x) for x in std_strs)
 		std_strs = [" " * (longest_std-len(x)) + x for x in std_strs]
