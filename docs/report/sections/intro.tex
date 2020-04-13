@@ -42,22 +42,22 @@ Det er denne udforskning af udfaldsrummet, der bliver læringsagentens store opg
 
 \section{Nyeste litteratur}
 
-Siden Ernö Rubik opfandt sin berømte terning i 1974, er der blevet opfundet adskillige løsningsalgoritmer.
-Disse kan overordnet set inddeles i to grupper:
-Gruppeteoretisk funderede algoritmer, fx. Kociembas algoritme, og brute force-algoritmer med udgangspunkt i skræddersyede heurestikker.
-De forskellige algoritmer har forskellige fordele og ulemper;
-nogle skal være lette for mennesker at løse, mens andre er designet til såkaldte speed cubers, der skal løse terningen med så få træk som muligt;
-nogle er optimerede til lavt hukommelsesforbrug og andre til at kunne løses på kort tid af computere. 
+Siden Ernö Rubik i 1974 opfandt sin verdensberømte terning, er der blevet udledt adskillige løsningsalgoritmer (den første af Rubik selv omkring en måned efter terningens opfindelse \cite{ErnoRubik}). 
+Overordnet set kan disse inddeles i to typer; 
+algoritmer funderet i gruppeteori (såsom Kociembas algoritme \cite{Kociemba}, der anses som værende én af de mest effektive algoritmer til at løse Rubiks terning) og brute force-algoritmer, der løser terningen ved hjælp af bestemte heuristikker til de specifikke tilstande af terningen.  
+Brute force-metoderne er oftest relativt nemme for mennesker at lære, men meget ineffektive. 
+Andre algoritmer er optimerede til at minimere hukommelses- og/eller tidsforbruget for en computer.  
 
-En ny tilgang til løsningsalgoritmer og diskrete problemer generelt er dyb reinforcement learning.
-Et forskerhold fra University of California Irvine har de sidste år gjort store fremskridt med netop denne fremgangsmåde som beskrevet i \textit{Solving the Rubik's Cube Without Human Knowledge} (maj 2018) \cite{HumansBeGone} og senest \textit{Solving the Rubik’s cube with deep reinforcement learning and search} (juli 2019) \cite{SolvingNature}.
+En nyere tilgang til løsning af Rubiks terning (og andre diskrete problemer generelt) vha. computerkraft er dyb reinforcement learning. 
+De største fremskridt inde for netop dette problem blev gjort af et forskerhold fra University of California Irvine, først i \textit{Solving the Rubik's Cube Without Human Knowledge} (maj 2018) \cite{HumansBeGone}, og senere \textit{Solving the Rubik’s cube with deep reinforcement learning and search} (juli 2019) \cite{SolvingNature}.
+Det er disse to artikler, som denne rapport tager udgangspunkt i under redegørelsen af den nyeste litteratur inde for området. 
 
-DeepCube, der introduceres i \cite{HumansBeGone}, er et dybt neuralt netværk, der lærer en heurestik til at styre en Monte Carlo-træafsøgning, så den kombinatoriske eksplosion undgås.
-DeepCube trænes med en approksimativ værdiiterations-algoritme, som forskerne betegner autodidaktisk iteration.
-Metoden formår at løse samtlige tilfældige testtilstande med en medianløsningslængde på 30 træk, hvilket er mindre end eller svarende til løsningsalgoritmer, der er baserede på domæneviden.
+\cite{HumansBeGone} introducerer agenten DeepCube, som bruger autodidaktisk iteration (ADI) til at løse Rubiks terning. 
+ADI er en approksimativ værdiiterations-algoritme, der bruges til at træne et dybt neuralt netværk, som derefter anvendes sammen med Monte Carlo-træafsøgning (MCTS) for at løse enhver given tilstand af Rubiks terning. 
+Denne metode formår at løse samtlige tilfældige testtilstande med en medianløsningslængde på 30 træk, hvilket er mindre end eller svarende til løsningsalgoritmer, der er baserede på domæneviden.
 
-DeepCubeA \cite{SolvingNature} bygger videre på denne agent med en ændring i værdiiterationen, og en mere avanceret afsøgningsmetode, de kalder batch-vægtet A*-afsøgning.
-Disse ændringer, forstærkede DeepCubeA nok til at løse alle testkonfigurationer og generaliserer til andre diskrete spil, hvilket gav Irvine-holdet en plads til at præsentere algoritmen i \textit{Nature} \cite{SolvingNature}.
+En viderebygning på denne agent er DeepCubeA \cite{SolvingNature}, som er ændret i værdiiterationen og i stedet for MCTS anvender batch-vægtet A*-afsøgning (BWAS) på netværket. Disse ændringer forstærkede agenten nok til at kunne løse 100\% af testkonfigurationerne og tilmed med færrest antal træk 60\% af gangene. Envidere kunne DeepCubeA generaliseres til andre diskrete spil såsom Sokoban. 
+
 
 
 \section{Rapportens mål}
