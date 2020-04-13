@@ -30,6 +30,7 @@ defaults  = {
 	'eval_max_time': 60,
 	'eval_scrambling': '10 25',
 	'final_evals': 10000,
+	'is2024': True,
 }
 
 class TrainJob:
@@ -49,9 +50,9 @@ class TrainJob:
 			eval_max_time: int,
 			eval_scrambling: list,
 			final_evals: int,
+			is2024: bool,
 
 			# Currently not set by argparser/configparser
-			is2024: bool = True,
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
 			):
@@ -122,7 +123,7 @@ class TrainJob:
 				evaluations		= self.evaluations,
 				evaluator		= train_evaluator,
 		)
-
+		print(get_repr(), self.is2024)
 
 		net = Model(self.model_cfg, self.logger).to(gpu)
 		net, min_net = train.train(net)
@@ -170,6 +171,8 @@ def parse(defaults: dict):
 	intlist_validator = lambda args: [int(args.split()[0]), int(args.split()[1])] #Ugly way to define list of two numbers
 	parser.add_argument('--eval_scrambling', help="Two space-seperated integers (given in string delimeters, such as --eval scrambling '10 20') denoting interval of number of scramblings to be run in evaluation. In evaluation during training, the mean of these is used", type=intlist_validator)
 	parser.add_argument('--final_evals', help="Number of games to be done in the evaluation after the training", type=int)
+	bool_validator = lambda b: isinstance(b, bool)
+	parser.add_argument('--is2024', help="True for 20x24 representation and False for 6x8x6", type=bool_validator, choices=[True, False])
 
 	jobs = list()
 	with_config = False

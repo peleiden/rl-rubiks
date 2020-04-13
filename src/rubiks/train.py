@@ -37,9 +37,9 @@ class Train:
 			searcher_class: DeepSearcher,
 			evaluator: Evaluator,
 			evaluations: int,
-			logger: Logger			= NullLogger(),
-			policy_criterion		= torch.nn.CrossEntropyLoss,
-			value_criterion			= torch.nn.MSELoss,
+			logger: Logger		= NullLogger(),
+			policy_criterion	= torch.nn.CrossEntropyLoss,
+			value_criterion		= torch.nn.MSELoss,
 		):
 
 		self.rollouts = rollouts
@@ -48,7 +48,6 @@ class Train:
 		self.rollout_depth = rollout_depth
 		self.depths = np.arange(1, rollout_depth)
 		self.loss_weighting = loss_weighting
-		assert self.loss_weighting in ["none", "weighted", "adaptive"]
 		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Reduces vram usage
 
 		self.evaluations = np.unique(np.linspace(0, self.rollouts-1, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
