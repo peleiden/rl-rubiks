@@ -126,7 +126,7 @@ class Train:
 				optimizer.step()
 				batch_loss += loss.cpu().detach()
 
-			self.train_losses[rollout] = batch_loss / len(batches)
+			self.train_losses[rollout] = batch_loss
 			self.tt.end_section("Training loop")
 			
 			if self.train_losses[rollout] < lowest_loss:
