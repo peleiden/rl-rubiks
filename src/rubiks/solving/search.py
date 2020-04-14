@@ -44,16 +44,16 @@ class Searcher:
 
 	def __init__(self):
 		self.action_queue = deque()
+		self.tt = TickTock()
 
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float) -> bool:
 		# Returns whether a path was found and generates action queue
 		# Implement _step method for searchers that look one step ahead, otherwise overwrite this method
-		self.reset_queue()
-		tt = TickTock()
-		tt.tick()
+		self.reset()
+		self.tt.tick()
 		if Cube.is_solved(state): return True
-		while tt.tock() < time_limit:
+		while self.tt.tock() < time_limit:
 			action, state, solution_found = self._step(state)
 			self.action_queue.append(action)
 			if solution_found: return True
@@ -62,8 +62,9 @@ class Searcher:
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		raise NotImplementedError
 
-	def reset_queue(self):
+	def reset(self):
 		self.action_queue = deque()
+		self.tt.reset()
 
 	def __str__(self):
 		raise NotImplementedError
@@ -96,16 +97,15 @@ class RandomDFS(Searcher):
 
 class BFS(Searcher):
 	def search(self, state: np.ndarray, time_limit: float) -> (np.ndarray, bool):
-		self.reset_queue()
-		tt = TickTock()
-		tt.tick()
+		self.reset()
+		self.tt.tick()
 
 		if Cube.is_solved(state): return True
 
 		# Each element contains the state from which it came and the corresponding action
 		states = { state.tostring(): (None, None) }
 		queue = deque([state])
-		while tt.tock() < time_limit:
+		while self.tt.tock() < time_limit:
 			state = queue.popleft()
 			tstate = state.tostring()
 			for i, action in enumerate(Cube.action_space):
@@ -164,24 +164,27 @@ class MCTS(DeepSearcher):
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float) -> bool:
 		self.clean_tree()  # Otherwise memory will continue to be used between runs
-		self.reset_queue()
+		self.reset()
 
-		tt = TickTock()
-		tt.tick()
+		self.tt.tick()
 		if Cube.is_solved(state): return True
 		#First state is evaluated  and expanded individually
 		oh = Cube.as_oh(state).to(gpu)
 		p, v = self.net(oh)  # Policy and value
 		self.states[state.tostring()] = Node(state, p.cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
+		self.tt.section("Expanding leaf")
 		solve_action = self.expand_leaf(self.states[state.tostring()])
+		self.tt.end_section("Expanding leaf")
 		if solve_action != -1:
 			self.action_queue = deque([solve_action])
 			return True
-		while tt.tock() < time_limit:
+		while self.tt.tock() < time_limit:
 			#Continually searching and expanding leaves
 			path, leaf = self.search_leaf(self.states[state.tostring()])
+			self.tt.section("Expanding leaf")
 			solve_action = self.expand_leaf(leaf)
+			self.tt.end_section("Expanding leaf")
 			if solve_action != -1:
 				self.action_queue = path + deque([solve_action])
 				if self.search_graf: self._shorten_action_queue()
@@ -192,6 +195,7 @@ class MCTS(DeepSearcher):
 		# Finds leaf starting from state
 		path = deque()
 		while not node.is_leaf:
+			self.tt.section("Exploring next node")
 			U = self.c * node.P * np.sqrt(node.N.sum()) / (1 + node.N)
 			Q = node.W - node.L
 			action = np.argmax(U + Q)
@@ -199,6 +203,7 @@ class MCTS(DeepSearcher):
 			node.L[action] += self.nu
 			path.append(action)
 			node = node.neighs[action]
+			self.tt.section("Exploring next node")
 		return path, node
 
 	def expand_leaf(self, leaf: Node) -> int:
@@ -226,10 +231,14 @@ class MCTS(DeepSearcher):
 		new_states_oh = torch.empty(len(unknown_neighs), Cube.get_oh_shape())
 
 		# Passes new states through net
+		self.tt.section("One-hot encoding new states")
 		for i in range(len(no_neighs)):
 			new_states_oh[i] = Cube.as_oh(new_states[i])
+		self.tt.end_section("One-hot encoding new states")
 		new_states_oh = new_states_oh.to(gpu)
+		self.tt.section("Feedforwarding")
 		p, v = self.net(new_states_oh)
+		self.tt.end_section("Feedforwarding")
 		p, v = torch.nn.functional.softmax(p.cpu(), dim=1).numpy(), v.cpu().numpy()
 
 		# Generates new states

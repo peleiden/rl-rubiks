@@ -37,6 +37,15 @@ class TickTock:
 		dt = self._sections[name]["tt"].tock()
 		self._sections[name]["hits"].append(dt)
 		self._section_depth -= 1
+	
+	def rename_section(self, name: str, new_name: str):
+		# Renames a section
+		# If a section with new_name already exists, they are combined under new_name
+		if self._sections[new_name]:
+			self._sections[new_name]["hits"] += self._sections[name]["hits"]
+		else:
+			self._sections[new_name] = self._sections[name]
+		del self._sections[name]
 
 	@staticmethod
 	def thousand_seps(numstr: str or float or int) -> str:

@@ -1,5 +1,6 @@
 import sys, os
 
+from ast import literal_eval
 from argparse import ArgumentParser
 from configparser import ConfigParser
 from pprint import pformat
@@ -180,7 +181,7 @@ def parse(defaults: dict):
 	intlist_validator = lambda args: [int(args.split()[0]), int(args.split()[1])] #Ugly way to define list of two numbers
 	parser.add_argument('--eval_scrambling', help="Two space-seperated integers (given in string delimeters, such as --eval scrambling '10 20') denoting interval of number of scramblings to be run in evaluation. In evaluation during training, the mean of these is used", type=intlist_validator)
 	parser.add_argument('--final_evals', help="Number of games to be done in the evaluation after the training", type=int)
-	bool_validator = lambda b: isinstance(b, bool)
+	bool_validator = lambda b: literal_eval(b)
 	parser.add_argument('--is2024', help="True for 20x24 representation and False for 6x8x6", type=bool_validator, choices=[True, False])
 
 	jobs = list()
