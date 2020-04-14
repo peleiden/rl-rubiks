@@ -1,8 +1,9 @@
 import os
+from typing import List
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from typing import List
 
 
 from src.rubiks.solving.search import DeepSearcher
@@ -20,6 +21,8 @@ class Train:
 
 	moves_per_rollout: int
 
+	value_losses: np.ndarray
+	policy_losses: np.ndarray
 	train_losses: np.ndarray
 	train_rollouts: np.ndarray
 	eval_rewards = list()
@@ -34,7 +37,7 @@ class Train:
 			loss_weighting: str,
 			optim_fn,
 			lr: float,
-			searcher_class: DeepSearcher,
+			searcher_class: DeepSearcher.__class__,
 			evaluator: Evaluator,
 			evaluations: int,
 			logger: Logger		= NullLogger(),
@@ -43,6 +46,7 @@ class Train:
 		):
 
 		self.rollouts = rollouts
+		self.train_rollouts = np.arange(self.rollouts)
 		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
@@ -92,7 +96,10 @@ class Train:
 		lowest_loss = float("inf")
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
-		self.train_rollouts, self.train_losses, self.eval_rewards, self.avg_value_targets = np.arange(self.rollouts), np.empty(self.rollouts), list(), list()
+		self.policy_losses, self.value_losses, self.train_losses, self.eval_rewards, self.avg_value_targets = np.zeros(self.rollouts),\
+																											  np.zeros(self.rollouts),\
+																											  np.empty(self.rollouts),\
+																											  list(), list()
 
 		agent = DeepAgent(self.searcher_class(net))
 
@@ -112,21 +119,19 @@ class Train:
 			self.tt.section("Training loop")
 			net.train()
 			batches = self._get_batches(self.moves_per_rollout, self.batch_size)
-			batch_loss = 0
 			for i, batch in enumerate(batches):
 				optimizer.zero_grad()
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
 
 				# Use loss on both policy and value
-				losses = self.policy_criterion(policy_pred, policy_targets[batch])
-				losses += self.value_criterion(value_pred.squeeze(), value_targets[batch])
-
-				loss = losses @ loss_weights[batch]  # Weighting of losses according to move importance
+				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
+				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
+				loss = policy_loss + value_loss
 				loss.backward()
 				optimizer.step()
-				batch_loss += loss.cpu().detach()
-
-			self.train_losses[rollout] = batch_loss
+				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy()
+				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
+			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
 			self.tt.end_section("Training loop")
 
 			if self.train_losses[rollout] < lowest_loss:
@@ -135,7 +140,7 @@ class Train:
 
 			torch.cuda.empty_cache()
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
-				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}")
+				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
 
 			if rollout in self.evaluations:
 				self.tt.section("Target value average")
@@ -240,20 +245,30 @@ class Train:
 		Visualizes training by showing training loss + evaluation reward in same plot
 		"""
 		self.log("Making plot of training")
+		ylim = np.array([-0.1, 1.1])
 		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8))
 		loss_ax.set_xlabel(f"Rollout of {self.moves_per_rollout} moves")
+		loss_ax.set_ylim(ylim*np.max(self.train_losses))
 
-		color = 'red'
-		loss_ax.set_ylabel("Cross Entropy + MSE, weighted", color = color)
-		loss_ax.plot(self.train_rollouts, self.train_losses, label="Training loss", color = color)
-		loss_ax.tick_params(axis='y', labelcolor = color)
+		colour = "red"
+		loss_ax.set_ylabel("Cross Entropy + MSE, weighted", color = colour)
+		loss_ax.plot(self.train_rollouts, self.train_losses, label="Training loss", color=colour)
+		loss_ax.plot(self.train_rollouts, self.policy_losses, linestyle="dashdot", label="Policy loss", color="orange")
+		loss_ax.plot(self.train_rollouts, self.value_losses, linestyle="dotted", label="Value loss", color="green")
+		loss_ax.tick_params(axis='y', labelcolor = colour)
+		h1, l1 = loss_ax.get_legend_handles_labels()
 
 		if len(self.evaluations):
 			color = 'blue'
 			reward_ax = loss_ax.twinx()
+			reward_ax.set_ylim(ylim)
 			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
-			reward_ax.plot(self.evaluations, self.eval_rewards, color=color, label="Evaluation reward")
+			reward_ax.plot(self.evaluations, self.eval_rewards, "-o", color=color, label="Fraction of cubes solved")
 			reward_ax.tick_params(axis='y', labelcolor=color)
+			h2, l2 = reward_ax.get_legend_handles_labels()
+			h1 += h2
+			l1 += l2
+		loss_ax.legend(h1, l1, loc=1)
 
 		fig.tight_layout()
 		plt.title(title if title else "Training")

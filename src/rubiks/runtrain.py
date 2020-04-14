@@ -56,7 +56,7 @@ class TrainJob:
 			# Currently not set by argparser/configparser
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
-			train_eval_games = 150,
+			train_eval_games = 10,
 			max_train_eval_time = 1,
 		):
 		self.jobname = jobname
@@ -140,6 +140,8 @@ class TrainJob:
 		train.plot_training(self.location)
 		train.plot_value_targets(self.location)
 		np.save(f"{self.location}/rollouts.npy", train.train_rollouts)
+		np.save(f"{self.location}/policy_losses.npy", train.policy_losses)
+		np.save(f"{self.location}/value_losses.npy", train.value_losses)
 		np.save(f"{self.location}/losses.npy", train.train_losses)
 		np.save(f"{self.location}/evaluation_rollouts.npy", train.evaluations)
 		np.save(f"{self.location}/evaluations.npy", train.eval_rewards)
