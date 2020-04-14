@@ -1,5 +1,5 @@
 from collections import deque
-from copy import deepcopy
+from typing import List
 
 import numpy as np
 import torch
@@ -17,7 +17,7 @@ class Node:
 		self.P = policy
 		self.value = value
 		# self.neighs[i] is a tuple containing the state obtained by the action Cube.action_space[i]
-		# Tuples are used, so they can be used for lookups
+		# strings are used, so they can be used for lookups
 		self.neighs = [None] * Cube.action_dim
 		self.N = np.zeros(Cube.action_dim)
 		self.W = np.zeros(Cube.action_dim)
@@ -162,7 +162,7 @@ class MCTS(DeepSearcher):
 		self.net = net
 
 	@no_grad
-	def search(self, state: np.ndarray, time_limit: float) -> bool:
+	def search(self, state: np.ndarray, time_limit: float, searchers=100) -> bool:
 		self.clean_tree()  # Otherwise memory will continue to be used between runs
 		self.reset()
 
@@ -173,21 +173,21 @@ class MCTS(DeepSearcher):
 		p, v = self.net(oh)  # Policy and value
 		self.states[state.tostring()] = Node(state, p.cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
-		self.tt.section("Expanding leaf")
-		solve_action = self.expand_leaf(self.states[state.tostring()])
-		self.tt.end_section("Expanding leaf")
+		self.tt.section("Expanding leafs")
+		_, solve_action = self.expand_leafs([self.states[state.tostring()]])
+		self.tt.end_section("Expanding leafs")
 		if solve_action != -1:
 			self.action_queue = deque([solve_action])
 			return True
 		while self.tt.tock() < time_limit:
-			#Continually searching and expanding leaves
-			path, leaf = self.search_leaf(self.states[state.tostring()])
-			self.tt.section("Expanding leaf")
-			solve_action = self.expand_leaf(leaf)
-			self.tt.end_section("Expanding leaf")
-			if solve_action != -1:
-				self.action_queue = path + deque([solve_action])
-				if self.search_graf: self._shorten_action_queue()
+			# Continually searching and expanding leaves
+			paths, leafs = zip(*[self.search_leaf(self.states[state.tostring()]) for _ in range(searchers)])
+			
+			self.tt.section("Expanding leafs")
+			solve_leaf, solve_action = self.expand_leafs(leafs)
+			self.tt.end_section("Expanding leafs")
+			if solve_leaf != -1:
+				self.action_queue = paths[solve_leaf] + deque([solve_action])
 				return True
 		return False
 
@@ -205,6 +205,54 @@ class MCTS(DeepSearcher):
 			node = node.neighs[action]
 			self.tt.end_section("Exploring next node")
 		return path, node
+
+	def expand_leafs(self, leafs: List[Node]) -> (int, int):
+		"""
+		Expands all given leafs
+		Returns the index of the leaf and the action to solve it
+		Both are -1 if no solution is found
+		"""
+		
+		# Explores all new states
+		new_states = np.array([Cube.rotate(leaf.state, *action)
+							   for leaf in leafs
+							   for action in Cube.action_space])
+		# Checks for solutions
+		for i, state in enumerate(new_states):
+			if Cube.is_solved(state):
+				return i // Cube.action_dim, i % Cube.action_dim
+		new_states_str = np.array([state.tostring() for state in new_states])
+		self.tt.section("One-hot encoding")
+		new_states_oh = Cube.as_oh(new_states).to(gpu)
+		self.tt.end_section("One-hot encoding")
+		self.tt.section("Feedforward")
+		policies, values = self.net(new_states_oh)
+		policies, values = policies.softmax(dim=1).cpu().numpy(), values.squeeze().cpu().numpy()
+		self.tt.end_section("Feedforward")
+		
+		self.tt.section("Generate new states")
+		for i, (state, state_str, p, v) in enumerate(zip(new_states, new_states_str, policies, values)):
+			leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
+			leaf = leafs[leaf_idx]
+			if state_str in self.states:
+				leaf.neighs[action_idx] = self.states[state_str]
+				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf
+			else:
+				new_leaf = Node(state, p, v, leaf, action_idx)
+				leaf.neighs[action_idx] = new_leaf
+				self.states[state_str] = new_leaf
+			leaf.is_leaf = False
+		self.tt.end_section("Generate new states")
+		
+		self.tt.section("Update W")
+		for leaf in leafs:
+			max_val = max([x.value for x in leaf.neighs])
+			for action_idx, neighbor in enumerate(leaf.neighs):
+				if not neighbor.is_leaf:
+					neighbor.W[Cube.rev_action(action_idx)] = max_val
+		self.tt.end_section("Update W")
+		
+		return -1, -1
 
 	def expand_leaf(self, leaf: Node) -> int:
 		# Expands at leaf node and checks if solved state in new states

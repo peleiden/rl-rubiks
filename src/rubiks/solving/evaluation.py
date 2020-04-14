@@ -95,19 +95,21 @@ class Evaluator:
 
 if __name__ == "__main__":
 	from src.rubiks.solving.agents import Agent, DeepAgent
-	e = Evaluator(n_games = 5,
+	e = Evaluator(n_games = 50,
 				  max_time = 1,
 				  logger = Logger("local_evaluation/evaluations.log", "Testing MCTS", True),
-				  scrambling_depths = range(1, 5)
+				  scrambling_depths = range(10, 15)
 	)
 	# agent = PolicyCube.from_saved("data/local_train")
 	# results = e.eval(agent, 1)
 	agents = [
-		Agent(RandomDFS()),
-		Agent(BFS()),
-		DeepAgent(PolicySearch.from_saved("data/local_train", False)),
-		DeepAgent(PolicySearch.from_saved("data/local_train", True)),
-		DeepAgent(MCTS.from_saved("data/local_train"))
+		# Agent(RandomDFS()),
+		# Agent(BFS()),
+		# DeepAgent(PolicySearch.from_saved("data/local_train", False)),
+		# DeepAgent(PolicySearch.from_saved("data/local_train", True)),
+		DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
+		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
+		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
 	]
 	for agent in agents:
 		e.eval(agent)
