@@ -1,10 +1,20 @@
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
-
+from time import perf_counter
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
 from src.rubiks.utils.logger import Logger
+
+from datetime import datetime
+from time import perf_counter
+import numpy as np
+
+scrambles, depth, actions = 1000, 50, 100_000
+
+tt = TickTock()
+log = Logger(os.path.join("data", "local_analyses", "cube.log"), "Cube")
 
 def scramble():
 	states = np.empty((scrambles, *Cube.get_solved_instance().shape), dtype=Cube.dtype)
@@ -53,12 +63,16 @@ def analyse_cube():
 	log.section("Running time")
 	log(tt)
 
+	for kw, v in tt.get_sections().items():
+		print(kw)
+		print(f't[0] / max(t[1:]): {v["hits"][0] / max(v["hits"][1:]):.2f}')
+		plt.hist(v["hits"][1:], label=kw)
+		plt.title(kw)
+		plt.show()
+
 
 if __name__ == "__main__":
-	scrambles, depth, actions = 1000, 50, 100_000
 
-	tt = TickTock()
-	log = Logger(os.path.join("data", "local_analyses", "cube.log"), "Cube")
 	analyse_cube()
 
 
