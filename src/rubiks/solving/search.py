@@ -203,7 +203,7 @@ class MCTS(DeepSearcher):
 			node.L[action] += self.nu
 			path.append(action)
 			node = node.neighs[action]
-			self.tt.section("Exploring next node")
+			self.tt.end_section("Exploring next node")
 		return path, node
 
 	def expand_leaf(self, leaf: Node) -> int:
@@ -228,14 +228,11 @@ class MCTS(DeepSearcher):
 
 		no_neighs = no_neighs[unknown_neighs]
 		new_states = new_states[unknown_neighs]
-		new_states_oh = torch.empty(len(unknown_neighs), Cube.get_oh_shape())
 
 		# Passes new states through net
 		self.tt.section("One-hot encoding new states")
-		for i in range(len(no_neighs)):
-			new_states_oh[i] = Cube.as_oh(new_states[i])
+		new_states_oh = Cube.as_oh(new_states).to(gpu)
 		self.tt.end_section("One-hot encoding new states")
-		new_states_oh = new_states_oh.to(gpu)
 		self.tt.section("Feedforwarding")
 		p, v = self.net(new_states_oh)
 		self.tt.end_section("Feedforwarding")

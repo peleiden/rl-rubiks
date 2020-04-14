@@ -10,11 +10,13 @@ tt = TickTock()
 log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
 
 def analyse_mcts():
+	time_limit = 2
 	state, _, _ = Cube.scramble(50)
-	net = Model(ModelConfig()).to(gpu)
+	net = Model(ModelConfig()).to(gpu).eval()
 	searcher = MCTS(net)
-	searcher.search(state, 1)
-	print(searcher.tt)
+	searcher.search(state, time_limit)
+	log(searcher.tt)
+	log(f"Tree size after {time_limit} s: {len(searcher.states)}")
 
 if __name__ == "__main__":
 	seedsetter()
