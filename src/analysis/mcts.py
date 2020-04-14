@@ -10,9 +10,10 @@ tt = TickTock()
 log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
 
 def analyse_mcts():
-	time_limit = 2
+	time_limit = 1
 	state, _, _ = Cube.scramble(50)
-	net = Model(ModelConfig()).to(gpu).eval()
+	# net = Model(ModelConfig()).to(gpu).eval()
+	net = Model.load("data/hpc-20-04-12").to(gpu).eval()
 	searcher = MCTS(net)
 	searcher.search(state, time_limit)
 	log(searcher.tt)

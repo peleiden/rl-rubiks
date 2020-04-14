@@ -214,6 +214,7 @@ class MCTS(DeepSearcher):
 		unknown_neighs = list(np.arange(len(no_neighs)))  # Some unknown neighbors may already be known but just not connected
 		new_states = np.empty((len(no_neighs), *Cube.get_solved_instance().shape), dtype=Cube.dtype)
 
+		self.tt.section("Exploring child states")
 		for i in reversed(range(len(no_neighs))):
 			action = no_neighs[i]
 			new_states[i] = Cube.rotate(leaf.state, *Cube.action_space[action])
@@ -228,6 +229,7 @@ class MCTS(DeepSearcher):
 
 		no_neighs = no_neighs[unknown_neighs]
 		new_states = new_states[unknown_neighs]
+		self.tt.end_section("Exploring child states")
 
 		# Passes new states through net
 		self.tt.section("One-hot encoding new states")
@@ -235,21 +237,24 @@ class MCTS(DeepSearcher):
 		self.tt.end_section("One-hot encoding new states")
 		self.tt.section("Feedforwarding")
 		p, v = self.net(new_states_oh)
+		p, v = torch.nn.functional.softmax(p.cpu(), dim=1).cpu().numpy(), v.cpu().numpy()
 		self.tt.end_section("Feedforwarding")
-		p, v = torch.nn.functional.softmax(p.cpu(), dim=1).numpy(), v.cpu().numpy()
 
-		# Generates new states
+		self.tt.section("Generate new states")
 		for i, action in enumerate(no_neighs):
 			new_leaf = Node(new_states[i], p[i], v[i], leaf, action)
 			leaf.neighs[action] = new_leaf
 			self.states[new_states[i].tostring()] = new_leaf
+		self.tt.end_section("Generate new states")
 
 		# Updates W in all non-leaf neighbors
+		self.tt.section("Update W")
 		max_val = max([x.value for x in leaf.neighs])
 		for action, neighbor in enumerate(leaf.neighs):
 			if neighbor.is_leaf:
 				continue
 			neighbor.W[Cube.rev_action(action)] = max_val
+		self.tt.end_section("Update W")
 
 		leaf.is_leaf = False
 		return -1

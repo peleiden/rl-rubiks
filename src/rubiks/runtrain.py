@@ -29,6 +29,7 @@ defaults  = {
 	'optim_fn': 'RMSprop',
 	'searcher': 'MCTS',
 	'evaluations': 20,
+	'train_eval_games': 150,
 	'eval_max_time': 60,
 	'eval_scrambling': '10 25',
 	'final_evals': 10000,
@@ -49,6 +50,7 @@ class TrainJob:
 			optim_fn: str,
 			searcher: str,
 			evaluations: int,
+			train_eval_games: int,
 			eval_max_time: int,
 			eval_scrambling: list,
 			final_evals: int,
@@ -57,7 +59,6 @@ class TrainJob:
 			# Currently not set by argparser/configparser
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
-			train_eval_games = 10,
 			max_train_eval_time = 1,
 		):
 		self.jobname = jobname
@@ -93,7 +94,7 @@ class TrainJob:
 		assert isinstance(self.final_evals, int)
 
 		self.train_eval_games = train_eval_games
-		assert isinstance(self.train_eval_games, int)
+		assert isinstance(self.train_eval_games, int) and self.train_eval_games > 0
 		self.max_train_eval_time = max_train_eval_time
 		assert self.max_train_eval_time > 0
 
@@ -177,6 +178,7 @@ def parse(defaults: dict):
 	parser.add_argument('--optim_fn', help="String corresponding to a class in torch.optim", type=str)
 	parser.add_argument('--searcher', help="String corresponding to a deepsearcher class in src.rubiks.solving.search", type=str, choices = ["MCTS", "PolicySearch",])
 	parser.add_argument('--evaluations', help="Number of evaluations (each consisting of 1/4 og rollout_games) to be done during training", type=int)
+	parser.add_argument('--train_eval_games', help="Number of games used for each evaluation during training", type=int)
 	parser.add_argument('--eval_max_time', help="Max time (seconds) for each game for the agent", type=int)
 	intlist_validator = lambda args: [int(args.split()[0]), int(args.split()[1])] #Ugly way to define list of two numbers
 	parser.add_argument('--eval_scrambling', help="Two space-seperated integers (given in string delimeters, such as --eval scrambling '10 20') denoting interval of number of scramblings to be run in evaluation. In evaluation during training, the mean of these is used", type=intlist_validator)

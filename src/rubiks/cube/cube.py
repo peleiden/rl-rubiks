@@ -178,10 +178,9 @@ class _Cube2024(Cube):
 			oh[0, idcs] = 1
 		else:
 			oh = torch.zeros(states.shape[0], 480)
-			idcs = np.array([np.arange(20) * 24 + state for state in states])
-			all_idcs = np.arange(len(idcs))
-			for i in idcs.T:
-				oh[all_idcs, i] = 1
+			idcs = np.arange(20) * 24 + states
+			all_idcs = np.repeat(np.arange(len(states)), 20)
+			oh[all_idcs, idcs.ravel()] = 1
 		return oh
 	
 	@classmethod
