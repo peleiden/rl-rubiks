@@ -278,9 +278,7 @@ class _Cube686(Cube):
 		state68 = np.where(state == 1)[2].reshape((6, 8))
 		state69 = (np.ones((9, 6)) * np.arange(6)).astype(int).T  # Nice
 		for i in range(6):
-			print(cls._shift_right(state68[i], cls.shifts[i]))
 			state69[i, cls.map633] = cls._shift_left(state68[i], cls.shifts[i])
-			print(state69[i])
 		return state69.reshape((6, 3, 3))
 
 
