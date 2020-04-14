@@ -1,5 +1,4 @@
-# 02466 Projektarbejde i Kunstig Intelligens og Data LOGBOOG
-* Søren Winkel Holm s183911@student.dtu.dk
+# 02466 Projektarbejde i Kunstig Intelligens og Data LOGBOOG * Søren Winkel Holm s183911@student.dtu.dk
 * Asger Laurits Schultz s183912@student.dtu.dk 
 * Anne Agathe Pedersen s174300@student.dtu.dk
 
@@ -163,6 +162,19 @@ Hjemmesiden skal være på engelsk.
   - Del kode for kostfunktion med Mikkel, så han kan se på det 
 - Brug forskningsspørgsmål til at skrive udkastet til metodeafnitttet - hvilke metoder vil vi bruge til at undersøge spørgsmålene?
 - Det er bedre at undersøge færre ting og så komme til bunds i det, i stedet for at undersøge en masse forskellige ting på overfladen
+
+
+### Uge 10:
+#### 14/04-2020
+
+Mikkel:
+
+- Hold evalueringsmål simpelt. 
+- Undersøg mærkelig konvergens, burde ikke have tilbagegang i loss. 
+- Kan overveje at tælle feedforwarder i evalueringen. 
+- Overvej flere netværkskompleksiteter. 
+- Overvej seperat data-repo, der ikke er gitbaseret.
+
 
 
 
