@@ -157,6 +157,7 @@ class Train:
 		self.log.verbose(self.tt)
 		self.log(f"Best net found to have loss of {lowest_loss}")
 		self.log(f"Total training time: {self.tt.stringify_time(self.tt.tock(), 's')}")
+		self.log(f"States witnessed: {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth)}")
 
 		return net, min_net
 
