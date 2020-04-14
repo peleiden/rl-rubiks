@@ -2,6 +2,17 @@ import os
 
 from src.rubiks.utils.ticktock import get_timestamp
 
+class Unverbose:
+	allow_verbose = True
+
+	def __enter__(self):
+		self.allow_verbose = False
+	
+	def __exit__(self, type, value, tb):
+		self.allow_verbose = True
+
+unverbose = Unverbose()
+
 class Logger:
 
 	def __init__(self, fpath: str, title: str, verbose=True):
@@ -41,11 +52,11 @@ class Logger:
 			print(tolog)
 	
 	def verbose(self, *tolog, with_timestamp=True):
-		if self._verbose:
+		if self._verbose and unverbose.allow_verbose:
 			self(*tolog, with_timestamp=with_timestamp)
 	
 	def is_verbose(self):
-		return self._verbose
+		return self._verbose and unverbose.allow_verbose
 	
 	def section(self, title=""):
 		self.log()
@@ -63,4 +74,5 @@ class NullLogger(Logger):
 
 	def section(self, title=""):
 		pass
+
 

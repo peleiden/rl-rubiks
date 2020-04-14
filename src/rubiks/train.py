@@ -12,7 +12,7 @@ from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.utils import seedsetter
-from src.rubiks.utils.logger import Logger, NullLogger
+from src.rubiks.utils.logger import Logger, NullLogger, unverbose
 from src.rubiks.utils.ticktock import TickTock
 
 
@@ -80,6 +80,7 @@ class Train:
 		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
 		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
 		"""
+		self.tt.reset()
 		self.tt.tick()
 		self.moves_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
@@ -145,15 +146,15 @@ class Train:
 					self.avg_value_targets[-1][i] = targets[idcs].mean()
 				self.tt.end_section("Target value average")
 
-				self.tt.section("Evaluation")
 				net.eval()
 				agent.update_net(net)
-				eval_results = self.evaluator.eval(agent)
+				with unverbose:
+					eval_results = self.evaluator.eval(agent)
 				eval_reward = (eval_results != -1).mean()
 
 				self.eval_rewards.append(eval_reward)
-				self.tt.end_section("Evaluation")
 
+		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
 		self.log(f"Best net found to have loss of {lowest_loss}")
 		self.log(f"Total training time: {self.tt.stringify_time(self.tt.tock(), 's')}")
