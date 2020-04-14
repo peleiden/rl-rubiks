@@ -250,7 +250,7 @@ class Train:
 		if len(self.evaluations):
 			color = 'blue'
 			reward_ax = loss_ax.twinx()
-			reward_ax.set_ylabel(f"Fraction of games won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
+			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
 			reward_ax.plot(self.evaluations, self.eval_rewards, color=color, label="Evaluation reward")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 
