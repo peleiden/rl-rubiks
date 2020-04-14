@@ -67,22 +67,22 @@ class TickTock:
 
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
-		strs = [["Execution times", "Total time", "Hits", "Avg. time p/m 2 std."]]
+		strs = [["Execution times", "Total time", "Hits", "Avg. time"]]
 		std_strs = []
 		for kw, v in self._sections.items():
 			elapsed = np.sum(v["hits"])
 			avg = elapsed / len(v["hits"])
-			std = self.stringify_time(2*np.std(v["hits"]), "ms")
-			std_strs.append(std)
+			# std = self.stringify_time(2*np.std(v["hits"]), "ms")
+			# std_strs.append(std)
 			strs.append([
 				"- " * v["depth"] + kw,
 				self.stringify_time(elapsed, unit),
 				self.thousand_seps(len(v["hits"])),
-				self.stringify_time(avg, "ms") + " p/m ",
+				self.stringify_time(avg, "ms")# + " p/m ",
 			])
-		longest_std = max(len(x) for x in std_strs)
-		std_strs = [" " * (longest_std-len(x)) + x for x in std_strs]
-		for i, str_ in enumerate(strs[1:]): str_[-1] += std_strs[i]
+		# longest_std = max(len(x) for x in std_strs)
+		# std_strs = [" " * (longest_std-len(x)) + x for x in std_strs]
+		# for i, str_ in enumerate(strs[1:]): str_[-1] += std_strs[i]
 		for i in range(len(strs[0])):
 			length = max(len(strs[j][i]) for j in range(len(strs)))
 			for j in range(len(strs)):
