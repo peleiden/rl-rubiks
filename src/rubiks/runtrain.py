@@ -58,7 +58,7 @@ class TrainJob:
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
 			train_eval_games = 150,
 			max_train_eval_time = 1,
-			):
+		):
 		self.jobname = jobname
 		assert isinstance(self.jobname, str)
 
