@@ -192,9 +192,12 @@ class MCTS(DeepSearcher):
 		return False
 
 	def search_leaf(self, node: Node) -> (list, Node):
+		tt = TickTock()
 		# Finds leaf starting from state
 		path = deque()
+		tt.tick()
 		while not node.is_leaf:
+			if tt.tock() > 1: print(node); breakpoint()
 			self.tt.section("Exploring next node")
 			U = self.c * node.P * np.sqrt(node.N.sum()) / (1 + node.N)
 			Q = node.W - node.L

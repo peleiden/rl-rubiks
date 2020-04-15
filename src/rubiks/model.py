@@ -101,6 +101,7 @@ class Model(nn.Module):
 			model_path = os.path.join(save_dir, "model-min.pt")
 			torch.save(self.state_dict(), model_path)
 			self.log(f"Saved min model to {model_path}")
+			return
 		model_path = os.path.join(save_dir, "model.pt")
 		torch.save(self.state_dict(), model_path)
 		conf_path = os.path.join(save_dir, "config.json")

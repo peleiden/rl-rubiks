@@ -16,6 +16,7 @@ def _eval_game(cfg: (Agent, int, int)):
 	agent, max_time, depth = cfg
 	turns_to_complete = -1  # -1 for unfinished
 	state, _, _ = Cube.scramble(depth)
+	print(state)
 	# breakpoint()
 	solution_found, n_actions = agent.generate_action_queue(state, max_time)
 	if solution_found:

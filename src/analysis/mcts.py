@@ -15,10 +15,12 @@ log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
 # TODO Fix taking forever to search sometimes
 
 def analyse_mcts(searchers: int, time_limit: float=1, output=True):
-	state, _, _ = Cube.scramble(50)
-	net = Model(ModelConfig()).to(gpu).eval()
+	# state, _, _ = Cube.scramble(50)
+	state = np.array([int(x) for x in "11 14  7 19  5  1 16 22 15 10  9  6  1  4 18 23  3 16 13 20".split()], dtype=Cube.dtype)
+	# net = Model(ModelConfig()).to(gpu).eval()
 	# net = Model.load("data/hpc-20-04-12").to(gpu).eval()
-	searcher = MCTS(net, c=1, nu=1)
+	net = Model.load("data/local_errornet").to(gpu).eval()
+	searcher = MCTS(net)
 	solved = searcher.search(state, time_limit, searchers)
 	assert not solved
 	if output:
@@ -41,8 +43,8 @@ def optimize_searchers():
 if __name__ == "__main__":
 	# set_repr(False)
 	seedsetter()
-	analyse_mcts(50)
-	optimize_searchers()
+	analyse_mcts(100)
+	# optimize_searchers()
 	
 
 

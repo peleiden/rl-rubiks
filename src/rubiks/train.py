@@ -152,6 +152,7 @@ class Train:
 				self.tt.end_section("Target value average")
 
 				net.eval()
+				net.save(save_dir="data/local_train/tmpnet")
 				agent.update_net(net)
 				with unverbose:
 					eval_results = self.evaluator.eval(agent)
