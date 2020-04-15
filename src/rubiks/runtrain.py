@@ -86,14 +86,14 @@ options = {
 	},
 	'eval_scrambling': {
 		'default':  '10 25',
-		'help':	    'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 20") denoting interval'
-			    ' of number of scramblings to be run in final evaluation. In eval during training, the mean of these is used',
+		'help':	    'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 20")\ndenoting interval'
+			    ' of number of scramblings to be run in final evaluation.\nIn eval during training, the mean of these is used',
 		#Ugly way to define list of two numbers
 		'type':	    lambda args: [int(args.split()[0]), int(args.split()[1])],
 	},
 	'is2024': {
 		'default':  True,
-		'help':	    'True for 20x24 Rubiks representation and Flase for 6x8x6',
+		'help':	    'True for 20x24 Rubiks representation and False for 6x8x6',
 		'type':	    literal_eval,
 		'choices':  [True, False],
 	},

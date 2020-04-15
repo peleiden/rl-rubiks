@@ -60,7 +60,7 @@ class Parser:
 			self.defaults[argname] = settings.pop('default')
 
 			if 'help' in settings and show_defaults:
-				settings['help'] += f"\n\tDEFAULT='{self.defaults[argname]}'"
+				settings['help'] += f"\n  Default='{self.defaults[argname]}'"
 
 			self.argparser.add_argument(f'--{argname}', **settings)
 
