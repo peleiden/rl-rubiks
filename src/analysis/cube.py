@@ -3,6 +3,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from time import perf_counter
+
+from src.rubiks import set_repr
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
 from src.rubiks.utils.logger import Logger
@@ -11,6 +13,7 @@ from datetime import datetime
 from time import perf_counter
 import numpy as np
 
+# set_repr(False)
 scrambles, depth, actions = 1000, 50, 100_000
 
 tt = TickTock()
@@ -25,11 +28,11 @@ def scramble():
 	return states
 
 def oh(states):
-	n_states = 1 if len(states.shape) == 1 else len(states)
+	n_states = states.shape[-1]
 	tt.section(f"One-hot encoding of {n_states} states")
 	oh = Cube.as_oh(states)
 	tt.end_section(f"One-hot encoding of {n_states} states")
-	return Cube.as_oh(states)
+	return oh
 
 def perform_actions():
 	state = Cube.get_solved_instance()
@@ -63,12 +66,12 @@ def analyse_cube():
 	log.section("Running time")
 	log(tt)
 
-	for kw, v in tt.get_sections().items():
-		print(kw)
-		print(f't[0] / max(t[1:]): {v["hits"][0] / max(v["hits"][1:]):.2f}')
-		plt.hist(v["hits"][1:], label=kw)
-		plt.title(kw)
-		plt.show()
+	# for kw, v in tt.get_sections().items():
+	# 	print(kw)
+	# 	print(f't[0] / max(t[1:]): {v["hits"][0] / max(v["hits"][1:]):.2f}')
+	# 	plt.hist(v["hits"][1:], label=kw)
+	# 	plt.title(kw)
+	# 	plt.show()
 
 
 if __name__ == "__main__":

@@ -143,6 +143,7 @@ class Train:
 				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
 
 			if rollout in self.evaluations:
+				net.eval()
 				self.tt.section("Target value average")
 				targets = value_targets.cpu().numpy()
 				self.avg_value_targets.append(np.empty_like(self.depths, dtype=float))
@@ -151,7 +152,6 @@ class Train:
 					self.avg_value_targets[-1][i] = targets[idcs].mean()
 				self.tt.end_section("Target value average")
 
-				net.eval()
 				agent.update_net(net)
 				with unverbose:
 					eval_results = self.evaluator.eval(agent)
