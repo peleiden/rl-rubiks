@@ -66,7 +66,10 @@ class Evaluator:
 			res = []
 			for i, cfg in enumerate(cfgs):
 				self.tt.section(f"Evaluation of {agent}. Depth {cfg[2]}")
-				self.log(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}")
+				if hasattr(agent._searcher, "states"):
+					self.log(f"Performing evaluation {i + 1} / {len(cfgs)}. Depth: {cfg[2]}. States explored: {TickTock.thousand_seps(len(agent._searcher.states))}")
+				else:
+					self.log(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}")
 				res.append(_eval_game(cfg))
 				self.tt.end_section(f"Evaluation of {agent}. Depth {cfg[2]}")
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
@@ -106,7 +109,7 @@ if __name__ == "__main__":
 		# Agent(BFS()),
 		# DeepAgent(PolicySearch.from_saved("data/local_train", False)),
 		# DeepAgent(PolicySearch.from_saved("data/local_train", True)),
-		DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
+		DeepAgent(MCTS.from_saved("data/hpc-20-04-12", 1, 1, False)),
 		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
 		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
 	]

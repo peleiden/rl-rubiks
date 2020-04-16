@@ -143,7 +143,7 @@ class TrainJob:
 			# Currently not set by argparser/configparser
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
-			max_train_eval_time = .5,
+			max_train_eval_time = 1,
 		):
 		self.name = name
 		assert isinstance(self.name, str)
