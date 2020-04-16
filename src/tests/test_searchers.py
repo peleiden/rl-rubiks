@@ -9,22 +9,22 @@ from src.tests import MainTest
 
 
 class TestMCTS(MainTest):
-	def __init__(self):
-		net = Model(ModelConfig()).to(gpu).eval()
-		self.state, _, _ = Cube.scramble(50)
-		self.searcher = MCTS(net, c=1, nu=10)
 	
 	def test_search(self):
+		net = Model(ModelConfig()).to(gpu).eval()
+		state, _, _ = Cube.scramble(50)
+		searcher = MCTS(net, c=1, nu=10)
+		
 		# Generates a search tree and tests its correctness
-		self.searcher.search(self.state, 1, 100)
-		for state in self.searcher.states.values():
+		searcher.search(state, 1, 100)
+		for state in searcher.states.values():
 			# Test neighbors and leaf status
 			assert not state.is_leaf == all(state.neighs)
 			for i, neigh in enumerate(state.neighs):
 				new_state = Cube.rotate(state.state, *Cube.action_space[i])
 				if neigh:
 					assert neigh.state.tostring() == new_state.tostring()
-					assert new_state.tostring() in self.searcher.states
+					assert new_state.tostring() in searcher.states
 				# else:
 				# 	assert new_state.tostring() not in searcher.states
 			# Assert that all W's are calculated correctly

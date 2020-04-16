@@ -14,14 +14,13 @@ from src.rubiks.cube.cube import Cube
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
-print(os.getcwd(), sys.path[0])
 net_loc = "data/hpc-20-04-12"
 agents = [
 	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
 	{ "name": "BFS", "agent": Agent(BFS()) },
 	{ "name": "Deterministisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
 	{ "name": "Stokastisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, True)) },
-	{ "name": "Dybkube", "agent": DeepAgent(MCTS.from_saved(net_loc)) },
+	{ "name": "Dybkube", "agent": DeepAgent(MCTS.from_saved(net_loc, 1, 1, True)) },
 ]
 
 def as69(state: np.ndarray):
@@ -38,7 +37,7 @@ def get_state_dict(state: np.ndarray or list):
 
 @app.route("/")
 def index():
-    return "<a href='https://asgerius.github.io/rl-rubiks'>Gå til hovedside</a>"
+	return "<a href='https://asgerius.github.io/rl-rubiks'>Gå til hovedside</a>"
 
 @app.route("/info")
 def get_info():

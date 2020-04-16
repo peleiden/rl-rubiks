@@ -152,7 +152,7 @@ class PolicySearch(DeepSearcher):
 		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
 
 class MCTS(DeepSearcher):
-	def __init__(self, net: Model, c: float=1, nu: float=0, search_graph=False):
+	def __init__(self, net: Model, c: float, nu: float, search_graph: bool):
 		super().__init__(net)
 		# Hyperparameters: c controls exploration and nu controls virtual loss updation us
 		self.c = c
@@ -183,6 +183,8 @@ class MCTS(DeepSearcher):
 			self.tt.end_section("Expanding leaves")
 			if solve_leaf != -1:  # If a solution is found
 				self.action_queue = paths[solve_leaf] + deque([solve_action])
+				if self.search_graph:
+					self._shorten_action_queue()
 				return True
 			# Gets new paths and leaves to expand from
 			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], time_limit) for _ in range(workers)])
@@ -270,6 +272,7 @@ class MCTS(DeepSearcher):
 				# It is possible to add check for existing neighbors in graph here using self._update_neighbors(state) to ensure graph completeness
 				# However, this is so expensive that it has been found to reduce the number of explored states to around a quarter
 				# Also, it is not a major problem, as the edges will be updated when new_leaf is expanded, so the problem only exists on the edge of the graph
+				# TODO: Test performance difference after implementing this
 			else:
 				leaf.neighs[action_idx] = self.states[state_str]
 				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf
@@ -351,12 +354,12 @@ class MCTS(DeepSearcher):
 		self.states = dict()
 
 	@classmethod
-	def from_saved(cls, loc: str, c: float=1, nu: float=1, search_graph=True):
+	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool):
 		net = Model.load(loc)
 		net.to(gpu)
 		return cls(net, c, nu, search_graph)
 
 	def __str__(self):
-		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search"
+		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
 
 

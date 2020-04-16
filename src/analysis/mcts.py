@@ -14,8 +14,8 @@ log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
 
 def analyse_mcts(workers: int, time_limit: float=1, output=True):
 	state, _, _ = Cube.scramble(50)
-	net = Model.load("data/local_errornet").to(gpu).eval()
-	searcher = MCTS(net, c=1, nu=10)
+	net = Model(ModelConfig()).to(gpu).eval()
+	searcher = MCTS(net, c=1, nu=10, search_graph=False)
 	solved = searcher.search(state, time_limit, workers)
 	assert not solved
 	if output:
@@ -39,6 +39,7 @@ def optimize_time_limit():
 	plt.grid(True)
 	# plt.show()
 	plt.savefig("data/local_analyses/mcts_time_limit.png")
+	plt.clf()
 
 def optimize_searchers(n: int):
 	x = np.arange(1, 201)
@@ -47,21 +48,21 @@ def optimize_searchers(n: int):
 	for s in x:
 		sizes = [analyse_mcts(s, 1, False) for _ in range(n)]
 		y.append(np.mean(sizes))
-		log(f"Tree size at {s} / {len(x)} workers: {y[-1]}")
+		log(f"Tree size at {s} / {len(x)} workers: {y[-1]}. Mean of {n} runs")
 	plt.plot(x, y)
 	plt.xlabel("Workers")
 	plt.ylabel("Tree size with time limit of 1 s")
 	plt.grid(True)
 	# plt.show()
 	plt.savefig("data/local_analyses/mcts_searchers.png")
-
+	plt.clf()
 
 if __name__ == "__main__":
 	# set_repr(False)
 	n = 5
 	analyse_mcts(100, 1)
 	optimize_time_limit()
-	optimize_searchers(n)
+	# optimize_searchers(n)
 	
 
 

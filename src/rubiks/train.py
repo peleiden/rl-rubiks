@@ -37,7 +37,7 @@ class Train:
 			loss_weighting: str,
 			optim_fn,
 			lr: float,
-			searcher_class: DeepSearcher.__class__,
+			agent: DeepAgent,
 			evaluator: Evaluator,
 			evaluations: int,
 			logger: Logger		= NullLogger(),
@@ -56,8 +56,7 @@ class Train:
 
 		self.evaluations = np.unique(np.linspace(0, self.rollouts-1, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
 		self.evaluations.sort()
-
-		self.searcher_class = searcher_class
+		self.agent = agent
 
 		self.optim = optim_fn
 		self.lr	= lr
@@ -94,14 +93,14 @@ class Train:
 			f"Evaluations: {len(self.evaluations)}",
 		]))
 		lowest_loss = float("inf")
+		min_net = net.clone()
+		self.agent.update_net(net)
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		self.policy_losses, self.value_losses, self.train_losses, self.eval_rewards, self.avg_value_targets = np.zeros(self.rollouts),\
 																											  np.zeros(self.rollouts),\
 																											  np.empty(self.rollouts),\
 																											  list(), list()
-
-		agent = DeepAgent(self.searcher_class(net))
 
 		for rollout in range(self.rollouts):
 			torch.cuda.empty_cache()
@@ -152,9 +151,9 @@ class Train:
 					self.avg_value_targets[-1][i] = targets[idcs].mean()
 				self.tt.end_section("Target value average")
 
-				agent.update_net(net)
+				self.agent.update_net(net)
 				with unverbose:
-					eval_results = self.evaluator.eval(agent)
+					eval_results = self.evaluator.eval(self.agent)
 				eval_reward = (eval_results != -1).mean()
 
 				self.eval_rewards.append(eval_reward)

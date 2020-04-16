@@ -91,6 +91,22 @@ options = {
 		#Ugly way to define list of two numbers
 		'type':	    lambda args: [int(args.split()[0]), int(args.split()[1])],
 	},
+	'mcts_c': {
+		'default':	1,
+		'help':		'Exploration parameter c for MCTS',
+		'type':		float,
+	},
+	'mcts_nu': {
+		'default':	1,
+		'help':		'Virtual loss nu for MCTS',
+		'type':		float,
+	},
+	'mcts_graph_search': {
+		'default':	True,
+		'help':		'Whether or not graph search should be applied to MCTS in the post training evaluation to find the shortest path',
+		'type':		literal_eval,
+		'choices':	[True, False]
+	},
 	'is2024': {
 		'default':  True,
 		'help':	    'True for 20x24 Rubiks representation and False for 6x8x6',
@@ -119,12 +135,15 @@ class TrainJob:
 			eval_max_time: int,
 			eval_scrambling: list,
 			final_evals: int,
+			mcts_c: float,
+			mcts_nu: float,
+			mcts_graph_search: bool,
 			is2024: bool,
 
 			# Currently not set by argparser/configparser
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
-			max_train_eval_time = 1,
+			max_train_eval_time = .5,
 		):
 		self.name = name
 		assert isinstance(self.name, str)
@@ -146,8 +165,15 @@ class TrainJob:
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
 
-		self.searcher = getattr(search, searcher)
-		assert issubclass(self.searcher, search.DeepSearcher)
+		searcher = getattr(search, searcher)
+		assert issubclass(searcher, search.DeepSearcher)
+		if searcher == search.MCTS:
+			assert all([mcts_c >= 0, mcts_nu >= 0, isinstance(mcts_graph_search, bool)])
+			self.train_agent = DeepAgent(search.MCTS(None, mcts_c, mcts_nu, False))
+			self.eval_agent = DeepAgent(search.MCTS(None, mcts_c, mcts_nu, mcts_graph_search))
+		elif searcher == search.PolicySearch:
+			self.train_agent = DeepAgent(search.PolicySearch(None, True))
+			self.eval_agent = DeepAgent(search.PolicySearch(None, True))
 
 		self.evaluations = evaluations
 		assert self.evaluations <= self.rollouts
@@ -193,7 +219,7 @@ class TrainJob:
 				loss_weighting	= self.loss_weighting,
 				optim_fn		= self.optim_fn,
 				lr				= self.lr,
-				searcher_class	= self.searcher,
+				agent			= self.train_agent,
 				logger			= self.logger,
 				evaluations		= self.evaluations,
 				evaluator		= train_evaluator,
@@ -216,7 +242,8 @@ class TrainJob:
 		if self.final_evals:
 			# Evaluation
 			self.logger.section()
-			final_evaluator.eval(DeepAgent(self.searcher(net)))
+			self.eval_agent.update_net(net)
+			final_evaluator.eval(self.eval_agent)
 
 		restore_repr()
 
@@ -229,8 +256,8 @@ if __name__ == "__main__":
 ___________________________________________________________________
   /_/_/_/\	______ _      ______ _   _______ _____ _   __ _____
  /_/_/_/\/\	| ___ \ |     | ___ \ | | | ___ \_   _| | / //  ___|
-/_/_/_/\/\/\	| |_/ / |     | |_/ / | | | |_/ / | | | |/ / \ `--.
-\_\_\_\/\/\/	|    /| |     |    /| | | | ___ \ | | |    \  `--. \
+/_/_/_/\/\/\| |_/ / |     | |_/ / | | | |_/ / | | | |/ / \ `--.
+\_\_\_\/\/\/|    /| |     |    /| | | | ___ \ | | |    \  `--. \
  \_\_\_\/\/	| |\ \| |____ | |\ \| |_| | |_/ /_| |_| |\  \/\__/ /
   \_\_\_\/	\_| \_\_____/ \_| \_|\___/\____/ \___/\_| \_/\____/
 __________________________________________________________________
