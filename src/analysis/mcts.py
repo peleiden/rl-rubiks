@@ -12,39 +12,56 @@ from src.rubiks.utils.ticktock import TickTock
 tt = TickTock()
 log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
 
-# TODO Fix taking forever to search sometimes
-
-def analyse_mcts(searchers: int, time_limit: float=1, output=True):
-	# state, _, _ = Cube.scramble(50)
-	state = np.array([int(x) for x in "11 14  7 19  5  1 16 22 15 10  9  6  1  4 18 23  3 16 13 20".split()], dtype=Cube.dtype)
-	# net = Model(ModelConfig()).to(gpu).eval()
-	# net = Model.load("data/hpc-20-04-12").to(gpu).eval()
+def analyse_mcts(workers: int, time_limit: float=1, output=True):
+	state, _, _ = Cube.scramble(50)
 	net = Model.load("data/local_errornet").to(gpu).eval()
-	searcher = MCTS(net)
-	solved = searcher.search(state, time_limit, searchers)
+	searcher = MCTS(net, c=1, nu=10)
+	solved = searcher.search(state, time_limit, workers)
 	assert not solved
 	if output:
 		log(searcher.tt)
 		log(f"Tree size after {time_limit} s: {TickTock.thousand_seps(len(searcher.states))}")
 	return len(searcher.states)
 
-def optimize_searchers():
-	x = np.arange(1, 401)
+def optimize_time_limit():
+	workers = 100
+	runs = np.linspace(20, 2, 100).astype(int)
+	time_limits = np.linspace(0.01, 1, 100)
 	y = []
+	log.section(f"Optimizing time limit with {workers} workers\nExpected runtime: {runs@time_limits} s")
+	for s, r in zip(time_limits, runs):
+		sizes = [analyse_mcts(workers, s, False) for _ in range(r)]
+		y.append(np.mean(sizes)/s)
+		log(f"Explored states per second at {s:.2f} s: {y[-1]:.2f}. Mean of {r} runs")
+	plt.plot(time_limits, y)
+	plt.xlabel("Time limit")
+	plt.ylabel("Explored states per second")
+	plt.grid(True)
+	# plt.show()
+	plt.savefig("data/local_analyses/mcts_time_limit.png")
+
+def optimize_searchers(n: int):
+	x = np.arange(1, 201)
+	y = []
+	log.section(f"Optimizing number of searchers\nExpected runtime: {len(x)*1*n} s")
 	for s in x:
-		sizes = [analyse_mcts(s, .5, False) for _ in range(5)]
+		sizes = [analyse_mcts(s, 1, False) for _ in range(n)]
 		y.append(np.mean(sizes))
-		log(f"Tree size at {s} / {len(x)} searchers: {y[-1]}")
+		log(f"Tree size at {s} / {len(x)} workers: {y[-1]}")
 	plt.plot(x, y)
+	plt.xlabel("Workers")
+	plt.ylabel("Tree size with time limit of 1 s")
 	plt.grid(True)
 	# plt.show()
 	plt.savefig("data/local_analyses/mcts_searchers.png")
-	
+
+
 if __name__ == "__main__":
 	# set_repr(False)
-	seedsetter()
-	analyse_mcts(100)
-	# optimize_searchers()
+	n = 5
+	analyse_mcts(100, 1)
+	optimize_time_limit()
+	optimize_searchers(n)
 	
 
 

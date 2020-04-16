@@ -25,13 +25,13 @@ class Node:
 		if action_idx is not None:
 			from_action_idx = Cube.rev_action(action_idx)
 			self.neighs[from_action_idx] = from_node
-			self.W[from_action_idx] = from_node.value
 
 	def __str__(self):
 		return "\n".join([
 			"----- Node -----",
 			f"Leaf:      {self.is_leaf}",
 			f"State:     {tuple(self.state)}",
+			f"Value:     {self.value}",
 			f"N:         {self.N}",
 			f"W:         {self.W}",
 			f"Neighbors: {[id(x) if x is not None else None for x in self.neighs]}",
@@ -41,6 +41,7 @@ class Node:
 
 class Searcher:
 	with_mt = False
+	eps = np.finfo("float").eps
 
 	def __init__(self):
 		self.action_queue = deque()
@@ -151,80 +152,105 @@ class PolicySearch(DeepSearcher):
 		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
 
 class MCTS(DeepSearcher):
-	def __init__(self, net: Model, c: float=1, nu: float=0, search_graph=True):
+	def __init__(self, net: Model, c: float=1, nu: float=0, search_graph=False):
 		super().__init__(net)
-		#Hyper parameters: c controls exploration and nu controls virtual loss updation us
+		# Hyperparameters: c controls exploration and nu controls virtual loss updation us
 		self.c = c
 		self.nu = nu
-		self.search_graf = search_graph
+		self.search_graph = search_graph
 
 		self.states = dict()
 		self.net = net
 
 	@no_grad
-	def search(self, state: np.ndarray, time_limit: float, searchers=100) -> bool:
-		self.clean_tree()  # Otherwise memory will continue to be used between runs
+	def search(self, state: np.ndarray, time_limit: float, workers=100) -> bool:
 		self.reset()
 
 		self.tt.tick()
 		if Cube.is_solved(state): return True
-		#First state is evaluated  and expanded individually
+		# First state is evaluated and expanded individually
 		oh = Cube.as_oh(state).to(gpu)
 		p, v = self.net(oh)  # Policy and value
-		self.states[state.tostring()] = Node(state, p.cpu().numpy().ravel(), float(v.cpu()))
+		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
-		self.tt.section("Expanding leafs")
-		_, solve_action = self.expand_leafs([self.states[state.tostring()]])
-		self.tt.end_section("Expanding leafs")
-		if solve_action != -1:
-			self.action_queue = deque([solve_action])
-			return True
+		
+		paths = deque([])
+		leaves = [self.states[state.tostring()]]
 		while self.tt.tock() < time_limit:
-			# Continually searching and expanding leaves
-			paths, leafs = zip(*[self.search_leaf(self.states[state.tostring()]) for _ in range(searchers)])
-			
-			self.tt.section("Expanding leafs")
-			solve_leaf, solve_action = self.expand_leafs(leafs)
-			self.tt.end_section("Expanding leafs")
-			if solve_leaf != -1:
+			# Expands leaves
+			self.tt.section("Expanding leaves")
+			solve_leaf, solve_action = self.expand_leaves(leaves)
+			self.tt.end_section("Expanding leaves")
+			if solve_leaf != -1:  # If a solution is found
 				self.action_queue = paths[solve_leaf] + deque([solve_action])
 				return True
+			# Gets new paths and leaves to expand from
+			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], time_limit) for _ in range(workers)])
+			
 		return False
 
-	def search_leaf(self, node: Node) -> (list, Node):
-		tt = TickTock()
+	def search_leaf(self, node: Node, time_limit: float) -> (list, Node):
 		# Finds leaf starting from state
 		path = deque()
-		tt.tick()
-		while not node.is_leaf:
-			if tt.tock() > 1: print(node); breakpoint()
-			self.tt.section("Exploring next node")
-			U = self.c * node.P * np.sqrt(node.N.sum()) / (1 + node.N)
-			Q = node.W - node.L
-			action = np.argmax(U + Q)
+		self.tt.section("Exploring next node")
+		while not node.is_leaf and self.tt.tock() < time_limit:
+			sqrtN = np.sqrt(node.N.sum())
+			if sqrtN < self.eps:  # Randomly chooses path the first time a path is found
+				action = np.random.choice(Cube.action_dim)
+			else:
+				U = self.c * node.P * sqrtN / (1 + node.N)
+				Q = node.W - node.L
+				g = U + Q
+				action = np.argmax(g)
 			node.N[action] += 1
 			node.L[action] += self.nu
 			path.append(action)
 			node = node.neighs[action]
-			self.tt.end_section("Exploring next node")
+		self.tt.end_section("Exploring next node")
 		return path, node
-
-	def expand_leafs(self, leafs: List[Node]) -> (int, int):
+	
+	def _update_neighbors(self, state: np.ndarray):
 		"""
-		Expands all given leafs
+		# Expands around state. If a new state is already in the tree, neighbor relations are updated
+		# Assumes that state is already in the tree
+		# Used for node expansion
+		"""
+		state_str = state.tostring()
+		for i, action in enumerate(Cube.action_space):
+			self.tt.section("Update neighbors")
+			new_state = Cube.rotate(state, *action)
+			new_state_str = new_state.tostring()
+			if new_state_str in self.states:
+				self.states[state_str].neighs[i] = self.states[new_state_str]
+				self.states[new_state_str].neighs[Cube.rev_action(i)] = self.states[state_str]
+				if all(self.states[new_state_str].neighs):
+					self.states[new_state_str].is_leaf = False
+			self.tt.end_section("Update neighbors")
+		if all(self.states[state_str].neighs):
+			self.states[state_str].is_leaf = False
+
+	def expand_leaves(self, leaves: List[Node]) -> (int, int):
+		"""
+		Expands all given leaves
 		Returns the index of the leaf and the action to solve it
 		Both are -1 if no solution is found
 		"""
 		
 		# Explores all new states
 		new_states = np.array([Cube.rotate(leaf.state, *action)
-							   for leaf in leafs
+							   for leaf in leaves
 							   for action in Cube.action_space])
 		# Checks for solutions
 		for i, state in enumerate(new_states):
 			if Cube.is_solved(state):
+				leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
+				solved_leaf = Node(state, None, None, leaves[leaf_idx], action_idx)
+				self.states[state.tostring()] = solved_leaf
+				self._update_neighbors(state)
 				return i // Cube.action_dim, i % Cube.action_dim
-		new_states_str = np.array([state.tostring() for state in new_states])
+		
+		# Gets information about new states
+		new_states_str = [state.tostring() for state in new_states]
 		self.tt.section("One-hot encoding")
 		new_states_oh = Cube.as_oh(new_states).to(gpu)
 		self.tt.end_section("One-hot encoding")
@@ -236,23 +262,28 @@ class MCTS(DeepSearcher):
 		self.tt.section("Generate new states")
 		for i, (state, state_str, p, v) in enumerate(zip(new_states, new_states_str, policies, values)):
 			leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
-			leaf = leafs[leaf_idx]
-			if state_str in self.states:
-				leaf.neighs[action_idx] = self.states[state_str]
-				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf
-			else:
+			leaf = leaves[leaf_idx]
+			if state_str not in self.states:
 				new_leaf = Node(state, p, v, leaf, action_idx)
 				leaf.neighs[action_idx] = new_leaf
 				self.states[state_str] = new_leaf
+				# It is possible to add check for existing neighbors in graph here using self._update_neighbors(state) to ensure graph completeness
+				# However, this is so expensive that it has been found to reduce the number of explored states to around a quarter
+				# Also, it is not a major problem, as the edges will be updated when new_leaf is expanded, so the problem only exists on the edge of the graph
+			else:
+				leaf.neighs[action_idx] = self.states[state_str]
+				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf
+				if all(self.states[state_str].neighs):
+					self.states[state_str].is_leaf = False
 			leaf.is_leaf = False
 		self.tt.end_section("Generate new states")
 		
 		self.tt.section("Update W")
-		for leaf in leafs:
+		for leaf in leaves:
 			max_val = max([x.value for x in leaf.neighs])
+			assert max_val != 0
 			for action_idx, neighbor in enumerate(leaf.neighs):
-				if not neighbor.is_leaf:
-					neighbor.W[Cube.rev_action(action_idx)] = max_val
+				neighbor.W[Cube.rev_action(action_idx)] = max_val
 		self.tt.end_section("Update W")
 		
 		return -1, -1
@@ -315,7 +346,8 @@ class MCTS(DeepSearcher):
 		# Generates new action queue with BFS through self.states
 		pass
 
-	def clean_tree(self):
+	def reset(self):
+		super().reset()
 		self.states = dict()
 
 	@classmethod
@@ -325,6 +357,6 @@ class MCTS(DeepSearcher):
 		return cls(net, c, nu, search_graph)
 
 	def __str__(self):
-		return "Monte Carlo Tree Search"
+		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search"
 
 

@@ -28,11 +28,11 @@ def scramble():
 	return states
 
 def oh(states):
-	n_states = 1 if len(states.shape) == 1 else len(states)
+	n_states = states.shape[-1]
 	tt.section(f"One-hot encoding of {n_states} states")
 	oh = Cube.as_oh(states)
 	tt.end_section(f"One-hot encoding of {n_states} states")
-	return Cube.as_oh(states)
+	return oh
 
 def perform_actions():
 	state = Cube.get_solved_instance()
