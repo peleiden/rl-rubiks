@@ -62,7 +62,7 @@ if __name__ == "__main__":
 	n = 5
 	analyse_mcts(100, 1)
 	optimize_time_limit()
-	# optimize_searchers(n)
+	optimize_searchers(n)
 	
 
 
