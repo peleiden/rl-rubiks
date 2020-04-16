@@ -204,8 +204,10 @@ class Train:
 			for scrambled_state in game_states
 			for action in Cube.action_space
 		], dtype=Cube.dtype)
-		substates_oh = Cube.as_oh(substates).to(gpu)
 		self.tt.end_section("ADI substates")
+		self.tt.section("One-hot encoding")
+		substates_oh = Cube.as_oh(substates).to(gpu)
+		self.tt.end_section("One-hot encoding")
 
 		# Generates policy and value targets
 		rewards = torch.tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
