@@ -248,7 +248,7 @@ class Train:
 		self.log("Making plot of training")
 		ylim = np.array([-0.1, 1.1])
 		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8))
-		loss_ax.set_xlabel(f"Rollout of {self.moves_per_rollout} moves")
+		loss_ax.set_xlabel(f"Rollouts, each of {self.moves_per_rollout} moves")
 		loss_ax.set_ylim(ylim*np.max(self.train_losses))
 
 		colour = "red"
@@ -272,7 +272,7 @@ class Train:
 		loss_ax.legend(h1, l1, loc=1)
 
 		fig.tight_layout()
-		plt.title(title if title else "Training")
+		plt.title(title if title else f"Training - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth)}")
 		if semi_logy: plt.semilogy()
 		plt.grid(True)
 
