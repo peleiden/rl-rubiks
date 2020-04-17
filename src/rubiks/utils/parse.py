@@ -45,9 +45,11 @@ class Parser:
 	```
 
 	"""
-	def __init__(self, options: dict, description: str = "Run experiments with following options", show_defaults: bool = True):
+	def __init__(self, options: dict, name: str = "Experiment",  description: str = "Run experiments with following options", show_defaults: bool = True):
 		self.options = options
 		self.defaults = dict()
+		self.save_location = ''
+		self.name = name
 
 		#Seperate parser for only receiving the config file
 		self.config_receiver = ArgumentParser(add_help = False)
@@ -113,10 +115,10 @@ class Parser:
 		"""
 		Saves all settings used for experiments for reproducability.
 		"""
-		save_location = self.defaults['location'] if 'location' in self.defaults else ''
-		os.makedirs(save_location, exist_ok = True)
+		if 'location' in self.defaults: self.save_location = self.defaults['location']
+		os.makedirs(self.save_location, exist_ok = True)
 
-		with open(f"{save_location}/used_config.ini", 'w') as f:
+		with open(f"{self.save_location}/{self.name}_config.ini", 'w') as f:
 			if with_config: self.configparser.write(f)
 			f.write(f"\n# Run command\n # {' '.join(sys.argv)}\n")
 			str_defaults = pformat(self.defaults).replace('\n', '\n# ')

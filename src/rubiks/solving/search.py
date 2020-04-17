@@ -188,7 +188,7 @@ class MCTS(DeepSearcher):
 				return True
 			# Gets new paths and leaves to expand from
 			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], time_limit) for _ in range(self.workers)])
-			
+
 		return False
 
 	def search_leaf(self, node: Node, time_limit: float) -> (list, Node):
@@ -210,7 +210,7 @@ class MCTS(DeepSearcher):
 			node = node.neighs[action]
 		self.tt.end_section("Exploring next node")
 		return path, node
-	
+
 	def _update_neighbors(self, state: np.ndarray):
 		"""
 		# Expands around state. If a new state is already in the tree, neighbor relations are updated
@@ -237,7 +237,7 @@ class MCTS(DeepSearcher):
 		Returns the index of the leaf and the action to solve it
 		Both are -1 if no solution is found
 		"""
-		
+
 		# Explores all new states
 		new_states = np.array([Cube.rotate(leaf.state, *action)
 							   for leaf in leaves
@@ -250,7 +250,7 @@ class MCTS(DeepSearcher):
 				self.states[state.tostring()] = solved_leaf
 				self._update_neighbors(state)
 				return i // Cube.action_dim, i % Cube.action_dim
-		
+
 		# Gets information about new states
 		new_states_str = [state.tostring() for state in new_states]
 		self.tt.section("One-hot encoding")
@@ -260,7 +260,7 @@ class MCTS(DeepSearcher):
 		policies, values = self.net(new_states_oh)
 		policies, values = policies.softmax(dim=1).cpu().numpy(), values.squeeze().cpu().numpy()
 		self.tt.end_section("Feedforward")
-		
+
 		self.tt.section("Generate new states")
 		for i, (state, state_str, p, v) in enumerate(zip(new_states, new_states_str, policies, values)):
 			leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
@@ -281,7 +281,7 @@ class MCTS(DeepSearcher):
 					self.states[state_str].is_leaf = False
 			leaf.is_leaf = False
 		self.tt.end_section("Generate new states")
-		
+
 		self.tt.section("Update W")
 		for leaf in leaves:
 			max_val = max([x.value for x in leaf.neighs])
@@ -289,7 +289,7 @@ class MCTS(DeepSearcher):
 			for action_idx, neighbor in enumerate(leaf.neighs):
 				neighbor.W[Cube.rev_action(action_idx)] = max_val
 		self.tt.end_section("Update W")
-		
+
 		return -1, -1
 
 	def expand_leaf(self, leaf: Node) -> int:
