@@ -25,7 +25,7 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	x = values
 	y = []
 	tree_sizes = []
-	log.section(f"Optimizing {var}\nExpected runtime: {len(x)*time_limit*n:.2f} s\nGames per number of workers: {n}")
+	log.section(f"Optimizing {var}\nExpected runtime: {len(x)*time_limit*n:.2f} s\nGames evaluation: {n}")
 	log(f"Config\nTime limit per game: {time_limit:.2f} s\n{other_vars}")
 	for val in values:
 		vals = {**other_vars, var: val}
@@ -49,7 +49,7 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	ax2.tick_params(axis="y", labelcolor=colour)
 	
 	fig.tight_layout()
-	plt.title(f"Solving in {time_limit:.2f} s with {other_vars}")
+	plt.title(f"Solving in {time_limit:.2f} s with {other_vars}. Mean of {n} games")
 	plt.grid(True)
 	plt.savefig(f"data/local_analyses/mcts_{var}.png")
 	plt.show()
@@ -57,12 +57,15 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 
 if __name__ == "__main__":
 	# set_repr(False)
-	time_limit = .2
+	time_limit = .1
 	n = 200
 	default_vars = { "depth": 8, "c": 1, "nu": 0.01, "workers": 10 }
 	get_other_vars = lambda excl: {kw: v for kw, v in default_vars.items() if kw != excl}
 	# seedsetter()
 	analyze_var(var="nu", values=np.linspace(0, 0.2, 30), other_vars=get_other_vars("nu"))
+	analyze_var(var="depth", values=np.linspace(1, 20, 20).astype(int), other_vars=get_other_vars("depth"))
+	analyze_var(var="c", values=np.linspace(0, 5, 20), other_vars=get_other_vars("c"))
+	analyze_var(var="workers", values=np.unique(np.logspace(1, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
 
 
 
