@@ -161,10 +161,18 @@ class Train:
 
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
+		total_time = self.tt.tock()
+		eval_time = sum(self.tt.get_sections()[f'Evaluating using agent {self.agent}']['hits'])
+		train_time = total_time - eval_time
+		nstates = self.rollouts * self.rollout_games * self.rollout_depth
+		states_per_sec = int(nstates / train_time)
 		self.log("\n".join([
-			f"Best net found to have loss of {lowest_loss}",
-			f"Total training time: {self.tt.stringify_time(self.tt.tock()-self.tt.get_sections()[f'Evaluating using agent {self.agent}'], 's')}",
-			f"States witnessed: {TickTock.thousand_seps(self.rollouts * self.rollout_games * self.rollout_depth)}",
+			f"Best net found to have loss of {lowest_loss:.4f}",
+			f"Total running time:            {self.tt.stringify_time(total_time, 's')}",
+			f"  Training time:               {self.tt.stringify_time(train_time, 's')} or {train_time/total_time*100:.2f} %",
+			f"  Evaluation time:             {self.tt.stringify_time(eval_time, 's')} or {eval_time/total_time*100:.2f} %",
+			f"States witnessed:              {TickTock.thousand_seps(nstates)}",
+			f"  States per training second:  {TickTock.thousand_seps(states_per_sec)}",
 		]))
 
 		return net, min_net

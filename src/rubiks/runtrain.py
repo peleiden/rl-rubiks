@@ -93,7 +93,7 @@ class TrainJob:
 			# Currently not set by argparser/configparser
 
 			agent = DeepAgent(PolicySearch(None)),
-			eval_games: int = 150,
+			eval_games: int = 10,
 			max_time: float = 1,
 			scrambling_depths: tuple = (10,),
 
@@ -125,7 +125,7 @@ class TrainJob:
 
 		self.evaluator = Evaluator(n_games=eval_games, max_time=max_time, scrambling_depths=scrambling_depths, logger=self.logger)
 		self.evaluations = evaluations
-		assert isinstance(self.evaluations, int) and self.evaluations>=0 and self.evaluations <=self.rollouts
+		assert isinstance(self.evaluations, int) and 0 <= self.evaluations <= self.rollouts
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
