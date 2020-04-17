@@ -93,7 +93,7 @@ class TrainJob:
 			# Currently not set by argparser/configparser
 
 			agent = DeepAgent(PolicySearch(None)),
-			eval_games: int = 10,
+			eval_games: int = 150,
 			max_time: float = 1,
 			scrambling_depths: tuple = (10,),
 
