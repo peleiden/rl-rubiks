@@ -29,7 +29,7 @@ options = {
 		'choices':  ['MCTS', 'PolicySearch','BFS', 'RandomDFS',],
 	},
 	'games': {
-		'default':  1000,
+		'default':  10,
 		'help':	    'Number of games to play in evaluation for each depth, for each agent.',
 		'type':	    int,
 	},
