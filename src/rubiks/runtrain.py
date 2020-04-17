@@ -9,9 +9,11 @@ from src.rubiks.utils import seedsetter
 from src.rubiks.utils.parse import Parser
 from src.rubiks.utils.ticktock import get_timestamp
 from src.rubiks.utils.logger import Logger
+
 from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.train import Train
+
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.solving.agents import DeepAgent
 from src.rubiks.solving.search import PolicySearch
@@ -23,17 +25,17 @@ options = {
 		'type':	    str,
 	},
 	'rollouts': {
-		'default':  1000,
+		'default':  500,
 		'help':	    'Number of passes of ADI+parameter update',
 		'type':	    int,
 	},
 	'rollout_games': {
-		'default':  1000,
+		'default':  100,
 		'help':	    'Number of games in ADI in each rollout',
 		'type':	    int,
 	},
 	'rollout_depth': {
-		'default':  100,
+		'default':  50,
 		'help':	    'Number of scramblings applied to each game in ADI',
 		"type":	    int,
 	},
@@ -59,7 +61,7 @@ options = {
 		'type':	    str,
 	},
 	'evaluations': {
-		'default':  20,
+		'default':  10,
 		'help':	    'Number of evaluations during training',
 		'type':	    int,
 	},
