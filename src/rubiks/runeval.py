@@ -29,12 +29,12 @@ options = {
 		'choices':  ['MCTS', 'PolicySearch','BFS', 'RandomDFS',],
 	},
 	'games': {
-		'default':  10000,
+		'default':  1000,
 		'help':	    'Number of games to play in evaluation for each agent.',
 		'type':	    int,
 	},
 	'max_time': {
-		'default':  60,
+		'default':  30,
 		'help':	    'Max searching time for agent',
 		'type':	    int,
 	},
@@ -51,7 +51,7 @@ options = {
 		'type':		float,
 	},
 	'mcts_nu': {
-		'default':	1,
+		'default':	.01,
 		'help':		'Virtual loss nu for MCTS',
 		'type':		float,
 	},
