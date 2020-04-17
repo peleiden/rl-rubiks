@@ -175,10 +175,9 @@ class MCTS(DeepSearcher):
 		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
 		
-		paths = deque([])
+		paths = [deque([])]
 		leaves = [self.states[state.tostring()]]
 		while self.tt.tock() < time_limit:
-			# Expands leaves
 			self.tt.section("Expanding leaves")
 			solve_leaf, solve_action = self.expand_leaves(leaves)
 			self.tt.end_section("Expanding leaves")

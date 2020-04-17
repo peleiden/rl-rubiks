@@ -75,7 +75,7 @@ class Cube:
 		dirs = np.random.randint(2, size=(n,)).astype(bool)
 		state = cls.get_solved()
 		for face, d in zip(faces, dirs):
-			state = cls.rotate(state, face, d)  # Uses rotate instead of move as checking for victory is not needed here
+			state = cls.rotate(state, face, d)
 		
 		if force_not_solved and cls.is_solved(state):
 			return cls.scramble(n, True)

@@ -11,21 +11,21 @@ from src.rubiks.utils.ticktock import TickTock
 
 tt = TickTock()
 log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
+net = Model.load("data/local_good_net").eval().to(gpu)
 
 
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float):
-	state, _, _ = Cube.scramble(depth, True)
-	net = Model.load("data/local_good_net").eval().to(gpu)
+	state, f, d = Cube.scramble(depth, True)
 	searcher = MCTS(net, c, nu, False, workers)
-	solved = searcher.search(state, time_limit)
-	assert solved == (Cube.get_solved().tostring() in searcher.states)
-	return solved, len(searcher.states)
+	is_solved = searcher.search(state, time_limit)
+	assert is_solved == (Cube.get_solved().tostring() in searcher.states)
+	return is_solved, len(searcher.states)
 
 def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	x = values
 	y = []
 	tree_sizes = []
-	log.section(f"Optimizing {var}\nExpected runtime: {len(x)*time_limit*n:.2f} s\nGames evaluation: {n}")
+	log.section(f"Optimizing {var}\nExpected runtime: {len(x)*time_limit*n:.2f} s\nGames per evaluation: {n}")
 	log(f"Config\nTime limit per game: {time_limit:.2f} s\n{other_vars}")
 	for val in values:
 		vals = {**other_vars, var: val}
@@ -52,17 +52,17 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	plt.title(f"Solving in {time_limit:.2f} s with {other_vars}. Mean of {n} games")
 	plt.grid(True)
 	plt.savefig(f"data/local_analyses/mcts_{var}.png")
-	plt.show()
+	# plt.show()
 	plt.clf()
 
 if __name__ == "__main__":
 	# set_repr(False)
 	time_limit = .1
-	n = 200
+	n = 300
 	default_vars = { "depth": 8, "c": 1, "nu": 0.01, "workers": 10 }
 	get_other_vars = lambda excl: {kw: v for kw, v in default_vars.items() if kw != excl}
 	# seedsetter()
-	analyze_var(var="nu", values=np.linspace(0, 0.2, 30), other_vars=get_other_vars("nu"))
+	analyze_var(var="nu", values=np.linspace(0, 0.1, 30), other_vars=get_other_vars("nu"))
 	analyze_var(var="depth", values=np.linspace(1, 20, 20).astype(int), other_vars=get_other_vars("depth"))
 	analyze_var(var="c", values=np.linspace(0, 5, 20), other_vars=get_other_vars("c"))
 	analyze_var(var="workers", values=np.unique(np.logspace(1, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
