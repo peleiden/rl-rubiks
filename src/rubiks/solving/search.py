@@ -152,18 +152,19 @@ class PolicySearch(DeepSearcher):
 		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
 
 class MCTS(DeepSearcher):
-	def __init__(self, net: Model, c: float, nu: float, search_graph: bool):
+	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers=100):
 		super().__init__(net)
 		# Hyperparameters: c controls exploration and nu controls virtual loss updation us
 		self.c = c
 		self.nu = nu
 		self.search_graph = search_graph
+		self.workers = workers
 
 		self.states = dict()
 		self.net = net
 
 	@no_grad
-	def search(self, state: np.ndarray, time_limit: float, workers=100) -> bool:
+	def search(self, state: np.ndarray, time_limit: float) -> bool:
 		self.reset()
 
 		self.tt.tick()
@@ -187,7 +188,7 @@ class MCTS(DeepSearcher):
 					self._shorten_action_queue()
 				return True
 			# Gets new paths and leaves to expand from
-			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], time_limit) for _ in range(workers)])
+			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], time_limit) for _ in range(self.workers)])
 			
 		return False
 
