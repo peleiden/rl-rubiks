@@ -1,5 +1,4 @@
 import os
-import json
 from glob import glob as glob #glob
 from ast import literal_eval
 
@@ -114,6 +113,8 @@ class EvalJob:
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}
+			else:
+				raise Exception(f"Kwargs have not been prepared for the DeepSearcher {searcher}")
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
 			#DeepSearchers might have to test multiple NN's
 			for folder in glob(f"{search_location}/*/")+[search_location]:
@@ -124,14 +125,14 @@ class EvalJob:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
 			self.logger.log(f"Loaded model from {search_location}")
 		else:
-			self.agents = {str(searcher): Agent(searcher)}
+			searcher = searcher()
+			self.agents = {searcher: Agent(searcher)}
 
-		self.logger.log(f"Initialized {self.name} with agents {' '.join(agent for agent in self.agents.keys())}")
+		self.logger.log(f"Initialized {self.name} with agents {' '.join(str(agent) for agent in self.agents)}")
 		self.logger.log(f"TIME ESTIMATE: {len(self.agents)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
 
 	def execute(self):
 		self.logger.log(f"Beginning evaluator {self.name}")
-		print(self.agents)
 		for name, agent in self.agents.items():
 			self.logger.section(f'Evaluationg agent {name}')
 			res = self.evaluator.eval(agent)
