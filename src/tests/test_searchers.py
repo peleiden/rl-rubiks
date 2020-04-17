@@ -13,10 +13,10 @@ class TestMCTS(MainTest):
 	def test_search(self):
 		net = Model(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
-		searcher = MCTS(net, c=1, nu=10)
+		searcher = MCTS(net, c=1, nu=.1, search_graph=True, workers=10)
 		
 		# Generates a search tree and tests its correctness
-		searcher.search(state, 1, 100)
+		searcher.search(state, 1)
 		for state in searcher.states.values():
 			# Test neighbors and leaf status
 			assert not state.is_leaf == all(state.neighs)

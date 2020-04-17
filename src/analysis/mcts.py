@@ -66,12 +66,13 @@ def solve(depth: int, c: float, nu: float, workers: int, time_limit: float):
 	return solved, len(searcher.states)
 
 def analyse_workers(n: int):
-	workers = np.arange(1, 101, 20)
+	workers = np.unique(np.logspace(0, 2, 20).astype(int))
 	y = []
 	tree_sizes = []
+	depth = 8; c = 1; nu = .1; time_limit = .5
 	log.section(f"Optimizing number of workers\nExpected runtime: {len(workers)*.5*n} s")
 	for x in workers:
-		solved, lens = zip(*[solve(8, c=1, nu=.1, workers=x, time_limit=.5) for _ in range(n)])
+		solved, lens = zip(*[solve(depth=depth, c=c, nu=nu, workers=x, time_limit=time_limit) for _ in range(n)])
 		y.append(np.mean(solved))
 		tree_sizes.append(np.mean(lens))
 		log(f"Pct. solved at {x} workers: {y[-1]*100:.2f} %. Avg tree size: {tree_sizes[-1]:.0f}")
@@ -87,19 +88,19 @@ def analyse_workers(n: int):
 	ax2 = ax1.twinx()
 	colour = "tab:red"
 	ax2.set_ylabel("Avg tree size")
-	ax2.set_ylim(np.array([-.05, 1.05]))
+	ax2.set_ylim(np.array([-.05, 1.05])*max(tree_sizes))
 	ax2.plot(workers, tree_sizes, color=colour)
 	ax2.tick_params(axis="y", labelcolor=colour)
 	
 	# fig.grid(True)
 	fig.savefig("data/local_analyses/mcts_workers.png")
-	fig.show()
-	fig.clf()
+	plt.show()
+	plt.clf()
 	
 
 if __name__ == "__main__":
 	# set_repr(False)
-	n = 1
+	n = 30
 	# seedsetter()
 	# analyse_mcts(100, 1)
 	# optimize_time_limit()

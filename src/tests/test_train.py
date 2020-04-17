@@ -15,7 +15,8 @@ class TestTrain(MainTest):
 		#The standard test
 		net = Model(ModelConfig()).to(gpu)
 		evaluator = Evaluator(2, 2, [2])
-		train = Train(rollouts=2, batch_size=2, loss_weighting='none',  rollout_games=2, rollout_depth=3, optim_fn=torch.optim.Adam, searcher_class=PolicySearch, lr=1e-6, evaluations=1, evaluator=evaluator)
+		agent = DeepAgent(PolicySearch(None))
+		train = Train(rollouts=2, batch_size=2, loss_weighting='none',  rollout_games=2, rollout_depth=3, optim_fn=torch.optim.Adam, agent=agent, lr=1e-6, evaluations=1, evaluator=evaluator)
 
 		# Current
 		net, min_net = train.train(net)

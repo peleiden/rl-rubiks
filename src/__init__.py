@@ -20,7 +20,7 @@ agents = [
 	{ "name": "BFS", "agent": Agent(BFS()) },
 	{ "name": "Deterministisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
 	{ "name": "Stokastisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, True)) },
-	{ "name": "Dybkube", "agent": DeepAgent(MCTS.from_saved(net_loc, 1, 1, True)) },
+	{ "name": "Dybkube", "agent": DeepAgent(MCTS.from_saved(net_loc, 1, 1, True, 1)) },
 ]
 
 def as69(state: np.ndarray):
