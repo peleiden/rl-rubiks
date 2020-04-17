@@ -46,12 +46,12 @@ options = {
 		'type':	    lambda args: [int(args.split()[0]), int(args.split()[1])],
 	},
 	'mcts_c': {
-		'default':	1,
+		'default':	0.6897,
 		'help':		'Exploration parameter c for MCTS',
 		'type':		float,
 	},
 	'mcts_nu': {
-		'default':	.01,
+		'default':	.0062,
 		'help':		'Virtual loss nu for MCTS',
 		'type':		float,
 	},

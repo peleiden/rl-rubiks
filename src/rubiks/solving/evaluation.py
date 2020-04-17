@@ -15,7 +15,7 @@ from src.rubiks.solving.agents import Agent
 def _eval_game(cfg: (Agent, int, int)):
 	agent, max_time, depth = cfg
 	turns_to_complete = -1  # -1 for unfinished
-	state, _, _ = Cube.scramble(depth)
+	state, _, _ = Cube.scramble(depth, True)
 	solution_found, n_actions = agent.generate_action_queue(state, max_time)
 	if solution_found:
 		turns_to_complete = n_actions

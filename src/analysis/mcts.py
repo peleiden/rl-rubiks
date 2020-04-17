@@ -57,15 +57,15 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 
 if __name__ == "__main__":
 	# set_repr(False)
-	time_limit = .1
+	time_limit = .2
 	n = 300
 	default_vars = { "depth": 8, "c": 1, "nu": 0.01, "workers": 10 }
 	get_other_vars = lambda excl: {kw: v for kw, v in default_vars.items() if kw != excl}
 	# seedsetter()
-	analyze_var(var="nu", values=np.linspace(0, 0.1, 30), other_vars=get_other_vars("nu"))
-	analyze_var(var="depth", values=np.linspace(1, 20, 20).astype(int), other_vars=get_other_vars("depth"))
-	analyze_var(var="c", values=np.linspace(0, 5, 20), other_vars=get_other_vars("c"))
-	analyze_var(var="workers", values=np.unique(np.logspace(1, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
+	analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
+	# analyze_var(var="depth", values=np.arange(1, 21, 1), other_vars=get_other_vars("depth"))
+	analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
+	analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
 
 
 

@@ -152,7 +152,7 @@ class PolicySearch(DeepSearcher):
 		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
 
 class MCTS(DeepSearcher):
-	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers=100):
+	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers=10):
 		super().__init__(net)
 		# Hyperparameters: c controls exploration and nu controls virtual loss updation us
 		self.c = c

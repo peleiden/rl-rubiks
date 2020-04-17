@@ -152,17 +152,20 @@ class Train:
 				self.tt.end_section("Target value average")
 
 				self.agent.update_net(net)
+				self.tt.section(f"Evaluating using agent {self.agent}")
 				with unverbose:
 					eval_results = self.evaluator.eval(self.agent)
 				eval_reward = (eval_results != -1).mean()
-
 				self.eval_rewards.append(eval_reward)
+				self.tt.end_section(f"Evaluating using agent {self.agent}")
 
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
-		self.log(f"Best net found to have loss of {lowest_loss}")
-		self.log(f"Total training time: {self.tt.stringify_time(self.tt.tock(), 's')}")
-		self.log(f"States witnessed: {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth)}")
+		self.log("\n".join([
+			f"Best net found to have loss of {lowest_loss}",
+			f"Total training time: {self.tt.stringify_time(self.tt.tock()-self.tt.get_sections()[f'Evaluating using agent {self.agent}'], 's')}",
+			f"States witnessed: {TickTock.thousand_seps(self.rollouts * self.rollout_games * self.rollout_depth)}",
+		]))
 
 		return net, min_net
 
