@@ -30,7 +30,7 @@ options = {
 	},
 	'games': {
 		'default':  10000,
-		'help':	    'Number of games to play in evaluation for each agent.',
+		'help':	    'Number of games to play in evaluation for each depth, for each agent.',
 		'type':	    int,
 	},
 	'max_time': {
@@ -93,6 +93,7 @@ class EvalJob:
 
 		assert isinstance(games, int) and games
 		assert max_time > 0
+		scrambling = range(*scrambling)
 		assert scrambling[0] #dirty check for iter and not starting with 0 :)
 
 		#Create evaluator
