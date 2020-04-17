@@ -121,6 +121,7 @@ class EvalJob:
 				self.agents[f'{searcher} {"" if folder==search_location else folder}'] = DeepAgent(searcher)
 			if not self.agents:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
+			self.logger.log(f"Loaded model from {search_location}")
 		else:
 			self.agents = {str(searcher): Agent(searcher)}
 
