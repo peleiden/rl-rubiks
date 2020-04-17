@@ -94,7 +94,7 @@ class TrainJob:
 
 			agent = DeepAgent(PolicySearch(None)),
 			eval_games: int = 150,
-			max_time: float = 1,
+			max_time: float = .5,
 			scrambling_depths: tuple = (10,),
 
 			verbose: bool = True,
