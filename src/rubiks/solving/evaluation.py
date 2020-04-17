@@ -24,10 +24,10 @@ def _eval_game(cfg: (Agent, int, int)):
 
 class Evaluator:
 	def __init__(self,
-				 n_games			= 420,  # Nice
-				 max_time			= 600,  # Max time to completion per game
-				 scrambling_depths	= range(1, 10),
-				 logger: Logger		= NullLogger()
+			n_games			= 420,  # Nice
+			max_time			= 600,  # Max time to completion per game
+			scrambling_depths	= range(1, 10),
+			logger: Logger		= NullLogger()
 		):
 
 		self.n_games = n_games
