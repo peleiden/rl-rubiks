@@ -89,6 +89,9 @@ class Model(nn.Module):
 		new_net = Model(self.config)
 		new_net.load_state_dict(new_state_dict)
 		return new_net
+
+	def get_params(self):
+		return torch.cat([x.flatten() for x in self.state_dict().values()]).clone()
 	
 	def save(self, save_dir: str, is_min=False):
 		"""

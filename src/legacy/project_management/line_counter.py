@@ -3,6 +3,7 @@ os.chdir(sys.path[0])
 from pathlib import Path
 import git
 import matplotlib.pyplot as plt
+plt.rcParams.update({"font.size": 22})
 import numpy as np
 from collections import deque, defaultdict
 

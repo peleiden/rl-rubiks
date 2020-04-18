@@ -1,6 +1,7 @@
 import os
 
 import matplotlib.pyplot as plt
+plt.rcParams.update({"font.size": 22})
 import numpy as np
 from time import perf_counter
 

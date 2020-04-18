@@ -167,6 +167,7 @@ class TrainJob:
 
 		train.plot_training(self.location)
 		train.plot_value_targets(self.location)
+		train.plot_net_changes(self.location)
 		np.save(f"{self.location}/rollouts.npy", train.train_rollouts)
 		np.save(f"{self.location}/policy_losses.npy", train.policy_losses)
 		np.save(f"{self.location}/value_losses.npy", train.value_losses)
