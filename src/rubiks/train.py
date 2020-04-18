@@ -162,7 +162,7 @@ class Train:
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
-		eval_time = sum(self.tt.get_sections()[f'Evaluating using agent {self.agent}']['hits'])
+		eval_time = sum(self.tt.get_sections()[f'Evaluating using agent {self.agent}']['hits']) if len(self.evaluations) else 0
 		train_time = total_time - eval_time
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth
 		states_per_sec = int(nstates / train_time)

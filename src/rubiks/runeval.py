@@ -113,8 +113,8 @@ class EvalJob:
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}
-			else:
-				raise Exception(f"Kwargs have not been prepared for the DeepSearcher {searcher}")
+			else: raise Exception(f"Kwargs have not been prepared for the DeepSearcher {searcher}")
+
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
 			#DeepSearchers might have to test multiple NN's
 			for folder in glob(f"{search_location}/*/")+[search_location]:
@@ -124,6 +124,7 @@ class EvalJob:
 			if not self.agents:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
 			self.logger.log(f"Loaded model from {search_location}")
+
 		else:
 			searcher = searcher()
 			self.agents = {searcher: Agent(searcher)}
