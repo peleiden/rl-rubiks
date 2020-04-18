@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+plt.rcParams.update({"font.size": 22})
 import numpy as np
 
 from src.rubiks import gpu, set_repr

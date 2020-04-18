@@ -2,6 +2,7 @@ import os
 from typing import List
 
 import matplotlib.pyplot as plt
+plt.rcParams.update({"font.size": 22})
 import numpy as np
 import torch
 
@@ -20,10 +21,12 @@ class Train:
 
 	moves_per_rollout: int
 
+	train_rollouts: np.ndarray
 	value_losses: np.ndarray
 	policy_losses: np.ndarray
 	train_losses: np.ndarray
-	train_rollouts: np.ndarray
+	param_changes = list()
+	param_total_changes = list()
 	eval_rewards = list()
 	depths: np.ndarray
 	avg_value_targets: List[np.ndarray] = list()
@@ -97,6 +100,8 @@ class Train:
 		lowest_loss = float("inf")
 		min_net = net.clone()
 		self.agent.update_net(net)
+		params = net.get_params()
+		orig_params = params
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, self.gamma)
@@ -104,6 +109,7 @@ class Train:
 																											  np.zeros(self.rollouts),\
 																											  np.empty(self.rollouts),\
 																											  list(), list()
+		self.param_changes, self.param_total_changes = list(), list()
 
 		for rollout in range(self.rollouts):
 			torch.cuda.empty_cache()
@@ -147,11 +153,18 @@ class Train:
 			if rollout in np.linspace(self.rollouts*.01, self.rollouts*.99, 100).astype(int):
 				lr_scheduler.step()
 				lr = optimizer.param_groups[0]["lr"]
-				self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
+				if self.gamma != 1:
+					self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
 
 			if self.train_losses[rollout] < lowest_loss:
 				lowest_loss = self.train_losses[rollout]
 				min_net = net.clone()
+
+			model_change = torch.sqrt((net.get_params()-params)**2).mean().cpu()
+			model_total_change = torch.sqrt((net.get_params()-orig_params)**2).mean().cpu()
+			params = net.get_params()
+			self.param_changes.append(float(model_change))
+			self.param_total_changes.append(model_total_change)
 
 			torch.cuda.empty_cache()
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
@@ -308,12 +321,12 @@ class Train:
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "training.png")
 		plt.savefig(path)
-		self.log(f"Saved plot to {path}")
+		self.log(f"Saved loss and evaluation plot to {path}")
 
 		if show: plt.show()
 		plt.clf()
 
-	def plot_value_targets(self, loc, show=False):
+	def plot_value_targets(self, loc: str, show=False):
 		self.log("Plotting average value targets")
 		plt.figure(figsize=(19.2, 10.8))
 		for target, rollout in zip(self.avg_value_targets, self.evaluations):
@@ -321,11 +334,27 @@ class Train:
 		plt.legend(loc=1)
 		plt.xlabel("Scrambling depth")
 		plt.ylabel("Average target value")
-		path = f"{loc}/avg_target_values.png"
+		path = os.path.join(loc, "avg_target_values.png")
 		plt.savefig(path)
 		if show: plt.show()
 		plt.clf()
-		self.log(f"Saved plot to {path}")
+		self.log(f"Saved value target plot to {path}")
+
+	def plot_net_changes(self, loc: str, show=False):
+		self.log("Plotting changes to network parameters")
+		plt.figure(figsize=(19.2, 10.8))
+		plt.plot(self.train_rollouts, self.param_changes, label="Change in network parameters")
+		plt.plot(self.train_rollouts, np.cumsum(self.param_changes), label="Cumulative change in network parameters")
+		plt.plot(self.train_rollouts, self.param_total_changes, label="Change in parameters since original network")
+		plt.legend(loc=2)
+		plt.xlabel("Rollout")
+		plt.ylabel("Euclidian distance")
+		plt.grid(True)
+		path = os.path.join(loc, "parameter_changes.png")
+		plt.savefig(path)
+		if show: plt.show()
+		plt.clf()
+		self.log(f"Saved network change plot to {path}")
 
 	@staticmethod
 	def _get_batches(size: int, bsize: int):
