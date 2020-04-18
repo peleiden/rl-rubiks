@@ -73,12 +73,12 @@ class Train:
 			"Created trainer",
 			f"Learning rate and gamma: {self.lr} and {self.gamma}",
 			f"  Learning rate will update 100 times during training: lr <- gamma * lr"
-			f"Optimizer: {self.optim}",
+			f"Optimizer:      {self.optim}",
 			f"Policy and value criteria: {self.policy_criterion} and {self.value_criterion}",
-			f"Rollouts: {self.rollouts}",
-			f"Batch size: {self.batch_size}",
-			f"Rollout games: {self.rollout_games}",
-			f"Rollout depth: {self.rollout_depth}",
+			f"Rollouts:       {self.rollouts}",
+			f"Batch size:     {self.batch_size}",
+			f"Rollout games:  {self.rollout_games}",
+			f"Rollout depth:  {self.rollout_depth}",
 			f"Loss weighting: {self.loss_weighting}",
 		]))
 		self.tt = TickTock()
