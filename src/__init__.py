@@ -14,7 +14,12 @@ from src.rubiks.cube.cube import Cube
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
-net_loc = "data/hpc-20-04-12"
+
+net_loc = os.path.join(
+		os.path.dirname(os.path.dirname(os.path.abspath(__file__))), #Get parent folder
+		'data',
+		'hpc-20-04-12'
+		)
 agents = [
 	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
 	{ "name": "BFS", "agent": Agent(BFS()) },
