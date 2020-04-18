@@ -127,7 +127,9 @@ class Model(nn.Module):
 		# First time the net is loaded, a feedforward is performed, as the first time is slow
 		# This avoids skewing evaluation results
 		with torch.no_grad():
+			model.eval()
 			model(Cube.as_oh(Cube.get_solved()).to(gpu))
+			model.train()
 		return model
 
 
