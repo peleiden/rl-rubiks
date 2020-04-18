@@ -76,11 +76,12 @@ class Parser:
 		if not experiments: #If configparser set nothing or only set defaults
 			self.argparser.set_defaults(**self.defaults)
 			args = self.argparser.parse_args(args)
+			if args.location: self.defaults['location'] = args.location
 			del args.config
 			experiments.append({'name': 'Experiment', **vars(args)})
 
 
-		if document: self._document_settings(with_config)
+		if document: self._document_settings(with_config, args.location)
 
 		return experiments
 
@@ -111,11 +112,13 @@ class Parser:
 		return experiments, with_config
 
 
-	def _document_settings(self, with_config: bool):
+	def _document_settings(self, with_config: bool, location: str):
 		"""
 		Saves all settings used for experiments for reproducability.
 		"""
-		if 'location' in self.defaults: self.save_location = self.defaults['location']
+		if location: self.save_location = location #To allow both for forced location and the automatic, default location
+		elif 'location' in self.defaults: self.save_location = self.defaults['location']
+
 		os.makedirs(self.save_location, exist_ok = True)
 
 		with open(f"{self.save_location}/{self.name}_config.ini", 'w') as f:
