@@ -120,7 +120,7 @@ class EvalJob:
 			for folder in glob(f"{search_location}/*/")+[search_location]:
 				if not os.path.isfile(os.path.join(folder, 'model.pt')): continue
 				searcher = searcher.from_saved(folder, **search_args)
-				self.agents[f'{searcher} {"" if folder==search_location else folder}'] = DeepAgent(searcher)
+				self.agents[f'{searcher} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'] = DeepAgent(searcher)
 			if not self.agents:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
 			self.logger.log(f"Loaded model from {search_location}")
