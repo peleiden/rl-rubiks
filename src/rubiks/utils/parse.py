@@ -73,15 +73,18 @@ class Parser:
 
 		experiments, with_config = self._read_config(conf_arg, args)
 
+		location = ''
 		if not experiments: #If configparser set nothing or only set defaults
 			self.argparser.set_defaults(**self.defaults)
 			args = self.argparser.parse_args(args)
-			if args.location: self.defaults['location'] = args.location
+			if args.location:
+				self.defaults['location'] = args.location
+				location = args.location
 			del args.config
 			experiments.append({'name': 'Experiment', **vars(args)})
 
 
-		if document: self._document_settings(with_config, args.location)
+		if document: self._document_settings(with_config, location)
 
 		return experiments
 
