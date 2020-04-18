@@ -17,7 +17,7 @@ train_folders = sorted(glob('data/local_train2*')) #Stops working in the next mi
 
 options = {
 	'location': {
-		'default':  train_folders[0] if train_folders else '.',
+		'default':  train_folders[-1] if train_folders else '.',
 		'help':	    "Location to search for model and save results.\nMust use location/<run_name>/model.pt structure.",
 		'type':	    str,
 	},
