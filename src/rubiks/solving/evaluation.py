@@ -1,6 +1,8 @@
 from os import cpu_count
+
 import torch.multiprocessing as mp
 import numpy as np
+import matplotlib.pyplot as plt
 
 from src.rubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS
 from src.rubiks.utils.logger import NullLogger, Logger
@@ -85,34 +87,46 @@ class Evaluator:
 	def approximate_time(self):
 		return self.max_time*self.n_games*len(self.scrambling_depths)
 
-	def eval_hists(self, eval_results: dict):
+	def plot_this_eval(self, eval_results: dict, save_dir: str,  **kwargs):
+		self.log("Creating plot of evaluation")
+		settings = {
+			'n_games': self.n_games,
+			'max_time': self.max_time,
+			'scrambling_depths': self.scrambling_depths
+		}
+		self.plot_an_eval(eval_results, save_dir, settings, **kwargs)
+
+	@staticmethod
+	def plot_an_eval(eval_results: dict, save_dir: str,  eval_settings: dict):
 		"""
 		{agent: results from self.eval}
 		"""
-		raise NotImplementedError
+		for agent, results in eval_results.items():
+			#Plot over scramble depth
+			win_percentages = (results != -1).mean(axis=1) * 100
 
-
-if __name__ == "__main__":
-	from src.rubiks.solving.agents import Agent, DeepAgent
-	e = Evaluator(n_games = 50,
-				  max_time = 1,
-				  logger = Logger("local_evaluation/evaluations.log", "Testing MCTS", True),
-				  scrambling_depths = range(10, 15)
-	)
+			raise  NotImplementedError
+# if __name__ == "__main__":
+	###USE NEW runeval instead
+	# from src.rubiks.solving.agents import Agent, DeepAgent
+	# e = Evaluator(n_games = 50,
+				  # max_time = 1,
+				  # logger = Logger("local_evaluation/evaluations.log", "Testing MCTS", True),
+				  # scrambling_depths = range(10, 15)
+	# )
 	# agent = PolicyCube.from_saved("data/local_train")
 	# results = e.eval(agent, 1)
-	agents = [
+	# agents = [
 		# Agent(RandomDFS()),
 		# Agent(BFS()),
 		# DeepAgent(PolicySearch.from_saved("data/local_train", False)),
 		# DeepAgent(PolicySearch.from_saved("data/local_train", True)),
-		DeepAgent(MCTS.from_saved("data/hpc-20-04-12", 1, 1, False)),
+		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12", 1, 1, False)),
 		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
 		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
-	]
-	for agent in agents:
-		e.eval(agent)
+	# ]
+	# for agent in agents:
+		# e.eval(agent)
 	# results = e.eval(PolicyCube.from_saved("data/local_train"))
-	# TODO: Boxplot with completion turns for each scrambling depth
 
 

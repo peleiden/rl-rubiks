@@ -35,7 +35,7 @@ options = {
 	'max_time': {
 		'default':  30,
 		'help':	    'Max searching time for agent',
-		'type':	    int,
+		'type':	    float,
 	},
 	'scrambling': {
 		'default':  '10 25',
@@ -134,12 +134,15 @@ class EvalJob:
 
 	def execute(self):
 		self.logger.log(f"Beginning evaluator {self.name}")
+		agent_results = {}
 		for name, agent in self.agents.items():
 			self.logger.section(f'Evaluationg agent {name}')
 			res = self.evaluator.eval(agent)
-			# self.evaluator.plot_eller_noget
-
 			np.save(f"{self.location}/{name}_results.npy", res)
+			agent_results[name] = res
+		#TODO: Finish evaluator plotter
+		# self.evaluator.plot_this_eval(agent_results, f"{self.location}/{self.name}_eval.png")
+
 
 
 
