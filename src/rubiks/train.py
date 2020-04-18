@@ -144,7 +144,7 @@ class Train:
 			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
 			self.tt.end_section("Training loop")
 			
-			if rollout in np.linspace(self.rollouts/100, self.rollouts, 100).astype(int):
+			if rollout in np.linspace(self.rollouts*.01, self.rollouts*.99, 100).astype(int):
 				lr_scheduler.step()
 				lr = optimizer.param_groups[0]["lr"]
 				self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
