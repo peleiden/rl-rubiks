@@ -55,6 +55,11 @@ options = {
 		'help':	    'Learning rate of parameter update',
 		'type':	    float,
 	},
+	'gamma': {
+		'default':  1,
+		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr 100 times during training',
+		'type':	    float,
+	},
 	'optim_fn': {
 		'default':  'RMSprop',
 		'help':	    'Name of optimization function corresponding to class in torch.optim',
@@ -86,15 +91,16 @@ class TrainJob:
 			loss_weighting: str,
 			batch_size: int,
 			lr: float,
+			gamma: float,
 			optim_fn: str,
 			is2024: bool,
 			evaluations: int,
 
 			# Currently not set by argparser/configparser
 
-			agent = DeepAgent(PolicySearch(None)),
+			agent = DeepAgent(PolicySearch(None, True)),
 			eval_games: int = 150,
-			max_time: float = .5,
+			max_time: float = .1,
 			scrambling_depths: tuple = (10,),
 
 			verbose: bool = True,
@@ -116,6 +122,8 @@ class TrainJob:
 		assert 0 < self.batch_size <= self.rollout_games * self.rollout_depth
 		self.lr = lr
 		assert float(lr) and lr <= 1
+		self.gamma = gamma
+		assert 0 < gamma <= 1
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
 
@@ -139,16 +147,17 @@ class TrainJob:
 
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*self.evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
-				batch_size		= self.batch_size,
+				batch_size			= self.batch_size,
 				rollout_games		= self.rollout_games,
 				rollout_depth		= self.rollout_depth,
 				loss_weighting		= self.loss_weighting,
-				optim_fn		= self.optim_fn,
-				lr			= self.lr,
-				agent			= self.agent,
-				logger			= self.logger,
-				evaluations		= self.evaluations,
-				evaluator		= self.evaluator,
+				optim_fn			= self.optim_fn,
+				lr					= self.lr,
+				gamma				= self.gamma,
+				agent				= self.agent,
+				logger				= self.logger,
+				evaluations			= self.evaluations,
+				evaluator			= self.evaluator,
 		)
 
 		net = Model(self.model_cfg, self.logger).to(gpu)

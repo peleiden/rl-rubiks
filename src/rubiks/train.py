@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-
 from src.rubiks.solving.search import DeepSearcher
 from src.rubiks.solving.agents import DeepAgent
 from src.rubiks import cpu, gpu, no_grad
@@ -37,6 +36,7 @@ class Train:
 			loss_weighting: str,
 			optim_fn,
 			lr: float,
+			gamma: float,
 			agent: DeepAgent,
 			evaluator: Evaluator,
 			evaluations: int,
@@ -58,16 +58,20 @@ class Train:
 		self.evaluations.sort()
 		self.agent = agent
 
-		self.optim = optim_fn
 		self.lr	= lr
-
+		self.optim = optim_fn
 		self.policy_criterion = policy_criterion(reduction='none')
 		self.value_criterion = value_criterion(reduction='none')
+		self.gamma = gamma
 
+		self.evaluator = evaluator
 		self.log = logger
-		self.log(f"Created trainer with optimizer: {self.optim}, policy and value criteria: {self.policy_criterion}, {self.value_criterion}. Learning rate: {self.lr}")
 		self.log("\n".join([
-			"Training procedure",
+			"Created trainer",
+			f"Learning rate and gamma: {self.lr} and {self.gamma}",
+			f"  Learning rate will update 100 times during training: lr <- gamma * lr"
+			f"Optimizer: {self.optim}",
+			f"Policy and value criteria: {self.policy_criterion} and {self.value_criterion}",
 			f"Rollouts: {self.rollouts}",
 			f"Batch size: {self.batch_size}",
 			f"Rollout games: {self.rollout_games}",
@@ -75,8 +79,6 @@ class Train:
 			f"Loss weighting: {self.loss_weighting}",
 		]))
 		self.tt = TickTock()
-
-		self.evaluator = evaluator
 
 	def train(self, net: Model) -> (Model, Model):
 		"""
@@ -97,6 +99,7 @@ class Train:
 		self.agent.update_net(net)
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
+		lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, self.gamma)
 		self.policy_losses, self.value_losses, self.train_losses, self.eval_rewards, self.avg_value_targets = np.zeros(self.rollouts),\
 																											  np.zeros(self.rollouts),\
 																											  np.empty(self.rollouts),\
@@ -107,31 +110,44 @@ class Train:
 
 			self.tt.section("Training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
-			self.tt.end_section("Training data")
-			self.tt.section("Training data to device")
+			self.tt.section("To cuda")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
 																		 value_targets.to(gpu),\
 																		 policy_targets.to(gpu),\
 																		 loss_weights.to(gpu)
-			self.tt.end_section("Training data to device")
+			self.tt.end_section("To cuda")
+			self.tt.end_section("Training data")
 
 			self.tt.section("Training loop")
 			net.train()
 			batches = self._get_batches(self.moves_per_rollout, self.batch_size)
 			for i, batch in enumerate(batches):
 				optimizer.zero_grad()
+				self.tt.section("Feedforward")
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
+				self.tt.end_section("Feedforward")
 
 				# Use loss on both policy and value
+				self.tt.section("Loss calculation")
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
 				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
 				loss = policy_loss + value_loss
+				self.tt.end_section("Loss calculation")
+				self.tt.section("Backprop")
 				loss.backward()
 				optimizer.step()
+				self.tt.end_section("Backprop")
+				self.tt.section("Store losses")
 				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy()
 				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
+				self.tt.end_section("Store losses")
 			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
 			self.tt.end_section("Training loop")
+			
+			if rollout in np.linspace(self.rollouts*.01, self.rollouts*.99, 100).astype(int):
+				lr_scheduler.step()
+				lr = optimizer.param_groups[0]["lr"]
+				self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
 
 			if self.train_losses[rollout] < lowest_loss:
 				lowest_loss = self.train_losses[rollout]
@@ -233,11 +249,13 @@ class Train:
 				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
 				self.adi_ff_batches *= 2
 		self.tt.end_section("ADI feedforward")
+		self.tt.section("Calculating targets")
 		values += rewards
 		values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
+		self.tt.end_section("Calculating targets")
 		if self.loss_weighting == "adaptive":
 			weighted = np.tile(1 / np.arange(1, self.rollout_depth + 1), self.rollout_games)
 			unweighted = np.ones_like(weighted)
