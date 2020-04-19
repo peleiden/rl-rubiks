@@ -146,7 +146,6 @@ class Evaluator:
 			plotables = (results != -1).any(axis=1)
 			results = [depth[depth != -1] for depth in results[plotables]]
 			depths = [eval_settings['scrambling_depths'][i] for i  in range(len(plotables)) if plotables[i]]
-			print(results, depths)
 			if len(depths): ax.boxplot(results, labels=depths)
 			ax.grid(True)
 
