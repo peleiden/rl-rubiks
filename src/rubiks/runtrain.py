@@ -66,7 +66,7 @@ options = {
 		'type':	    str,
 	},
 	'evaluations': {
-		'default':  10,
+		'default':  200,
 		'help':	    'Number of evaluations during training',
 		'type':	    int,
 	},
@@ -99,9 +99,9 @@ class TrainJob:
 			# Currently not set by argparser/configparser
 
 			agent = DeepAgent(PolicySearch(None, True)),
-			eval_games: int = 150,
-			max_time: float = .1,
-			scrambling_depths: tuple = (10,),
+			eval_games: int = 200,
+			max_time: float = .01,
+			scrambling_depths: tuple = (8,),
 
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),

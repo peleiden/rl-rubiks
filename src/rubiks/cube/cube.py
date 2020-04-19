@@ -29,12 +29,12 @@ def _sequence_scrambler(n: int):
 	A non-inplace scrambler that returns the state to each of the scrambles useful for ADI
 	"""
 	env = _Cube2024 if get_repr() else _Cube686
-	scrambled_states = np.empty((n, *env.get_solved_instance().shape), dtype=env.dtype)
+	scrambled_states = np.empty((n+1, *env.get_solved_instance().shape), dtype=env.dtype)
 	scrambled_states[0] = env.get_solved()
 
-	faces = np.random.randint(6, size = (n, ))
-	dirs = np.random.randint(2, size = (n, )).astype(bool)
-	for i, face, d in zip(range(n-1), faces, dirs):
+	faces = np.random.randint(6, size = (n+1, ))
+	dirs = np.random.randint(2, size = (n+1, )).astype(bool)
+	for i, face, d in zip(range(n), faces, dirs):
 		scrambled_states[i+1] = env.rotate(scrambled_states[i], face, d)
 	return scrambled_states, env.as_oh(scrambled_states)
 
@@ -85,7 +85,7 @@ class Cube:
 	@classmethod
 	def sequence_scrambler(cls, games: int, n: int):
 		"""
-		A non-inplace scrambler which returns the state to each of the scrambles useful for ADI
+		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
 		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
 		"""
 		# Multithreads if over 1000 games
