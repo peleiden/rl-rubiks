@@ -91,7 +91,7 @@ class Model(nn.Module):
 		return new_net
 
 	def get_params(self):
-		return torch.cat([x.flatten() for x in self.state_dict().values()]).clone()
+		return torch.cat([x.float().flatten() for x in self.state_dict().values()]).clone()
 	
 	def save(self, save_dir: str, is_min=False):
 		"""

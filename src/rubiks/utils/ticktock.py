@@ -31,10 +31,10 @@ class TickTock:
 		if name not in self._sections:
 			self._sections[name] = {"start": 0, "hits": [], "depth": self._section_depth}
 		self._section_depth += 1
-		self._sections[name]["tt"]["start"] = perf_counter()
+		self._sections[name]["start"] = perf_counter()
 
 	def end_section(self, name: str):
-		dt = perf_counter() - self._sections[name]["tt"]["start"]
+		dt = perf_counter() - self._sections[name]["start"]
 		self._sections[name]["hits"].append(dt)
 		self._section_depth -= 1
 	
