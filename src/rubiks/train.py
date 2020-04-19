@@ -19,7 +19,7 @@ from src.rubiks.utils.ticktock import TickTock
 
 class Train:
 
-	moves_per_rollout: int
+	states_per_rollout: int
 
 	train_rollouts: np.ndarray
 	value_losses: np.ndarray
@@ -50,7 +50,7 @@ class Train:
 
 		self.rollouts = rollouts
 		self.train_rollouts = np.arange(self.rollouts)
-		self.batch_size = self.moves_per_rollout if not batch_size else batch_size
+		self.batch_size = self.states_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
 		self.depths = np.arange(1, rollout_depth)
@@ -90,7 +90,7 @@ class Train:
 		"""
 		self.tt.reset()
 		self.tt.tick()
-		self.moves_per_rollout = self.rollout_depth * self.rollout_games
+		self.states_per_rollout = (self.rollout_depth + 1) * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
 		self.log("\n".join([
 			f"Rollouts: {self.rollouts}",
@@ -126,7 +126,7 @@ class Train:
 
 			self.tt.section("Training loop")
 			net.train()
-			batches = self._get_batches(self.moves_per_rollout, self.batch_size)
+			batches = self._get_batches(self.states_per_rollout, self.batch_size)
 			for i, batch in enumerate(batches):
 				optimizer.zero_grad()
 				self.tt.section("Feedforward")
@@ -176,7 +176,7 @@ class Train:
 				targets = value_targets.cpu().numpy()
 				self.avg_value_targets.append(np.empty_like(self.depths, dtype=float))
 				for i, depth in enumerate(self.depths):
-					idcs = np.arange(self.rollout_games) * self.rollout_depth + depth
+					idcs = np.arange(self.rollout_games) * (self.rollout_depth+1) + depth
 					self.avg_value_targets[-1][i] = targets[idcs].mean()
 				self.tt.end_section("Target value average")
 
@@ -192,8 +192,8 @@ class Train:
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
 		eval_time = sum(self.tt.get_sections()[f'Evaluating using agent {self.agent}']['hits']) if len(self.evaluations) else 0
-		train_time = sum(self.tt.get_sections()["Training loop"])
-		nstates = self.rollouts * self.rollout_games * self.rollout_depth * 12
+		train_time = sum(self.tt.get_sections()["Training loop"]["hits"])
+		nstates = self.rollouts * self.rollout_games * (self.rollout_depth+1) * 12
 		states_per_sec = int(nstates / train_time)
 		self.log("\n".join([
 			f"Best net found to have loss of {lowest_loss:.4f}",
@@ -207,7 +207,7 @@ class Train:
 		return net, min_net
 
 	def get_adi_ff_slices(self):
-		data_points = self.rollout_games * self.rollout_depth * Cube.action_dim
+		data_points = self.rollout_games * (self.rollout_depth+1) * Cube.action_dim
 		slice_size = data_points // self.adi_ff_batches + 1
 		# Final slice may have overflow, however this is simply ignored when indexing
 		slices = [slice(i*slice_size, (i+1)*slice_size) for i in range(self.adi_ff_batches)]
@@ -256,7 +256,7 @@ class Train:
 			try:
 				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
 				values = torch.cat(value_parts).cpu()
-				assert values.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
+				assert values.shape == torch.Size([self.rollout_games*(self.rollout_depth+1)*Cube.action_dim])
 				break
 			except RuntimeError:  # Caused by running out of vram
 				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
@@ -270,14 +270,14 @@ class Train:
 		value_targets[solved_scrambled_states] = 0
 		self.tt.end_section("Calculating targets")
 		if self.loss_weighting == "adaptive":
-			weighted = np.tile(1 / np.arange(1, self.rollout_depth + 1), self.rollout_games)
+			weighted = np.tile(1 / np.arange(1, self.rollout_depth+2), self.rollout_games)
 			unweighted = np.ones_like(weighted)
 			alpha = rollout / self.rollouts
 			loss_weights = (1-alpha) * weighted + alpha * unweighted
 		elif self.loss_weighting == "weighted":
-			loss_weights = np.tile(1 / np.arange(1, self.rollout_depth + 1), self.rollout_games)
+			loss_weights = np.tile(1 / np.arange(1, self.rollout_depth+2), self.rollout_games)
 		else:
-			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
+			loss_weights = np.ones(self.rollout_games*(self.rollout_depth+1))
 		loss_weights /= loss_weights.sum()
 		assert np.isclose(loss_weights.sum(), 1)
 
@@ -290,7 +290,7 @@ class Train:
 		self.log("Making plot of training")
 		ylim = np.array([-0.1, 1.1])
 		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8))
-		loss_ax.set_xlabel(f"Rollouts, each of {self.moves_per_rollout} moves")
+		loss_ax.set_xlabel(f"Rollouts, each of {self.states_per_rollout} moves")
 		loss_ax.set_ylim(ylim*np.max(self.train_losses))
 
 		colour = "red"
@@ -314,7 +314,7 @@ class Train:
 		loss_ax.legend(h1, l1, loc=1)
 
 		fig.tight_layout()
-		plt.title(title if title else f"Training - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth)}")
+		plt.title(title if title else f"Training - {TickTock.thousand_seps(self.rollouts*self.rollout_games*(self.rollout_depth+1)*12)} states")
 		if semi_logy: plt.semilogy()
 		plt.grid(True)
 
@@ -343,9 +343,8 @@ class Train:
 	def plot_net_changes(self, loc: str, show=False):
 		self.log("Plotting changes to network parameters")
 		plt.figure(figsize=(19.2, 10.8))
-		plt.plot(self.train_rollouts, self.param_changes, label="Change in network parameters")
 		plt.plot(self.train_rollouts, np.cumsum(self.param_changes), label="Cumulative change in network parameters")
-		plt.plot(self.train_rollouts, self.param_total_changes, label="Change in parameters since original network")
+		plt.plot(self.train_rollouts, self.param_total_changes, linestyle="dashdot", label="Change in parameters since original network")
 		plt.legend(loc=2)
 		plt.xlabel("Rollout")
 		plt.ylabel("Euclidian distance")
