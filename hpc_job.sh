@@ -12,6 +12,7 @@
 #BSUB -N
 
 echo "Running job"
-python3 src/rubiks/runtrain.py --config data/configs/hpc_run.ini
+python3 src/rubiks/runtrain.py --config data/configs/hpc_train.ini
+python3 src/rubiks/runeval.py --config data/configs/hpc_eval.ini
 echo "Finished running job"
 
