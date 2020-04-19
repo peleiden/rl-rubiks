@@ -23,25 +23,25 @@ log = Logger(os.path.join("data", "local_analyses", "cube.log"), "Cube")
 def scramble():
 	states = np.empty((scrambles, *Cube.get_solved_instance().shape), dtype=Cube.dtype)
 	for i in range(scrambles):
-		tt.section(f"Scrambling of depth {depth}")
+		tt.profile(f"Scrambling of depth {depth}")
 		states[i], _, _ = Cube.scramble(depth)
-		tt.end_section(f"Scrambling of depth {depth}")
+		tt.end_profile(f"Scrambling of depth {depth}")
 	return states
 
 def oh(states):
 	n_states = states.shape[-1]
-	tt.section(f"One-hot encoding of {n_states} states")
+	tt.profile(f"One-hot encoding of {n_states} states")
 	oh = Cube.as_oh(states)
-	tt.end_section(f"One-hot encoding of {n_states} states")
+	tt.end_profile(f"One-hot encoding of {n_states} states")
 	return oh
 
 def perform_actions():
 	state = Cube.get_solved_instance()
 	for i in range(actions):
 		action = Cube.action_space[np.random.choice(Cube.action_dim)]
-		tt.section("Performing one action")
+		tt.profile("Performing one action")
 		state = Cube.rotate(state, *action)
-		tt.end_section("Performing one action")
+		tt.end_profile("Performing one action")
 
 def analyse_cube():
 	log("\n".join([

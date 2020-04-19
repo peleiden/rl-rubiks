@@ -178,9 +178,9 @@ class MCTS(DeepSearcher):
 		paths = [deque([])]
 		leaves = [self.states[state.tostring()]]
 		while self.tt.tock() < time_limit:
-			self.tt.section("Expanding leaves")
+			self.tt.profile("Expanding leaves")
 			solve_leaf, solve_action = self.expand_leaves(leaves)
-			self.tt.end_section("Expanding leaves")
+			self.tt.end_profile("Expanding leaves")
 			if solve_leaf != -1:  # If a solution is found
 				self.action_queue = paths[solve_leaf] + deque([solve_action])
 				if self.search_graph:
@@ -194,7 +194,7 @@ class MCTS(DeepSearcher):
 	def search_leaf(self, node: Node, time_limit: float) -> (list, Node):
 		# Finds leaf starting from state
 		path = deque()
-		self.tt.section("Exploring next node")
+		self.tt.profile("Exploring next node")
 		while not node.is_leaf and self.tt.tock() < time_limit:
 			sqrtN = np.sqrt(node.N.sum())
 			if sqrtN < self.eps:  # Randomly chooses path the first time a path is found
@@ -208,7 +208,7 @@ class MCTS(DeepSearcher):
 			node.L[action] += self.nu
 			path.append(action)
 			node = node.neighs[action]
-		self.tt.end_section("Exploring next node")
+		self.tt.end_profile("Exploring next node")
 		return path, node
 
 	def _update_neighbors(self, state: np.ndarray):
@@ -219,7 +219,7 @@ class MCTS(DeepSearcher):
 		"""
 		state_str = state.tostring()
 		for i, action in enumerate(Cube.action_space):
-			self.tt.section("Update neighbors")
+			self.tt.profile("Update neighbors")
 			new_state = Cube.rotate(state, *action)
 			new_state_str = new_state.tostring()
 			if new_state_str in self.states:
@@ -227,7 +227,7 @@ class MCTS(DeepSearcher):
 				self.states[new_state_str].neighs[Cube.rev_action(i)] = self.states[state_str]
 				if all(self.states[new_state_str].neighs):
 					self.states[new_state_str].is_leaf = False
-			self.tt.end_section("Update neighbors")
+			self.tt.end_profile("Update neighbors")
 		if all(self.states[state_str].neighs):
 			self.states[state_str].is_leaf = False
 
@@ -253,15 +253,15 @@ class MCTS(DeepSearcher):
 
 		# Gets information about new states
 		new_states_str = [state.tostring() for state in new_states]
-		self.tt.section("One-hot encoding")
+		self.tt.profile("One-hot encoding")
 		new_states_oh = Cube.as_oh(new_states).to(gpu)
-		self.tt.end_section("One-hot encoding")
-		self.tt.section("Feedforward")
+		self.tt.end_profile("One-hot encoding")
+		self.tt.profile("Feedforward")
 		policies, values = self.net(new_states_oh)
 		policies, values = policies.softmax(dim=1).cpu().numpy(), values.squeeze().cpu().numpy()
-		self.tt.end_section("Feedforward")
+		self.tt.end_profile("Feedforward")
 
-		self.tt.section("Generate new states")
+		self.tt.profile("Generate new states")
 		for i, (state, state_str, p, v) in enumerate(zip(new_states, new_states_str, policies, values)):
 			leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
 			leaf = leaves[leaf_idx]
@@ -280,15 +280,15 @@ class MCTS(DeepSearcher):
 				if all(self.states[state_str].neighs):
 					self.states[state_str].is_leaf = False
 			leaf.is_leaf = False
-		self.tt.end_section("Generate new states")
+		self.tt.end_profile("Generate new states")
 
-		self.tt.section("Update W")
+		self.tt.profile("Update W")
 		for leaf in leaves:
 			max_val = max([x.value for x in leaf.neighs])
 			assert max_val != 0
 			for action_idx, neighbor in enumerate(leaf.neighs):
 				neighbor.W[Cube.rev_action(action_idx)] = max_val
-		self.tt.end_section("Update W")
+		self.tt.end_profile("Update W")
 
 		return -1, -1
 
@@ -300,7 +300,7 @@ class MCTS(DeepSearcher):
 		unknown_neighs = list(np.arange(len(no_neighs)))  # Some unknown neighbors may already be known but just not connected
 		new_states = np.empty((len(no_neighs), *Cube.get_solved_instance().shape), dtype=Cube.dtype)
 
-		self.tt.section("Exploring child states")
+		self.tt.profile("Exploring child states")
 		for i in reversed(range(len(no_neighs))):
 			action = no_neighs[i]
 			new_states[i] = Cube.rotate(leaf.state, *Cube.action_space[action])
@@ -315,32 +315,32 @@ class MCTS(DeepSearcher):
 
 		no_neighs = no_neighs[unknown_neighs]
 		new_states = new_states[unknown_neighs]
-		self.tt.end_section("Exploring child states")
+		self.tt.end_profile("Exploring child states")
 
 		# Passes new states through net
-		self.tt.section("One-hot encoding new states")
+		self.tt.profile("One-hot encoding new states")
 		new_states_oh = Cube.as_oh(new_states).to(gpu)
-		self.tt.end_section("One-hot encoding new states")
-		self.tt.section("Feedforwarding")
+		self.tt.end_profile("One-hot encoding new states")
+		self.tt.profile("Feedforwarding")
 		p, v = self.net(new_states_oh)
 		p, v = torch.nn.functional.softmax(p.cpu(), dim=1).cpu().numpy(), v.cpu().numpy()
-		self.tt.end_section("Feedforwarding")
+		self.tt.end_profile("Feedforwarding")
 
-		self.tt.section("Generate new states")
+		self.tt.profile("Generate new states")
 		for i, action in enumerate(no_neighs):
 			new_leaf = Node(new_states[i], p[i], v[i], leaf, action)
 			leaf.neighs[action] = new_leaf
 			self.states[new_states[i].tostring()] = new_leaf
-		self.tt.end_section("Generate new states")
+		self.tt.end_profile("Generate new states")
 
 		# Updates W in all non-leaf neighbors
-		self.tt.section("Update W")
+		self.tt.profile("Update W")
 		max_val = max([x.value for x in leaf.neighs])
 		for action, neighbor in enumerate(leaf.neighs):
 			if neighbor.is_leaf:
 				continue
 			neighbor.W[Cube.rev_action(action)] = max_val
-		self.tt.end_section("Update W")
+		self.tt.end_profile("Update W")
 
 		leaf.is_leaf = False
 		return -1

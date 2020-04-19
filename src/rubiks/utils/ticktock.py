@@ -10,13 +10,30 @@ def get_timestamp(for_file=False):
 	else:
 		return str(datetime.now())
 
+class Profile:
+
+	_start: float
+
+	def __init__(self, depth: int):
+		self.hits = []
+		self.depth = depth
+
+	def sum(self):
+		return sum(self.hits)
+
+	def mean(self):
+		return self.sum() / len(self.hits)
+
+	def __len__(self):
+		return len(self.hits)
+
 
 class TickTock:
 
 	_start: float = 0.
-	_sections = {}
-	_section_depth = 0
 	_units = {"ns": 1e9, "mus": 1e6, "ms": 1e3, "s": 1, "m": 1/60}
+	profiles = {}
+	_profile_depth = 0
 
 	def tick(self):
 		self._start = perf_counter()
@@ -24,28 +41,27 @@ class TickTock:
 
 	def tock(self):
 		end = perf_counter()
-		passed_time = end - self._start
-		return passed_time
+		return end - self._start
 
-	def section(self, name: str):
-		if name not in self._sections:
-			self._sections[name] = {"start": 0, "hits": [], "depth": self._section_depth}
-		self._section_depth += 1
-		self._sections[name]["start"] = perf_counter()
+	def profile(self, name: str):
+		if name not in self.profiles:
+			self.profiles[name] = Profile(self._profile_depth)
+		self._profile_depth += 1
+		self.profiles[name].start = perf_counter()
 
-	def end_section(self, name: str):
-		dt = perf_counter() - self._sections[name]["start"]
-		self._sections[name]["hits"].append(dt)
-		self._section_depth -= 1
+	def end_profile(self, name: str):
+		dt = perf_counter() - self.profiles[name].start
+		self.profiles[name].hits.append(dt)
+		self._profile_depth -= 1
 	
 	def rename_section(self, name: str, new_name: str):
 		# Renames a section
 		# If a section with new_name already exists, they are combined under new_name
-		if self._sections[new_name]:
-			self._sections[new_name]["hits"] += self._sections[name]["hits"]
+		if self.profiles[new_name]:
+			self.profiles[new_name].hits += self.profiles[name].hits
 		else:
-			self._sections[new_name] = self._sections[name]
-		del self._sections[name]
+			self.profiles[new_name] = self.profiles[name]
+		del self.profiles[name]
 
 	@staticmethod
 	def thousand_seps(numstr: str or float or int) -> str:
@@ -64,30 +80,21 @@ class TickTock:
 		return cls.thousand_seps(str_)
 	
 	def reset(self):
-		self._sections = {}
-		self._section_depth = 0
-
-	def get_sections(self):
-		# Returns data parts of sections
-		return {kw: v for kw, v in self._sections.items() if kw != "tt"}
-
-	def get_section_times(self):
-		return {kw: np.sum(v["hits"]) for kw, v in self._sections.items()}
+		self.profiles = {}
+		self._profile_depth = 0
 
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
 		strs = [["Execution times", "Total time", "Hits", "Avg. time"]]
-		std_strs = []
-		for kw, v in self._sections.items():
-			elapsed = np.sum(v["hits"])
-			avg = elapsed / len(v["hits"])
+		# std_strs = []
+		for kw, v in self.profiles.items():
 			# std = self.stringify_time(2*np.std(v["hits"]), "ms")
 			# std_strs.append(std)
 			strs.append([
-				"- " * v["depth"] + kw,
-				self.stringify_time(elapsed, unit),
-				self.thousand_seps(len(v["hits"])),
-				self.stringify_time(avg, "ms")# + " p/m ",
+				"- " * v.depth + kw,
+				self.stringify_time(v.sum(), unit),
+				self.thousand_seps(len(v)),
+				self.stringify_time(v.mean(), "ms")# + " p/m ",
 			])
 		# longest_std = max(len(x) for x in std_strs)
 		# std_strs = [" " * (longest_std-len(x)) + x for x in std_strs]
@@ -109,8 +116,8 @@ class TickTock:
 if __name__ == "__main__":
 	tt = TickTock()
 	for i in range(100_000):
-		tt.section("Test")
-		tt.end_section("Test")
+		tt.profile("Test")
+		tt.end_profile("Test")
 	print(tt)
 
 

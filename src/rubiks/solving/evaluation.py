@@ -69,10 +69,10 @@ class Evaluator:
 		else:
 			res = []
 			for i, cfg in enumerate(cfgs):
-				self.tt.section(f"Evaluation of {agent}. Depth {cfg[2]}")
+				self.tt.profile(f"Evaluation of {agent}. Depth {cfg[2]}")
 				res.append(_eval_game(cfg))
 				self.log.verbose(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}. Explored states: {len(agent)}")
-				self.tt.end_section(f"Evaluation of {agent}. Depth {cfg[2]}")
+				self.tt.end_profile(f"Evaluation of {agent}. Depth {cfg[2]}")
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
 
 		self.log(f"Evaluation results")

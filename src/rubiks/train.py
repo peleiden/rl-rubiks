@@ -114,17 +114,17 @@ class Train:
 		for rollout in range(self.rollouts):
 			torch.cuda.empty_cache()
 
-			self.tt.section("Training data")
+			self.tt.profile("Training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
-			self.tt.section("To cuda")
+			self.tt.profile("To cuda")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
 																		 value_targets.to(gpu),\
 																		 policy_targets.to(gpu),\
 																		 loss_weights.to(gpu)
-			self.tt.end_section("To cuda")
-			self.tt.end_section("Training data")
+			self.tt.end_profile("To cuda")
+			self.tt.end_profile("Training data")
 
-			self.tt.section("Training loop")
+			self.tt.profile("Training loop")
 			net.train()
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
 			for i, batch in enumerate(batches):
@@ -140,7 +140,7 @@ class Train:
 				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy()
 				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
 			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
-			self.tt.end_section("Training loop")
+			self.tt.end_profile("Training loop")
 			
 			if rollout in np.linspace(self.rollouts*.01, self.rollouts*.99, 100).astype(int):
 				lr_scheduler.step()
@@ -163,27 +163,27 @@ class Train:
 
 			if rollout in self.evaluations:
 				net.eval()
-				self.tt.section("Target value average")
+				self.tt.profile("Target value average")
 				targets = value_targets.cpu().numpy()
 				self.avg_value_targets.append(np.empty_like(self.depths, dtype=float))
 				for i, depth in enumerate(self.depths):
 					idcs = np.arange(self.rollout_games) * (self.rollout_depth+1) + depth
 					self.avg_value_targets[-1][i] = targets[idcs].mean()
-				self.tt.end_section("Target value average")
+				self.tt.end_profile("Target value average")
 
 				self.agent.update_net(net)
-				self.tt.section(f"Evaluating using agent {self.agent}")
+				self.tt.profile(f"Evaluating using agent {self.agent}")
 				with unverbose:
 					eval_results = self.evaluator.eval(self.agent)
 				eval_reward = (eval_results != -1).mean()
 				self.eval_rewards.append(eval_reward)
-				self.tt.end_section(f"Evaluating using agent {self.agent}")
+				self.tt.end_profile(f"Evaluating using agent {self.agent}")
 
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
-		eval_time = sum(self.tt.get_sections()[f'Evaluating using agent {self.agent}']['hits']) if len(self.evaluations) else 0
-		train_time = sum(self.tt.get_sections()["Training loop"]["hits"])
+		eval_time = self.tt.profiles[f'Evaluating using agent {self.agent}'].sum() if len(self.evaluations) else 0
+		train_time = self.tt.profiles["Training loop"].sum()
 		nstates = self.rollouts * self.rollout_games * (self.rollout_depth+1) * 12
 		states_per_sec = int(nstates / train_time)
 		self.log("\n".join([
@@ -217,9 +217,9 @@ class Train:
 		"""
 
 		net.eval()
-		self.tt.section("Scrambling")
+		self.tt.profile("Scrambling")
 		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
-		self.tt.end_section("Scrambling")
+		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
 		solved_scrambled_states = np.array([
@@ -228,21 +228,21 @@ class Train:
 			for scrambled_state in game_states
 		], dtype=bool)
 		# Generates possible substates for all scrambled states
-		self.tt.section("ADI substates")
+		self.tt.profile("ADI substates")
 		substates = np.array([
 			Cube.rotate(scrambled_state, *action)
 			for game_states in states
 			for scrambled_state in game_states
 			for action in Cube.action_space
 		], dtype=Cube.dtype)
-		self.tt.end_section("ADI substates")
-		self.tt.section("One-hot encoding")
+		self.tt.end_profile("ADI substates")
+		self.tt.profile("One-hot encoding")
 		substates_oh = Cube.as_oh(substates).to(gpu)
-		self.tt.end_section("One-hot encoding")
+		self.tt.end_profile("One-hot encoding")
 
 		# Generates policy and value targets
 		rewards = torch.tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
-		self.tt.section("ADI feedforward")
+		self.tt.profile("ADI feedforward")
 		while True:
 			try:
 				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
@@ -252,14 +252,14 @@ class Train:
 			except RuntimeError:  # Caused by running out of vram
 				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
 				self.adi_ff_batches *= 2
-		self.tt.end_section("ADI feedforward")
-		self.tt.section("Calculating targets")
+		self.tt.end_profile("ADI feedforward")
+		self.tt.profile("Calculating targets")
 		values += rewards
 		values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
-		self.tt.end_section("Calculating targets")
+		self.tt.end_profile("Calculating targets")
 		if self.loss_weighting == "adaptive":
 			weighted = np.tile(1 / np.arange(1, self.rollout_depth+2), self.rollout_games)
 			unweighted = np.ones_like(weighted)
