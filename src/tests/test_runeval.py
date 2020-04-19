@@ -15,7 +15,8 @@ class TestRuneval(MainTest):
 		for k,v in run_settings.items(): args.extend([f'--{k}', str(v)])
 		subprocess.check_call(args) #Raises error on problems in call
 
-		expected_files = ['Breadth-first search_results.npy']
+		expected_files = ['Breadth-first search_results.npy', 'eval_sollengths.png', 'eval_winrates.png']
+
 		for fname in expected_files:
 			assert fname in os.listdir(location)
 
