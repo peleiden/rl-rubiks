@@ -72,7 +72,7 @@ class Train:
 		self.log("\n".join([
 			"Created trainer",
 			f"Learning rate and gamma: {self.lr} and {self.gamma}",
-			f"  Learning rate will update 100 times during training: lr <- gamma * lr"
+			f"  Learning rate will update 100 times during training: lr <- gamma * lr",
 			f"Optimizer:      {self.optim}",
 			f"Policy and value criteria: {self.policy_criterion} and {self.value_criterion}",
 			f"Rollouts:       {self.rollouts}",
@@ -129,20 +129,24 @@ class Train:
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
 			for i, batch in enumerate(batches):
 				optimizer.zero_grad()
+				torch.cuda.synchronize()
 				self.tt.section("Feedforward")
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
 				self.tt.end_section("Feedforward")
 
 				# Use loss on both policy and value
+				torch.cuda.synchronize()
 				self.tt.section("Loss calculation")
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
 				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
 				loss = policy_loss + value_loss
 				self.tt.end_section("Loss calculation")
+				torch.cuda.synchronize()
 				self.tt.section("Backprop")
 				loss.backward()
 				optimizer.step()
 				self.tt.end_section("Backprop")
+				torch.cuda.synchronize()
 				self.tt.section("Store losses")
 				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy()
 				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
@@ -166,7 +170,6 @@ class Train:
 			self.param_changes.append(float(model_change))
 			self.param_total_changes.append(model_total_change)
 
-			torch.cuda.empty_cache()
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
 
@@ -276,6 +279,8 @@ class Train:
 			loss_weights = (1-alpha) * weighted + alpha * unweighted
 		elif self.loss_weighting == "weighted":
 			loss_weights = np.tile(1 / np.arange(1, self.rollout_depth+2), self.rollout_games)
+		elif self.loss_weighting == "sqrt":
+			loss_weights = np.sqrt(np.tile(1 / np.arange(1, self.rollout_depth+2), self.rollout_games))
 		else:
 			loss_weights = np.ones(self.rollout_games*(self.rollout_depth+1))
 		loss_weights /= loss_weights.sum()
@@ -290,7 +295,7 @@ class Train:
 		self.log("Making plot of training")
 		ylim = np.array([-0.1, 1.1])
 		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8))
-		loss_ax.set_xlabel(f"Rollouts, each of {self.states_per_rollout} moves")
+		loss_ax.set_xlabel(f"Rollout, each of {self.states_per_rollout} states")
 		loss_ax.set_ylim(ylim*np.max(self.train_losses))
 
 		colour = "red"
@@ -346,7 +351,7 @@ class Train:
 		plt.plot(self.train_rollouts, np.cumsum(self.param_changes), label="Cumulative change in network parameters")
 		plt.plot(self.train_rollouts, self.param_total_changes, linestyle="dashdot", label="Change in parameters since original network")
 		plt.legend(loc=2)
-		plt.xlabel("Rollout")
+		plt.xlabel(f"Rollout, each of {self.states_per_rollout} states")
 		plt.ylabel("Euclidian distance")
 		plt.grid(True)
 		path = os.path.join(loc, "parameter_changes.png")
