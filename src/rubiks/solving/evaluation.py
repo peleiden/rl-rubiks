@@ -78,7 +78,7 @@ class Evaluator:
 		for i, d in enumerate(self.scrambling_depths):
 			self.log(f"Scrambling depth {d}", with_timestamp=False)
 			self.log(f"\tShare completed: {np.count_nonzero(res[i]!=-1)*100/len(res[i]):.2f} %", with_timestamp=False)
-			if (res[-i]!=-1).any():
+			if (res[i]!=-1).any():
 				self.log(f"\tMean turns to complete (ex. unfinished): {res[i][res[i]!=-1].mean():.2f}", with_timestamp=False)
 				self.log(f"\tMedian turns to complete (ex. unfinished): {np.median(res[i][res[i]!=-1]):.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
