@@ -1,3 +1,4 @@
+import os
 from os import cpu_count
 
 import torch.multiprocessing as mp
@@ -98,36 +99,64 @@ class Evaluator:
 		self.plot_an_eval(eval_results, save_dir, settings, **kwargs)
 
 	@staticmethod
-	def plot_an_eval(eval_results: dict, save_dir: str,  eval_settings: dict):
+	def plot_an_eval(eval_results: dict, save_dir: str,  eval_settings: dict, show: bool=False, title: str=''):
 		"""
 		{agent: results from self.eval}
 		"""
-		for agent, results in eval_results.items():
-			#Plot over scramble depth
+		#depth, win%-graph
+		fig, ax = plt.subplots(figsize=(19.2, 10.8))
+		ax.set_ylabel(f"Percentage of {eval_settings['n_games']} games won")
+		ax.set_xlabel(f"Scrambling depth: Number of random rotations applied to cubes")
+		ax.locator_params(axis='x', integer=True, tight=True)
+
+		cmap = plt.get_cmap('gist_rainbow')
+		colors = [cmap(i) for i in np.linspace(0, 1, len(eval_results))]
+
+		for i, (agent, results) in enumerate(eval_results.items()):
+			color = colors[i]
 			win_percentages = (results != -1).mean(axis=1) * 100
 
-			raise  NotImplementedError
-# if __name__ == "__main__":
-	###USE NEW runeval instead
-	# from src.rubiks.solving.agents import Agent, DeepAgent
-	# e = Evaluator(n_games = 50,
-				  # max_time = 1,
-				  # logger = Logger("local_evaluation/evaluations.log", "Testing MCTS", True),
-				  # scrambling_depths = range(10, 15)
-	# )
-	# agent = PolicyCube.from_saved("data/local_train")
-	# results = e.eval(agent, 1)
-	# agents = [
-		# Agent(RandomDFS()),
-		# Agent(BFS()),
-		# DeepAgent(PolicySearch.from_saved("data/local_train", False)),
-		# DeepAgent(PolicySearch.from_saved("data/local_train", True)),
-		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12", 1, 1, False)),
-		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
-		# DeepAgent(MCTS.from_saved("data/hpc-20-04-12")),
-	# ]
-	# for agent in agents:
-		# e.eval(agent)
-	# results = e.eval(PolicyCube.from_saved("data/local_train"))
+			ax.plot(eval_settings['scrambling_depths'], win_percentages, linestyle='dashdot', color=color)
+			ax.scatter(eval_settings['scrambling_depths'], win_percentages, color=color, label=f"Win % of {agent}")
+		ax.legend()
+		fig.tight_layout()
+		ax.grid(True)
+		ax.set_title(title if title else f"Cubes solved in {eval_settings['max_time']:.2f} seconds")
+
+		os.makedirs(save_dir, exist_ok=True)
+		path = os.path.join(save_dir, "eval_winrates.png")
+		plt.savefig(path)
+
+		if show: plt.show()
+		plt.clf()
+
+		# solution length boxplots
+
+		fig, axes = plt.subplots(len(eval_results), 1, figsize=(19.2, 10.8))
+
+		for i, (agent, results) in enumerate(eval_results.items()):
+
+			ax = axes[i] if len(eval_results) > 1 else axes
+			ax.set_title(f'Solution lengths for {agent} in {eval_settings["max_time"]:.2f} s')
+
+			ax.set_ylabel(f"Solution length")
+			ax.set_xlabel(f"Scrambling depth")
+
+			#Handling that some might not even win any games
+			plotables = (results != -1).any(axis=1)
+			results = [depth[depth != -1] for depth in results[plotables]]
+			depths = [eval_settings['scrambling_depths'][i] for i  in range(len(plotables)) if plotables[i]]
+			print(results, depths)
+			if len(depths): ax.boxplot(results, labels=depths)
+			ax.grid(True)
 
 
+		fig.tight_layout()
+
+		os.makedirs(save_dir, exist_ok=True)
+		path = os.path.join(save_dir, "eval_sollengths.png")
+		plt.savefig(path)
+
+		show = True
+		if show: plt.show()
+		plt.clf()

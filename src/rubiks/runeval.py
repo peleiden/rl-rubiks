@@ -140,8 +140,8 @@ class EvalJob:
 			res = self.evaluator.eval(agent)
 			np.save(f"{self.location}/{name}_results.npy", res)
 			agent_results[name] = res
-		#TODO: Finish evaluator plotter
-		# self.evaluator.plot_this_eval(agent_results, f"{self.location}/{self.name}_eval.png")
+
+		self.evaluator.plot_this_eval(agent_results, f"{self.location}/{self.name}_eval.png")
 
 
 
