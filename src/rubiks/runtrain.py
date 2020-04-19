@@ -43,7 +43,7 @@ options = {
 		'default':  'weighted',
 		'help':	    'Weighting method applied to scrambling depths',
 		'type':	    str,
-		'choices':  ['weighted', 'none', 'adaptive', 'sqrt'],
+		'choices':  ['weighted', 'none', 'adaptive'],
 	},
 	'batch_size': {
 		'default':  50,
@@ -117,7 +117,7 @@ class TrainJob:
 		assert rollout_depth > 0
 
 		self.loss_weighting = loss_weighting
-		assert loss_weighting in ["adaptive", "weighted", "none", "sqrt"]
+		assert loss_weighting in ["adaptive", "weighted", "none"]
 		self.batch_size = batch_size
 		assert 0 < self.batch_size <= self.rollout_games * self.rollout_depth
 		self.lr = lr

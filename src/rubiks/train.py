@@ -129,24 +129,20 @@ class Train:
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
 			for i, batch in enumerate(batches):
 				optimizer.zero_grad()
-				torch.cuda.synchronize()
 				self.tt.section("Feedforward")
 				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
 				self.tt.end_section("Feedforward")
 
 				# Use loss on both policy and value
-				torch.cuda.synchronize()
 				self.tt.section("Loss calculation")
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
 				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
 				loss = policy_loss + value_loss
 				self.tt.end_section("Loss calculation")
-				torch.cuda.synchronize()
 				self.tt.section("Backprop")
 				loss.backward()
 				optimizer.step()
 				self.tt.end_section("Backprop")
-				torch.cuda.synchronize()
 				self.tt.section("Store losses")
 				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy()
 				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
@@ -279,8 +275,6 @@ class Train:
 			loss_weights = (1-alpha) * weighted + alpha * unweighted
 		elif self.loss_weighting == "weighted":
 			loss_weights = np.tile(1 / np.arange(1, self.rollout_depth+2), self.rollout_games)
-		elif self.loss_weighting == "sqrt":
-			loss_weights = np.sqrt(np.tile(1 / np.arange(1, self.rollout_depth+2), self.rollout_games))
 		else:
 			loss_weights = np.ones(self.rollout_games*(self.rollout_depth+1))
 		loss_weights /= loss_weights.sum()
