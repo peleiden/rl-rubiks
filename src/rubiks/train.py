@@ -192,8 +192,8 @@ class Train:
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
 		eval_time = sum(self.tt.get_sections()[f'Evaluating using agent {self.agent}']['hits']) if len(self.evaluations) else 0
-		train_time = total_time - eval_time
-		nstates = self.rollouts * self.rollout_games * self.rollout_depth
+		train_time = sum(self.tt.get_sections()["Training loop"])
+		nstates = self.rollouts * self.rollout_games * self.rollout_depth * 12
 		states_per_sec = int(nstates / train_time)
 		self.log("\n".join([
 			f"Best net found to have loss of {lowest_loss:.4f}",
