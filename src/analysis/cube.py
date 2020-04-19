@@ -28,6 +28,13 @@ def scramble():
 		tt.end_profile(f"Scrambling of depth {depth}")
 	return states
 
+def sequence_sramble():
+	n = 100
+	tt.profile(f"Generating {n} sequence scrambles of depth {depth}")
+	states = Cube.sequence_scrambler(n, depth)
+	tt.end_profile(f"Generating {n} sequence scrambles of depth {depth}")
+	return states
+
 def oh(states):
 	n_states = states.shape[-1]
 	tt.profile(f"One-hot encoding of {n_states} states")
@@ -50,20 +57,24 @@ def analyse_cube():
 		f"Scrambling depth: {depth}",
 		f"Actions: {TickTock.thousand_seps(actions)}",
 	]))
-	log.section("Scrambling")
-	states = scramble()
+	# log.section("Scrambling")
+	# states = scramble()
 
-	log.section(f"One-hot encoding {scrambles} states")
-	for i in range(1000):
-		oh(states)
+	log.section("Sequence scrambles")
+	for i in range(100):
+		states = sequence_sramble()
 
-	log.section(f"One-hot encoding one state {scrambles} times")
-	for i in range(10_000):
-		oh(Cube.get_solved())
-
-	log.section(f"Performing {actions} actions")
-	perform_actions()
-
+	# log.section(f"One-hot encoding {scrambles} states")
+	# for i in range(1000):
+	# 	oh(states)
+	#
+	# log.section(f"One-hot encoding one state {scrambles} times")
+	# for i in range(10_000):
+	# 	oh(Cube.get_solved())
+	#
+	# log.section(f"Performing {actions} actions")
+	# perform_actions()
+	#
 	log.section("Running time")
 	log(tt)
 

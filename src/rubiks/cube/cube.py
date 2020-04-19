@@ -62,12 +62,18 @@ class Cube:
 	action_dim = len(action_space)
 
 	@classmethod
-	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool) -> np.ndarray:
+	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool) -> np.ndarray:
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
 		method = _Cube2024.rotate if get_repr() else _Cube686.rotate
-		return method(current_state, face, pos_rev)
+		return method(state, face, pos_rev)
+
+	@classmethod
+	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_rev: np.ndarray):
+		# Performs action (faces[i], pos_revs[i]) on states[i]
+		method = _Cube2024.multi_rotate if get_repr() else _Cube686.multi_rotate
+		return method(states, faces, pos_rev)
 
 	@classmethod
 	def scramble(cls, n: int, force_not_solved=False):
@@ -83,20 +89,28 @@ class Cube:
 		return state, faces, dirs
 
 	@classmethod
-	def sequence_scrambler(cls, games: int, n: int):
+	def sequence_scrambler(cls, games: int, depth: int):
 		"""
 		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
 		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
 		"""
 		# Multithreads if over 1000 games
 		# Experimentally, this seems to be around the point at which multithreading is worth it
-		if games > 1000:
-			with mp.Pool(cpu_count()) as p:
-				res = p.map(_sequence_scrambler, [n]*games)
-		else:
-			res = [_sequence_scrambler(n) for _ in range(games)]
-		states = np.array([x[0] for x in res])
-		oh_states = torch.stack([x[1] for x in res]).view(-1, cls.get_oh_shape())
+		# if games > 1000:
+		# 	with mp.Pool(cpu_count()) as p:
+		# 		res = p.map(_sequence_scrambler, [n]*games)
+		# else:
+		# 	res = [_sequence_scrambler(n) for _ in range(games)]
+		# states = np.array([x[0] for x in res])
+		# oh_states = torch.stack([x[1] for x in res]).view(-1, cls.get_oh_shape())
+		# return states, oh_states
+		states = np.empty((games*depth, *cls.get_solved_instance().shape), dtype=Cube.dtype)
+		current_states = np.vstack([cls.get_solved_instance()]*games)
+		for d in range(depth):
+			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
+			current_states = cls.multi_rotate(current_states, faces, dirs)
+			states[d*games:(d+1)*games] = current_states
+		oh_states = cls.as_oh(states)
 		return states, oh_states
 
 	@classmethod
@@ -158,16 +172,27 @@ class _Cube2024(Cube):
 	corner_633map, side_633map = get_633maps(Cube.F, Cube.B, Cube.T, Cube.D, Cube.L, Cube.R)
 	
 	@classmethod
-	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool):
+	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool):
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
-		altered_state = current_state.copy()
+		altered_state = state.copy()
 		map_ = cls.map_pos[face] if pos_rev else cls.map_neg[face]
 		altered_state[:8] += map_[0, altered_state[:8]]
 		altered_state[8:] += map_[1, altered_state[8:]]
-		
 		return altered_state
+
+	@classmethod
+	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
+		# Performs action (faces[i], pos_revs[i]) on states[i]
+		altered_states = states.copy()
+		maps = np.array([cls.map_pos[face] if pos_rev else cls.map_neg[face] for face, pos_rev in zip(faces, pos_revs)]).transpose((1, 0, 2))
+		idcs8 = np.repeat(np.arange(8), len(states))
+		idcs12 = np.repeat(np.arange(12), len(states))
+		breakpoint()
+		altered_states[:, :8] += maps[0, idcs8, altered_states[:, :8].ravel()]
+		altered_states[:, 8:] += maps[1, idcs12, altered_states[:, 8:].ravel()]
+		return altered_states
 	
 	@classmethod
 	def as_oh(cls, states: np.ndarray):
@@ -243,18 +268,18 @@ class _Cube686(Cube):
 		return np.roll(a, num_elems, axis=0)
 
 	@classmethod
-	def rotate(cls, current_state: np.ndarray, face: int, pos_rev: bool):
+	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool):
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
 
 		# if not 0 <= face <= 5:
 		# 	raise IndexError("Face should be 0-5, not %i" % face)
-		altered_state = current_state.copy()
-		altered_state[face] = cls._shift_right(current_state[face], 2)\
-			if pos_rev else cls._shift_left(current_state[face], 2)
+		altered_state = state.copy()
+		altered_state[face] = cls._shift_right(state[face], 2)\
+			if pos_rev else cls._shift_left(state[face], 2)
 
-		ini_state = current_state[cls.neighbours[face]]
+		ini_state = state[cls.neighbours[face]]
 
 		if pos_rev:
 			for i in range(4):
@@ -264,6 +289,10 @@ class _Cube686(Cube):
 				altered_state[cls.neighbours[face, i-1], cls.adjacents[i-1]] = ini_state[i, cls.adjacents[i]]
 
 		return altered_state
+
+	@classmethod
+	def muti_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
+		return np.array(cls.rotate(state, face, pos_rev) for state, face, pos_rev in zip(states, faces, pos_revs))
 
 	@classmethod
 	def as_oh(cls, states: np.ndarray):
