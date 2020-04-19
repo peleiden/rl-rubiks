@@ -3,6 +3,7 @@ from os import cpu_count
 import torch.multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
+plt.rcParams.update({"font.size": 22})
 
 from src.rubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS
 from src.rubiks.utils.logger import NullLogger, Logger
@@ -69,7 +70,7 @@ class Evaluator:
 			for i, cfg in enumerate(cfgs):
 				self.tt.section(f"Evaluation of {agent}. Depth {cfg[2]}")
 				res.append(_eval_game(cfg))
-				self.log(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}. Explored states: {len(agent)}")
+				self.log.verbose(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}. Explored states: {len(agent)}")
 				self.tt.end_section(f"Evaluation of {agent}. Depth {cfg[2]}")
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
 

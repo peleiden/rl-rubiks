@@ -120,7 +120,7 @@ class EvalJob:
 			for folder in glob(f"{search_location}/*/")+[search_location]:
 				if not os.path.isfile(os.path.join(folder, 'model.pt')): continue
 				searcher = searcher.from_saved(folder, **search_args)
-				self.agents[f'{searcher} {"" if folder==search_location else folder}'] = DeepAgent(searcher)
+				self.agents[f'{searcher} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'] = DeepAgent(searcher)
 			if not self.agents:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
 			self.logger.log(f"Loaded model from {search_location}")
@@ -152,8 +152,8 @@ if __name__ == "__main__":
 ___________________________________________________________________
   /_/_/_/\	______ _      ______ _   _______ _____ _   __ _____
  /_/_/_/\/\	| ___ \ |     | ___ \ | | | ___ \_   _| | / //  ___|
-/_/_/_/\/\/\    | |_/ / |     | |_/ / | | | |_/ / | | | |/ / \ `--.
-\_\_\_\/\/\/    |    /| |     |    /| | | | ___ \ | | |    \  `--. \
+/_/_/_/\/\/\| |_/ / |     | |_/ / | | | |_/ / | | | |/ / \ `--.
+\_\_\_\/\/\/|    /| |     |    /| | | | ___ \ | | |    \  `--. \
  \_\_\_\/\/	| |\ \| |____ | |\ \| |_| | |_/ /_| |_| |\  \/\__/ /
   \_\_\_\/	\_| \_\_____/ \_| \_|\___/\____/ \___/\_| \_/\____/
 __________________________________________________________________
