@@ -157,6 +157,5 @@ class Evaluator:
 		path = os.path.join(save_dir, "eval_sollengths.png")
 		plt.savefig(path)
 
-		show = True
 		if show: plt.show()
 		plt.clf()
