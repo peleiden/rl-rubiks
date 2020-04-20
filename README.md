@@ -32,3 +32,13 @@ for help on options. In many cases, using the parameters from a configuration fi
 ```
 python src/rubiks/runtrain.py --config data/configs/train_ex.ini
 ```
+### Evaluation of agents
+
+To evaluate the performance of one or more agents, a solving experiment can be started using `src/rubiks/runevak.py`. From the main repo folder, run
+```
+python src/rubiks/runeval.py --help
+```
+for help on options. This also works with configuration files; an example of which can be seen be running
+```
+python src/rubiks/runeval.py --config data/configs/eval_ex.ini
+```
