@@ -97,9 +97,9 @@ class Cube:
 		states = np.empty((games*depth, *cls.shape()), dtype=Cube.dtype)
 		current_states = np.array([cls.get_solved_instance()]*games)
 		for d in range(depth):
+			states[d*games:(d+1)*games] = current_states  # TODO
 			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
 			current_states = cls.multi_rotate(current_states, faces, dirs)
-			states[d*games:(d+1)*games] = current_states
 		oh_states = cls.as_oh(states)
 		return states, oh_states
 

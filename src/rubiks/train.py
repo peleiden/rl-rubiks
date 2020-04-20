@@ -134,6 +134,7 @@ class Train:
 				# Use loss on both policy and value
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
 				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
+				# print(policy_loss, value_loss)
 				loss = policy_loss + value_loss
 				loss.backward()
 				optimizer.step()
@@ -185,7 +186,7 @@ class Train:
 		eval_time = self.tt.profiles[f'Evaluating using agent {self.agent}'].sum() if len(self.evaluations) else 0
 		train_time = self.tt.profiles["Training loop"].sum()
 		adi_time = self.tt.profiles["ADI training data"].sum()
-		nstates = self.rollouts * self.rollout_games * self.rollout_depth * 12
+		nstates = self.rollouts * self.rollout_games * self.rollout_depth * Cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
 		self.log("\n".join([
 			f"Best net found to have loss of {lowest_loss:.4f}",
@@ -220,13 +221,16 @@ class Train:
 
 		net.eval()
 		self.tt.profile("Scrambling")
-		states = []
-		for game in range(self.rollout_games):
-			state, oh = _sequence_scrambler(self.rollout_depth)
-			states.append(state)
-		states = np.reshape(states, (-1, *Cube.shape()))
-		oh_states = Cube.as_oh(states)
-		# states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
+		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
+		# states = np.array([
+		# 	[0,  3,  6,  9, 12, 15, 18, 21,  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22],
+		# 	[0,  3,  6,  9, 12, 15, 18, 21,  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22],
+		# 	[0,  3,  6,  9, 12, 15, 18, 21,  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22],
+		# 	[3,  6,  9,  0, 12, 15, 18, 21,  2,  4,  6,  0,  8, 10, 12, 14, 16, 18, 20, 22],
+		# 	[3,  6,  9,  0, 12, 15, 18, 21,  2,  4,  6,  0,  8, 10, 12, 14, 16, 18, 20, 22],
+		# 	[3,  6,  9,  0, 12, 15, 18, 21,  2,  4,  6,  0,  8, 10, 12, 14, 16, 18, 20, 22],
+		# ])
+		# oh_states = Cube.as_oh(states)
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
@@ -242,6 +246,7 @@ class Train:
 		self.tt.profile("One-hot encoding")
 		substates_oh = Cube.as_oh(substates).to(gpu)
 		self.tt.end_profile("One-hot encoding")
+		# breakpoint()
 
 		# Get rewards. 1 for solved states else -1
 		self.tt.profile("Reward")
@@ -264,9 +269,10 @@ class Train:
 		self.tt.end_profile("ADI feedforward")
 
 		self.tt.profile("Calculating targets")
-		idcs = np.arange(Cube.action_dim) * self.rollout_depth * self.rollout_games
+		idcs = np.arange(Cube.action_dim) * self.rollout_games * self.rollout_depth
+		# breakpoint()
 		values += rewards
-		values = torch.stack([values[idcs+i] for i in range(self.rollout_depth*self.rollout_games)])
+		values = torch.stack([values[idcs+i] for i in range(self.rollout_games*self.rollout_depth)])
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0

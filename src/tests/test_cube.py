@@ -92,7 +92,7 @@ class TestRubiksCube(MainTest):
 
 	def _multi_rotate_test(self):
 		states = np.array([Cube.get_solved()]*5)
-		for _ in range(5):
+		for _ in range(10):
 			faces, dirs = np.random.randint(0, 6, 5), np.random.randint(0, 1, 5)
 			states_classic = np.array([Cube.rotate(state, face, d) for state, face, d in zip(states, faces, dirs)])
 			states = Cube.multi_rotate(states, faces, dirs)
