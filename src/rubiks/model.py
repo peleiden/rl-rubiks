@@ -14,12 +14,11 @@ from dataclasses import dataclass
 @dataclass
 class ModelConfig:
 	activation_function: torch.nn.functional = torch.nn.ELU()
-	dropout: float = 0
 	batchnorm: bool = True
 
 	@classmethod
 	def _get_non_serializable(cls):
-		return {"activation_function": cls._conv_activation_function}
+		return {"activation_function": cls._get_activation_function}
 
 	def as_json_dict(self):
 		d = deepcopy(self.__dict__)
@@ -34,7 +33,7 @@ class ModelConfig:
 		return ModelConfig(**conf)
 
 	@staticmethod
-	def _conv_activation_function(val, from_key: bool):
+	def _get_activation_function(val, from_key: bool):
 		afs = {"elu": torch.nn.ELU(), "relu": torch.nn.ReLU()}
 		if from_key:
 			return afs[val]
@@ -64,7 +63,6 @@ class Model(nn.Module):
 			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
 			if not (final and i == len(thiccness) - 2):
 				layers.append(self.config.activation_function)
-				layers.append(nn.Dropout(self.config.dropout))
 				if self.config.batchnorm:
 					layers.append(nn.BatchNorm1d(thiccness[i+1]))
 		
