@@ -222,38 +222,27 @@ class Train:
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
-		# breakpoint()
 		solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
-		solved_scrambled_states_classic = np.array([Cube.is_solved(state) for state in states])  # TODO Remove after confidence >= threshold
-		assert np.all(solved_scrambled_states==solved_scrambled_states_classic)
 
-		# Generates possible substates for all scrambled states
+		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
 		substates = np.array([
 			Cube.multi_rotate(states, np.array([action[0]]*len(states)), np.array([action[1]]*len(states)))
 			for action in Cube.action_space
 		], dtype=Cube.dtype).reshape((-1, *Cube.shape()))
-		substates_classic = []
-		for action in Cube.action_space:
-			for state in states:
-				substates_classic.append(Cube.rotate(state, *action))
-		substates_classic = np.array(substates_classic, dtype=Cube.dtype)
-		assert (substates == substates_classic).all()
 		self.tt.end_profile("ADI substates")
 		self.tt.profile("One-hot encoding")
 		substates_oh = Cube.as_oh(substates).to(gpu)
 		self.tt.end_profile("One-hot encoding")
 
-		# Generates policy and value targets
+		# Get rewards. 1 for solved states else -1
 		self.tt.profile("Reward")
 		solved_substates = (substates == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
 		rewards = torch.ones(*solved_substates.shape)
 		rewards[~solved_substates] = -1
 		self.tt.end_profile("Reward")
-		self.tt.profile("Classic reward")
-		rewards_classic = torch.tensor([1 if Cube.is_solved(substate) else -1 for substate in substates])
-		self.tt.end_profile("Classic reward")
-		assert (rewards==rewards_classic).all()
+		
+		# Generates policy and value targets
 		self.tt.profile("ADI feedforward")
 		while True:
 			try:
@@ -267,14 +256,14 @@ class Train:
 		self.tt.end_profile("ADI feedforward")
 
 		self.tt.profile("Calculating targets")
-		# values += rewards
 		idcs = np.arange(Cube.action_dim) * self.rollout_depth * self.rollout_games
+		values += rewards
 		values = torch.stack([values[idcs+i] for i in range(self.rollout_depth*self.rollout_games)])
-		# values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
 		self.tt.end_profile("Calculating targets")
+		
 		if self.loss_weighting == "adaptive":
 			weighted = np.repeat(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
 			unweighted = np.ones_like(weighted)
@@ -286,8 +275,11 @@ class Train:
 			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
 		loss_weights /= loss_weights.sum()
 		assert np.isclose(loss_weights.sum(), 1)
-
-		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
+		# breakpoint()
+		
+		shufflers = np.random.choice(len(states), len(states), replace=False)
+		assert np.all(np.sort(shufflers) == np.unique(shufflers))
+		return oh_states[shufflers], policy_targets[shufflers], value_targets[shufflers], torch.from_numpy(loss_weights[shufflers]).float()
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""

@@ -47,7 +47,7 @@ class Logger:
 				logs[i] = f"{spaces}\t{logs[i]}"
 				if logs[i].strip() == "":
 					logs[i] = ""
-			tolog = "\n".join(logs)
+			tolog = "\n".join(x.rstrip() for x in logs)
 			logfile.write(tolog+"\n")
 			print(tolog)
 	
