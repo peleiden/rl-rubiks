@@ -9,7 +9,7 @@ import torch
 from src.rubiks.solving.search import DeepSearcher
 from src.rubiks.solving.agents import DeepAgent
 from src.rubiks import cpu, gpu, no_grad
-from src.rubiks.cube.cube import Cube
+from src.rubiks.cube.cube import Cube, _sequence_scrambler
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.utils import seedsetter
@@ -218,18 +218,26 @@ class Train:
 
 		net.eval()
 		self.tt.profile("Scrambling")
-		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
+		states = []
+		for game in range(self.rollout_games):
+			state, oh = _sequence_scrambler(self.rollout_depth)
+			states.append(state)
+		states = np.array(states).reshape((-1, *Cube.shape()))
+		oh_states = Cube.as_oh(states)
+		# states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
 		solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
+		
+		idcs = np.arange(Cube.action_dim) * self.rollout_depth * self.rollout_games
 
 		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
-		substates = np.array([
+		substates = np.vstack([
 			Cube.multi_rotate(states, np.array([action[0]]*len(states)), np.array([action[1]]*len(states)))
 			for action in Cube.action_space
-		], dtype=Cube.dtype).reshape((-1, *Cube.shape()))
+		])
 		self.tt.end_profile("ADI substates")
 		self.tt.profile("One-hot encoding")
 		substates_oh = Cube.as_oh(substates).to(gpu)
@@ -256,8 +264,9 @@ class Train:
 		self.tt.end_profile("ADI feedforward")
 
 		self.tt.profile("Calculating targets")
-		idcs = np.arange(Cube.action_dim) * self.rollout_depth * self.rollout_games
 		values += rewards
+		# breakpoint()
+		# values = values.reshape(-1, Cube.action_dim)
 		values = torch.stack([values[idcs+i] for i in range(self.rollout_depth*self.rollout_games)])
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
