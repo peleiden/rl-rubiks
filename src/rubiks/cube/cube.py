@@ -128,6 +128,10 @@ class Cube:
 		return (state == cls.get_solved_instance()).all()
 
 	@classmethod
+	def shape(cls):
+		return cls.get_solved_instance().shape
+
+	@classmethod
 	def as_oh(cls, states: np.ndarray) -> torch.tensor:
 		# Takes in n states and returns an n x 480 one-hot tensor
 		method = _Cube2024.as_oh if get_repr() else _Cube686.as_oh
@@ -186,12 +190,12 @@ class _Cube2024(Cube):
 	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
 		# Performs action (faces[i], pos_revs[i]) on states[i]
 		altered_states = states.copy()
-		maps = np.array([cls.map_pos[face] if pos_rev else cls.map_neg[face] for face, pos_rev in zip(faces, pos_revs)]).transpose((1, 0, 2))
-		idcs8 = np.repeat(np.arange(8), len(states))
-		idcs12 = np.repeat(np.arange(12), len(states))
-		breakpoint()
-		altered_states[:, :8] += maps[0, idcs8, altered_states[:, :8].ravel()]
-		altered_states[:, 8:] += maps[1, idcs12, altered_states[:, 8:].ravel()]
+		maps = np.array([cls.map_pos[face] if pos_rev else cls.map_neg[face] for face, pos_rev in zip(faces, pos_revs)])
+		idcs8 = np.repeat(np.arange(len(states)), 8)
+		idcs12 = np.repeat(np.arange(len(states)), 12)
+		# breakpoint()
+		altered_states[:, :8] += maps[idcs8, 0, altered_states[:, :8].ravel()].reshape((-1, 8))
+		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
 		return altered_states
 	
 	@classmethod
@@ -276,9 +280,7 @@ class _Cube686(Cube):
 		# if not 0 <= face <= 5:
 		# 	raise IndexError("Face should be 0-5, not %i" % face)
 		altered_state = state.copy()
-		altered_state[face] = cls._shift_right(state[face], 2)\
-			if pos_rev else cls._shift_left(state[face], 2)
-
+		altered_state[face] = cls._shift_right(state[face], 2) if pos_rev else cls._shift_left(state[face], 2)
 		ini_state = state[cls.neighbours[face]]
 
 		if pos_rev:
@@ -291,8 +293,8 @@ class _Cube686(Cube):
 		return altered_state
 
 	@classmethod
-	def muti_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
-		return np.array(cls.rotate(state, face, pos_rev) for state, face, pos_rev in zip(states, faces, pos_revs))
+	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
+		return np.array([cls.rotate(state, face, pos_rev) for state, face, pos_rev in zip(states, faces, pos_revs)], dtype=cls.dtype)
 
 	@classmethod
 	def as_oh(cls, states: np.ndarray):
@@ -312,16 +314,23 @@ class _Cube686(Cube):
 
 
 if __name__ == "__main__":
-	
 	set_repr(False)
-	state = Cube.get_solved()
+	states = np.array([Cube.get_solved()]*2, dtype=Cube.dtype)
+	for _ in range(5):
+		faces, dirs = np.random.randint(0, 6, 2), np.random.randint(0, 1, 2)
+		states_classic = np.array([Cube.rotate(state, face, d) for state, face, d in zip(states, faces, dirs)], dtype=Cube.dtype)
+		states = Cube.multi_rotate(states, faces, dirs)
+		assert (states_classic == states).all()
+	
+	# set_repr(False)
+	# state = Cube.get_solved()
 	# print(Cube.as633(state))
 	# print(Cube.stringify(state))
 	# print()
-	state = Cube.rotate(state, 0, True)
-	state68 = np.where(state == 1)[2].reshape((6, 8))
-	print(state68)
-	print(Cube.stringify(state))
+	# state = Cube.rotate(state, 0, True)
+	# state68 = np.where(state == 1)[2].reshape((6, 8))
+	# print(state68)
+	# print(Cube.stringify(state))
 	# print()
 	# state = Cube.rotate(state, 0, False)
 	# print(Cube.as633(state))

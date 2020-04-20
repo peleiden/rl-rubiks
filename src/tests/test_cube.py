@@ -17,9 +17,10 @@ class TestRubiksCube(MainTest):
 	def test_cube(self):
 		set_repr(True)
 		self._rotation_tests()
-		# TODO Once _Cube686.as633 is implemented
+		self._multi_rotate_test()
 		set_repr(False)
 		self._rotation_tests()
+		self._multi_rotate_test()
 		set_repr(True)
 
 	def _rotation_tests(self):
@@ -88,6 +89,14 @@ class TestRubiksCube(MainTest):
 			"      5 3 4            ",
 			"      3 0 3            ",
 		])
+
+	def _multi_rotate_test(self):
+		states = np.array([Cube.get_solved()]*5)
+		for _ in range(5):
+			faces, dirs = np.random.randint(0, 6, 5), np.random.randint(0, 1, 5)
+			states_classic = np.array([Cube.rotate(state, face, d) for state, face, d in zip(states, faces, dirs)])
+			states = Cube.multi_rotate(states, faces, dirs)
+			assert (states_classic == states).all()
 
 	def test_scramble(self):
 		np.random.seed(42)
