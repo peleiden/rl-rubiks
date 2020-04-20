@@ -114,7 +114,7 @@ class Train:
 		for rollout in range(self.rollouts):
 			torch.cuda.empty_cache()
 
-			self.tt.profile("Training data")
+			self.tt.profile("ADI training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
 			self.tt.profile("To cuda")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
@@ -122,7 +122,7 @@ class Train:
 																		 policy_targets.to(gpu),\
 																		 loss_weights.to(gpu)
 			self.tt.end_profile("To cuda")
-			self.tt.end_profile("Training data")
+			self.tt.end_profile("ADI training data")
 
 			self.tt.profile("Training loop")
 			net.train()
@@ -184,11 +184,13 @@ class Train:
 		total_time = self.tt.tock()
 		eval_time = self.tt.profiles[f'Evaluating using agent {self.agent}'].sum() if len(self.evaluations) else 0
 		train_time = self.tt.profiles["Training loop"].sum()
+		adi_time = self.tt.profiles["ADI training data"].sum()
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * 12
-		states_per_sec = int(nstates / train_time)
+		states_per_sec = int(nstates / (adi_time+train_time))
 		self.log("\n".join([
 			f"Best net found to have loss of {lowest_loss:.4f}",
 			f"Total running time:            {self.tt.stringify_time(total_time, 's')}",
+			f"  Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
 			f"  Training time:               {self.tt.stringify_time(train_time, 's')} or {train_time/total_time*100:.2f} %",
 			f"  Evaluation time:             {self.tt.stringify_time(eval_time, 's')} or {eval_time/total_time*100:.2f} %",
 			f"States witnessed:              {TickTock.thousand_seps(nstates)}",
@@ -222,7 +224,7 @@ class Train:
 		for game in range(self.rollout_games):
 			state, oh = _sequence_scrambler(self.rollout_depth)
 			states.append(state)
-		states = np.array(states).reshape((-1, *Cube.shape()))
+		states = np.reshape(states, (-1, *Cube.shape()))
 		oh_states = Cube.as_oh(states)
 		# states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
 		self.tt.end_profile("Scrambling")
@@ -230,8 +232,6 @@ class Train:
 		# Keeps track of solved states - Max Lapan's convergence fix
 		solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
 		
-		idcs = np.arange(Cube.action_dim) * self.rollout_depth * self.rollout_games
-
 		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
 		substates = np.vstack([
@@ -264,9 +264,8 @@ class Train:
 		self.tt.end_profile("ADI feedforward")
 
 		self.tt.profile("Calculating targets")
+		idcs = np.arange(Cube.action_dim) * self.rollout_depth * self.rollout_games
 		values += rewards
-		# breakpoint()
-		# values = values.reshape(-1, Cube.action_dim)
 		values = torch.stack([values[idcs+i] for i in range(self.rollout_depth*self.rollout_games)])
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
@@ -283,11 +282,8 @@ class Train:
 		else:
 			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
 		loss_weights /= loss_weights.sum()
-		assert np.isclose(loss_weights.sum(), 1)
-		# breakpoint()
 		
 		shufflers = np.random.choice(len(states), len(states), replace=False)
-		assert np.all(np.sort(shufflers) == np.unique(shufflers))
 		return oh_states[shufflers], policy_targets[shufflers], value_targets[shufflers], torch.from_numpy(loss_weights[shufflers]).float()
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
