@@ -5,7 +5,7 @@
 ## Demo
 Visit the [Demo page](https://asgerius.github.io/rl-rubiks/) to see the trained Reinforcement Learning agents in action.
 
-## Reproducing training 
+## Reproducing the results 
 
 ### Setup
 Clone the repo:
