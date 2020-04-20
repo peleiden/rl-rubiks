@@ -81,7 +81,7 @@ class Parser:
 				self.defaults['location'] = args.location
 				location = args.location
 			del args.config
-			experiments.append({'name': 'Experiment', **vars(args)})
+			experiments.append({'name': self.name, **vars(args)})
 
 
 		if document: self._document_settings(with_config, location)

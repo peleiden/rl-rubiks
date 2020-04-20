@@ -5,7 +5,7 @@
 ## Demo
 Visit the [Demo page](https://asgerius.github.io/rl-rubiks/) to see the trained Reinforcement Learning agents in action.
 
-## Reproducing training 
+## Reproducing the results 
 
 ### Setup
 Clone the repo:
@@ -31,4 +31,14 @@ python src/rubiks/runtrain.py --help
 for help on options. In many cases, using the parameters from a configuration file is preferable. An example of using this to run two trainings, can be seen be running
 ```
 python src/rubiks/runtrain.py --config data/configs/train_ex.ini
+```
+### Evaluation of agents
+
+To evaluate the performance of one or more agents, a solving experiment can be started using `src/rubiks/runeval.py`. From the main repo folder, run
+```
+python src/rubiks/runeval.py --help
+```
+for help on options. This also works with configuration files; an example of which can be seen be running
+```
+python src/rubiks/runeval.py --config data/configs/eval_ex.ini
 ```
