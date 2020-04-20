@@ -128,6 +128,6 @@ class Parser:
 			if with_config: self.configparser.write(f)
 			f.write(f"\n# Run command\n # {' '.join(sys.argv)}\n")
 			str_defaults = pformat(self.defaults).replace('\n', '\n# ')
-			f.write(f"\n# Default configuration values at run\n # {str_defaults}")
+			f.write(f"\n# Default configuration values at run\n# {str_defaults}")
 
 
