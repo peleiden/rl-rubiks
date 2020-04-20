@@ -104,8 +104,8 @@ class Cube:
 		# states = np.array([x[0] for x in res])
 		# oh_states = torch.stack([x[1] for x in res]).view(-1, cls.get_oh_shape())
 		# return states, oh_states
-		states = np.empty((games*depth, *cls.get_solved_instance().shape), dtype=Cube.dtype)
-		current_states = np.vstack([cls.get_solved_instance()]*games)
+		states = np.empty((games*depth, *cls.shape()), dtype=Cube.dtype)
+		current_states = np.array([cls.get_solved_instance()]*games)
 		for d in range(depth):
 			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
 			current_states = cls.multi_rotate(current_states, faces, dirs)
@@ -277,8 +277,6 @@ class _Cube686(Cube):
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
 
-		# if not 0 <= face <= 5:
-		# 	raise IndexError("Face should be 0-5, not %i" % face)
 		altered_state = state.copy()
 		altered_state[face] = cls._shift_right(state[face], 2) if pos_rev else cls._shift_left(state[face], 2)
 		ini_state = state[cls.neighbours[face]]

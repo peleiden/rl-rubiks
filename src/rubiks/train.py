@@ -265,20 +265,23 @@ class Train:
 				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
 				self.adi_ff_batches *= 2
 		self.tt.end_profile("ADI feedforward")
+
 		self.tt.profile("Calculating targets")
-		values += rewards
-		values = values.reshape(-1, 12)
+		# values += rewards
+		idcs = np.arange(Cube.action_dim) * self.rollout_depth * self.rollout_games
+		values = torch.stack([values[idcs+i] for i in range(self.rollout_depth*self.rollout_games)])
+		# values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
 		self.tt.end_profile("Calculating targets")
 		if self.loss_weighting == "adaptive":
-			weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
+			weighted = np.repeat(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
 			unweighted = np.ones_like(weighted)
 			alpha = rollout / self.rollouts
 			loss_weights = (1-alpha) * weighted + alpha * unweighted
 		elif self.loss_weighting == "weighted":
-			loss_weights = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
+			loss_weights = np.repeat(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
 		else:
 			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
 		loss_weights /= loss_weights.sum()
