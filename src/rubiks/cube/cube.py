@@ -23,20 +23,6 @@ def _get_686solved(dtype):
 		solved_state[i, :, i] = 1
 	return solved_state
 
-# Implemented toplevel for multithreading
-def _sequence_scrambler(n: int):
-	"""
-	A non-inplace scrambler that returns the state to each of the scrambles useful for ADI
-	"""
-	env = _Cube2024 if get_repr() else _Cube686
-	scrambled_states = np.empty((n, *env.get_solved_instance().shape), dtype=env.dtype)
-	scrambled_states[0] = env.get_solved()
-
-	faces = np.random.randint(6, size = (n, ))
-	dirs = np.random.randint(2, size = (n, )).astype(bool)
-	for i, face, d in zip(range(n-1), faces, dirs):
-		scrambled_states[i+1] = env.rotate(scrambled_states[i], face, d)
-	return scrambled_states, env.as_oh(scrambled_states)
 
 class Cube:
 	# If the six sides are represented by an array, the order should be F, B, T, D, L, R
@@ -97,9 +83,9 @@ class Cube:
 		states = np.empty((games*depth, *cls.shape()), dtype=Cube.dtype)
 		current_states = np.array([cls.get_solved_instance()]*games)
 		for d in range(depth):
-			states[d*games:(d+1)*games] = current_states  # TODO
 			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
 			current_states = cls.multi_rotate(current_states, faces, dirs)
+			states[d*games:(d+1)*games] = current_states
 		oh_states = cls.as_oh(states)
 		return states, oh_states
 

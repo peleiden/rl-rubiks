@@ -9,7 +9,7 @@ import torch
 from src.rubiks.solving.search import DeepSearcher
 from src.rubiks.solving.agents import DeepAgent
 from src.rubiks import cpu, gpu, no_grad
-from src.rubiks.cube.cube import Cube, _sequence_scrambler
+from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.utils import seedsetter
@@ -222,15 +222,6 @@ class Train:
 		net.eval()
 		self.tt.profile("Scrambling")
 		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
-		# states = np.array([
-		# 	[0,  3,  6,  9, 12, 15, 18, 21,  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22],
-		# 	[0,  3,  6,  9, 12, 15, 18, 21,  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22],
-		# 	[0,  3,  6,  9, 12, 15, 18, 21,  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22],
-		# 	[3,  6,  9,  0, 12, 15, 18, 21,  2,  4,  6,  0,  8, 10, 12, 14, 16, 18, 20, 22],
-		# 	[3,  6,  9,  0, 12, 15, 18, 21,  2,  4,  6,  0,  8, 10, 12, 14, 16, 18, 20, 22],
-		# 	[3,  6,  9,  0, 12, 15, 18, 21,  2,  4,  6,  0,  8, 10, 12, 14, 16, 18, 20, 22],
-		# ])
-		# oh_states = Cube.as_oh(states)
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
@@ -246,7 +237,6 @@ class Train:
 		self.tt.profile("One-hot encoding")
 		substates_oh = Cube.as_oh(substates).to(gpu)
 		self.tt.end_profile("One-hot encoding")
-		# breakpoint()
 
 		# Get rewards. 1 for solved states else -1
 		self.tt.profile("Reward")
@@ -270,7 +260,6 @@ class Train:
 
 		self.tt.profile("Calculating targets")
 		idcs = np.arange(Cube.action_dim) * self.rollout_games * self.rollout_depth
-		# breakpoint()
 		values += rewards
 		values = torch.stack([values[idcs+i] for i in range(self.rollout_games*self.rollout_depth)])
 		policy_targets = torch.argmax(values, dim=1)
@@ -289,8 +278,7 @@ class Train:
 			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
 		loss_weights /= loss_weights.sum()
 		
-		shufflers = np.random.choice(len(states), len(states), replace=False)
-		return oh_states[shufflers], policy_targets[shufflers], value_targets[shufflers], torch.from_numpy(loss_weights[shufflers]).float()
+		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
