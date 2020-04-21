@@ -83,8 +83,8 @@ class Cube:
 		states = []
 		current_states = np.array([cls.get_solved_instance()]*games)
 		for d in range(depth):
-			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
 			states.append(current_states)
+			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
 			current_states = cls.multi_rotate(current_states, faces, dirs)
 		states = np.vstack(np.transpose(states, (1, 0, 2)))
 		oh_states = cls.as_oh(states)
