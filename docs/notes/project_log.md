@@ -167,14 +167,22 @@ Hjemmesiden skal være på engelsk.
 ### Uge 10:
 #### 14/04-2020
 
-Mikkel:
-
 - Hold evalueringsmål simpelt. 
 - Undersøg mærkelig konvergens, burde ikke have tilbagegang i loss. 
 - Kan overveje at tælle feedforwarder i evalueringen. 
 - Overvej flere netværkskompleksiteter. 
 - Overvej seperat data-repo, der ikke er gitbaseret.
 
+### Uge 11:
+#### 21/04-2020
 
-
+- Vi har fået gode resultater (bedre end Max Lapan)
+- Løbende evaluering med ren policy
+- Vi ved ikke, hvad der giver dykket i losskurven
+- Forskellige undersøgelsesmetoder, herunder gradientstørrelser og værdimålsændringer
+- Er reward overhovedet nødvendig, når man sætter løste tilstande til 1?
+- Undersøg uden batchnorm
+- Evt 1d-konvolutioner på 686
+- Kunne være sjovt at tage videre
+- Debugging stadig påkrævet
 
