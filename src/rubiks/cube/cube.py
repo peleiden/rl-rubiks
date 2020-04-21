@@ -1,8 +1,5 @@
-from os import cpu_count
-
 import numpy as np
 import torch
-import torch.multiprocessing as mp
 
 from src.rubiks import get_repr, set_repr
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
@@ -88,19 +85,6 @@ class Cube:
 			current_states = cls.multi_rotate(current_states, faces, dirs)
 		states = np.vstack(np.transpose(states, (1, 0, 2)))
 		oh_states = cls.as_oh(states)
-		return states, oh_states
-	
-	@classmethod
-	def sequence_scrambler2(cls, games: int, n: int):
-		"""
-		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
-		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
-		"""
-		# Multithreads if over 1000 games
-		# Experimentally, this seems to be around the point at which multithreading is worth it
-		res = [_sequence_scrambler(n, _) for _ in range(games)]
-		states = np.array([x[0] for x in res])
-		oh_states = torch.stack([x[1] for x in res]).view(-1, cls.get_oh_shape())
 		return states, oh_states
 
 	@classmethod

@@ -12,7 +12,6 @@ from src.rubiks import cpu, gpu, no_grad
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
-from src.rubiks.utils import seedsetter
 from src.rubiks.utils.logger import Logger, NullLogger, unverbose
 from src.rubiks.utils.ticktock import TickTock
 
