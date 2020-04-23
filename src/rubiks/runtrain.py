@@ -77,10 +77,10 @@ options = {
 		'choices':  [True, False],
 	},
 	'arch': {
-		'default':	'ff',
-		'help':		'Network architecture. ff for fully connected, res for fully connected with residual blocks, and conv for convolutional blocks',
+		'default':	'fc',
+		'help':		'Network architecture. fc for fully connected, res for fully connected with residual blocks, and conv for convolutional blocks',
 		'type':		str,
-		'choices':	['ff', 'res', 'conv'],
+		'choices':	['fc', 'res', 'conv'],
 	},
 }
 
@@ -144,7 +144,7 @@ class TrainJob:
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
 		self.model_cfg = ModelConfig(architecture=arch)
-		assert arch in ["ff", "res", "conv"]
+		assert arch in ["fc", "res", "conv"]
 		if arch == "conv": assert not get_is2024()
 		assert isinstance(self.model_cfg, ModelConfig)
 

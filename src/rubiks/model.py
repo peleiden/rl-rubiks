@@ -32,7 +32,7 @@ class ModelConfig:
 			self.shared_sizes = self._get_arch()["shared_sizes"]
 		if self.part_sizes is None:
 			self.part_sizes = self._get_arch()["part_sizes"]
-		if self.conv_channels is None:
+		if self.conv_channels is None and self.architecture == "conv":
 			self.conv_channels = self._get_arch()["conv_channels"]
 
 	def _get_arch(self):
@@ -74,20 +74,20 @@ class Model(nn.Module):
 		self.config = config
 		self.log = logger
 
-		self._construct_network()
+		self._construct_net()
 		self.log(f"Created network\n{self.config}\n{self}")
 
 	@staticmethod
 	def create(config: ModelConfig, logger=NullLogger()):
 		# As only subclasses of this classes are ever instantiated, __init__ is never called directly
 		# Instead, instantiation should happen through this method
-		if config.architecture == "ff":
+		if config.architecture == "fc":
 			return FFNet(config, logger)
 		elif config.architecture == "res":
 			return ResNet(config, logger)
 		elif config.architecture == "conv":
 			return ConvNet(config, logger)
-		raise KeyError(f"Network architecture should be 'ff', 'res', or 'conv', but '{config.architecture}' was given")
+		raise KeyError(f"Network architecture should be 'fc', 'res', or 'conv', but '{config.architecture}' was given")
 
 	def forward(self, x, policy=True, value=True):
 		assert policy or value
