@@ -42,10 +42,12 @@ class Train:
 			agent: DeepAgent,
 			evaluator: Evaluator,
 			evaluations: int,
+			new: bool,
 			logger: Logger		= NullLogger(),
 			policy_criterion	= torch.nn.CrossEntropyLoss,
 			value_criterion		= torch.nn.MSELoss,
 		):
+		self.new = new
 
 		self.rollouts = rollouts
 		self.train_rollouts = np.arange(self.rollouts)
@@ -220,7 +222,7 @@ class Train:
 
 		net.eval()
 		self.tt.profile("Scrambling")
-		new = False
+		new = self.new
 		if new:
 			states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
 			states2 = states.reshape((self.rollout_games, self.rollout_depth, *Cube.shape()))

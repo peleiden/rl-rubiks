@@ -76,6 +76,12 @@ options = {
 		'type':	    literal_eval,
 		'choices':  [True, False],
 	},
+	"new": {
+		"default": True,
+		"help": "",
+		"type": literal_eval,
+		"choices": [True, False],
+	}
 }
 
 
@@ -95,6 +101,7 @@ class TrainJob:
 			optim_fn: str,
 			is2024: bool,
 			evaluations: int,
+			new: bool,
 
 			# Currently not set by argparser/configparser
 
@@ -106,6 +113,7 @@ class TrainJob:
 			verbose: bool = True,
 			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
 		):
+		self.new = new
 		self.name = name
 		assert isinstance(self.name, str)
 
@@ -158,6 +166,7 @@ class TrainJob:
 				logger				= self.logger,
 				evaluations			= self.evaluations,
 				evaluator			= self.evaluator,
+					  new = self.new,
 		)
 
 		net = Model(self.model_cfg, self.logger).to(gpu)
