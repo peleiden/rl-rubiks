@@ -234,7 +234,7 @@ class Train:
 		substates = np.vstack(np.transpose([
 			Cube.multi_rotate(states, np.array([action[0]]*len(states)), np.array([action[1]]*len(states)))
 			for action in Cube.action_space
-		], (1, 0, 2)))
+		], (1, 0, *np.arange(2, len(Cube.shape())+2))))
 		self.tt.end_profile("ADI substates")
 		self.tt.profile("One-hot encoding")
 		substates_oh = Cube.as_oh(substates).to(gpu)

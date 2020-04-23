@@ -83,7 +83,7 @@ class Cube:
 			states.append(current_states)
 			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
 			current_states = cls.multi_rotate(current_states, faces, dirs)
-		states = np.vstack(np.transpose(states, (1, 0, 2)))
+		states = np.vstack(np.transpose(states, (1, 0, *np.arange(2, len(cls.shape())+2))))
 		oh_states = cls.as_oh(states)
 		return states, oh_states
 
@@ -167,7 +167,6 @@ class _Cube2024(Cube):
 		maps = np.array([cls.map_pos[face] if pos_rev else cls.map_neg[face] for face, pos_rev in zip(faces, pos_revs)])
 		idcs8 = np.repeat(np.arange(len(states)), 8)
 		idcs12 = np.repeat(np.arange(len(states)), 12)
-		# breakpoint()
 		altered_states[:, :8] += maps[idcs8, 0, altered_states[:, :8].ravel()].reshape((-1, 8))
 		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
 		return altered_states
