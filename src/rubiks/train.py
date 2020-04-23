@@ -112,6 +112,7 @@ class Train:
 
 		for rollout in range(self.rollouts):
 			torch.cuda.empty_cache()
+			if torch.cuda.is_available(): torch.cuda.synchronize()
 
 			self.tt.profile("ADI training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
@@ -123,6 +124,8 @@ class Train:
 			self.tt.end_profile("To cuda")
 			self.tt.end_profile("ADI training data")
 
+			torch.cuda.empty_cache()
+			if torch.cuda.is_available(): torch.cuda.synchronize()
 			self.tt.profile("Training loop")
 			net.train()
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
