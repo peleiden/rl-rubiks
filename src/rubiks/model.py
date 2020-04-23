@@ -77,6 +77,18 @@ class Model(nn.Module):
 		self._construct_network()
 		self.log(f"Created network\n{self.config}\n{self}")
 
+	@staticmethod
+	def create(config: ModelConfig, logger=NullLogger()):
+		# As only subclasses of this classes are ever instantiated, __init__ is never called directly
+		# Instead, instantiation should happen through this method
+		if config.architecture == "ff":
+			return FFNet(config, logger)
+		elif config.architecture == "res":
+			return ResNet(config, logger)
+		elif config.architecture == "conv":
+			return ConvNet(config, logger)
+		raise KeyError(f"Network architecture should be 'ff', 'res', or 'conv', but '{config.architecture}' was given")
+
 	def forward(self, x, policy=True, value=True):
 		assert policy or value
 		x = self.shared_net(x)
@@ -93,7 +105,7 @@ class Model(nn.Module):
 		new_state_dict = {}
 		for kw, v in self.state_dict().items():
 			new_state_dict[kw] = v.cpu().clone()
-		new_net = Model(self.config)
+		new_net = Model.create(self.config)
 		new_net.load_state_dict(new_state_dict)
 		return new_net
 
@@ -119,8 +131,8 @@ class Model(nn.Module):
 			json.dump(self.config.as_json_dict(), conf)
 		self.log(f"Saved model to {model_path} and configuration to {conf_path}")
 
-	@classmethod
-	def load(cls, load_dir: str, logger=NullLogger()):
+	@staticmethod
+	def load(load_dir: str, logger=NullLogger()):
 		"""
 		Load a model from a configuration directory
 		"""
@@ -131,7 +143,7 @@ class Model(nn.Module):
 			state_dict = torch.load(model_path, map_location=gpu)
 			config = ModelConfig.from_json_dict(json.load(conf))
 
-		model = cls(config, logger)
+		model = Model.create(config, logger)
 		model.load_state_dict(state_dict)
 		model.to(gpu)
 		# First time the net is loaded, a feedforward is performed, as the first time is slow
@@ -172,8 +184,10 @@ class ResNet(Model):
 
 class ConvNet(Model):
 
+	shared_conv_net: nn.Sequential
+
 	def _construct_net(self):
-		raise NotImplementedError
+		super(FFNet, self)._construct_net()
 
 	def forward(self, x, policy=True, value=True):
 		assert policy or value

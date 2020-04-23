@@ -13,7 +13,7 @@ class TestTrain(MainTest):
 	def test_train(self):
 		torch.manual_seed(42)
 		#The standard test
-		net = Model(ModelConfig()).to(gpu)
+		net = Model.create(ModelConfig()).to(gpu)
 		evaluator = Evaluator(2, .02, [2])
 		agent = DeepAgent(PolicySearch(None))
 		train = Train(rollouts=2, batch_size=2, loss_weighting='none', gamma=1, rollout_games=2, rollout_depth=3, optim_fn=torch.optim.Adam, agent=agent, lr=1e-6, evaluations=1, evaluator=evaluator)

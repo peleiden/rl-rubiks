@@ -1,6 +1,6 @@
 from src.tests import MainTest
 
-from src.rubiks import get_repr, set_repr
+from src.rubiks import get_is2024, set_is2024
 from src.rubiks.cube.cube import Cube
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 
@@ -15,13 +15,13 @@ class TestRubiksCube(MainTest):
 		assert Cube.get_solved_instance().shape == (20,)
 
 	def test_cube(self):
-		set_repr(True)
+		set_is2024(True)
 		self._rotation_tests()
 		self._multi_rotate_test()
-		set_repr(False)
+		set_is2024(False)
 		self._rotation_tests()
 		self._multi_rotate_test()
-		set_repr(True)
+		set_is2024(True)
 
 	def _rotation_tests(self):
 		state = Cube.get_solved()

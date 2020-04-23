@@ -6,12 +6,12 @@ gpu = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 _is2024 = True
 _stored_repr: bool
 
-def set_repr(is2024: bool):
+def set_is2024(is2024: bool):
 	global _is2024
 	assert type(is2024) is bool
 	_is2024 = is2024
 
-def get_repr():
+def get_is2024():
 	return _is2024
 
 def store_repr():

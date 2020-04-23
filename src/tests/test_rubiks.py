@@ -1,18 +1,18 @@
 import torch
 from src.tests import MainTest
-from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr, no_grad
+from src.rubiks import cpu, gpu, get_is2024, set_is2024, store_repr, restore_repr, no_grad
 
 
 class TestRubiks(MainTest):
 
 	def test_repr(self):
-		ini_repr = get_repr()
+		ini_repr = get_is2024()
 		store_repr()
-		assert get_repr() == ini_repr
-		set_repr(not ini_repr)
-		assert get_repr() != ini_repr
+		assert get_is2024() == ini_repr
+		set_is2024(not ini_repr)
+		assert get_is2024() != ini_repr
 		restore_repr()
-		assert get_repr() == ini_repr
+		assert get_is2024() == ini_repr
 
 	def test_no_grad(self):
 		torch.set_grad_enabled(True)

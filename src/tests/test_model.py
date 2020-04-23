@@ -12,7 +12,7 @@ from src.rubiks.utils.logger import NullLogger
 class TestModel(MainTest):
 	def test_model(self):
 		config = ModelConfig()
-		model = Model(config).to(gpu)
+		model = Model.create(config).to(gpu)
 		assert next(model.parameters()).device.type == gpu.type
 		model.eval()
 		x = torch.randn(2, 480).to(gpu)
@@ -24,7 +24,7 @@ class TestModel(MainTest):
 		torch.manual_seed(42)
 
 		config = ModelConfig()
-		model = Model(config, logger=NullLogger()).to(gpu)
+		model = Model.create(config, logger=NullLogger()).to(gpu)
 		model_dir = "local_tests/local_model_test"
 		model.save(model_dir)
 		assert os.path.exists(f"{model_dir}/config.json")

@@ -11,7 +11,7 @@ from src.tests import MainTest
 class TestMCTS(MainTest):
 	
 	def test_search(self):
-		net = Model(ModelConfig()).to(gpu).eval()
+		net = Model.create(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
 		searcher = MCTS(net, c=1, nu=.1, search_graph=True, workers=10)
 		
