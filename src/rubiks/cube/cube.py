@@ -85,6 +85,11 @@ class Cube:
 		return state, faces, dirs
 
 	@classmethod
+	def pad(cls, oh: torch.tensor) -> torch.tensor:
+		assert not get_repr()
+		return _Cube686.pad(oh)
+
+	@classmethod
 	def sequence_scrambler(cls, games: int, depth: int):
 		"""
 		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
@@ -301,6 +306,16 @@ class _Cube686(Cube):
 			states = np.expand_dims(states, 0)
 		states = torch.from_numpy(states.reshape(-1, 288)).float()
 		return states
+
+	@classmethod
+	def pad(cls, oh: torch.tensor) -> torch.tensor:
+		# Performs pad wrap of size one on each side
+		oh = oh.reshape(-1, 6, 8, 6)
+		padded = torch.empty(len(oh), 6, 10, 8)
+		padded[..., 1:9] = oh
+		padded[..., 0] = oh[..., -1]
+		padded[..., 9] = oh[..., 0]
+		return padded
 
 	@classmethod
 	def as633(cls, state: np.ndarray):
