@@ -85,9 +85,9 @@ class Cube:
 		return state, faces, dirs
 
 	@classmethod
-	def pad(cls, oh: torch.tensor) -> torch.tensor:
+	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
 		assert not get_is2024()
-		return _Cube686.pad(oh)
+		return _Cube686.pad(oh, pad_size)
 
 	@classmethod
 	def sequence_scrambler(cls, games: int, depth: int):
@@ -308,13 +308,15 @@ class _Cube686(Cube):
 		return states
 
 	@classmethod
-	def pad(cls, oh: torch.tensor) -> torch.tensor:
+	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
 		# Performs pad wrap of size one on each side
+		assert pad_size >= 1
 		oh = oh.reshape(-1, 6, 8, 6)
-		padded = torch.empty(len(oh), 6, 10, 8)
-		padded[..., 1:9] = oh
-		padded[..., 0] = oh[..., -1]
-		padded[..., 9] = oh[..., 0]
+		solved = (oh[:] == cls.get_solved_instance()).all(dim=3)
+		padded = torch.ones(len(oh), 6, 8+pad_size*2, 8)
+		padded[..., pad_size:8+pad_size] = solved
+		padded[..., :pad_size] = solved[..., -pad_size]
+		padded[..., -pad_size:] = solved[..., pad_size]
 		return padded
 
 	@classmethod

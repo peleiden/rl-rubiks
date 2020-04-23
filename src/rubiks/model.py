@@ -22,10 +22,11 @@ class ModelConfig:
 	shared_sizes: tuple = None
 	part_sizes: tuple = None
 	conv_channels: tuple = None
+	intermediate_sizes: tuple = None
 
 	_fc_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,)}
 	_res_arch: ClassVar[dict] = {"shared_sizes": (5000, 1000), "part_sizes": (100,)}
-	_conv_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,), "conv_channels": (4, 4)}
+	_conv_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,), "conv_channels": (4, 4), "intermediate_sizes": (1024,)}
 
 	def __post_init__(self):
 		if self.shared_sizes is None:
@@ -34,6 +35,8 @@ class ModelConfig:
 			self.part_sizes = self._get_arch()["part_sizes"]
 		if self.conv_channels is None and self.architecture == "conv":
 			self.conv_channels = self._get_arch()["conv_channels"]
+		if self.intermediate_sizes is None and self.activation_function == "conv":
+			self.intermediate_sizes = self._get_arch()["intermediate_sizes"]
 
 	def _get_arch(self):
 		return getattr(self, f"_{self.architecture}_arch")
@@ -182,16 +185,23 @@ class ResNet(Model):
 	def _construct_net(self):
 		raise NotImplementedError
 
-class ConvNet(Model):
+class ConvNet(FFNet):
+	# Inherits from FFNet, as this class is essentially as superset of FFNet
 
 	shared_conv_net: nn.Sequential
 
 	def _construct_net(self):
-		super(FFNet, self)._construct_net()
+		super()._construct_net()
+		conv_layers = []
+		conv_layers = [nn.Conv1d(1, self.config.conv_channels[0], 1)]
+		for channels in self.config.conv_channels[1:]:
+			conv_layers.append(self.config.activation_function)
+			# conv_layers.append(nn.BatchNorm1d())  # TODO: Calculate number of features
+			conv_layers.append(nn.Conv1d())
 
 	def forward(self, x, policy=True, value=True):
 		assert policy or value
-		padded_x = Cube.pad(x)
+		padded_x = Cube.pad(x, len(self.config.conv_channels))
 		raise NotImplementedError
 
 
