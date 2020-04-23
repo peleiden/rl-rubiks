@@ -1,9 +1,3 @@
-# Do not use this file to install dependencies. It is designed for heroku only
-Flask
-flask_restful
-flask_cors
-gunicorn
 numpy
---find-links https://download.pytorch.org/whl/torch_stable.html
-torch==1.4.0+cpu
-dataclasses
+matplotlib
+torch==1.4.0
