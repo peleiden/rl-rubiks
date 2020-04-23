@@ -158,7 +158,6 @@ class TrainJob:
 				logger				= self.logger,
 				evaluations			= self.evaluations,
 				evaluator			= self.evaluator,
-					  new = self.new,
 		)
 
 		net = Model(self.model_cfg, self.logger).to(gpu)
