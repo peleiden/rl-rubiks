@@ -8,14 +8,28 @@ from src.rubiks.cube.cube import Cube
 from src.rubiks import cpu, gpu
 from src.rubiks.utils.logger import Logger, NullLogger
 
-from dataclasses import dataclass
-
+from dataclasses import dataclass, field
+from typing import ClassVar
 
 @dataclass
 class ModelConfig:
 	activation_function: torch.nn.functional = torch.nn.ELU()
 	batchnorm: bool = True
+	architecture: str = 'fc'  # Options: 'fc', 'res'
 
+	#Hidden layer sizes in  shared network and in the two part networks given as tuples. If None: The value is controlled by architecture (often wanted)
+	shared_size: tuple = None
+	part_size: tuple = None
+
+	_std_shared_sizes: ClassVar[dict] = {'fc': (4096, 2048,), 'res': (5000, 1000)}
+	_std_part_sizes: ClassVar[dict] = {'fc': (512,), 'res': (100,)}
+
+	def __post_init__(self):
+		if self.shared_size is None:
+			self.shared_size = self._std_shared_sizes[self.architecture]
+		if self.part_size is None:
+
+			self.part_size = self._std_part_sizes[self.architecture]
 	@classmethod
 	def _get_non_serializable(cls):
 		return {"activation_function": cls._get_activation_function}
@@ -25,7 +39,7 @@ class ModelConfig:
 		for a, f in self._get_non_serializable().items():
 			d[a] = f(d[a], False)
 		return d
-	
+
 	@classmethod
 	def from_json_dict(cls, conf: dict):
 		for a, f in cls._get_non_serializable().items():
@@ -42,15 +56,16 @@ class ModelConfig:
 
 
 class Model(nn.Module):
-	
+
 	def __init__(self, config: ModelConfig, logger=NullLogger(),):
 		super().__init__()
 		self.config = config
 		self.log = logger
+		(4096, 2048,)
 
-		shared_thiccness = [Cube.get_oh_shape(), 4096, 2048]
-		policy_thiccness = [shared_thiccness[-1], 512, 12]
-		value_thiccness = [shared_thiccness[-1], 512, 1]
+		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_size]
+		policy_thiccness = [shared_thiccness[-1], *self.config.part_size, 12]
+		value_thiccness = [shared_thiccness[-1], *self.config.part_size, 1]
 		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
 		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
 		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness, True))
@@ -65,9 +80,9 @@ class Model(nn.Module):
 				layers.append(self.config.activation_function)
 				if self.config.batchnorm:
 					layers.append(nn.BatchNorm1d(thiccness[i+1]))
-		
+
 		return layers
-	
+
 	def forward(self, x, policy=True, value=True):
 		assert policy or value
 		x = self.shared_net(x)
@@ -90,13 +105,13 @@ class Model(nn.Module):
 
 	def get_params(self):
 		return torch.cat([x.float().flatten() for x in self.state_dict().values()]).clone()
-	
+
 	def save(self, save_dir: str, is_min=False):
 		"""
 		Save the model and configuration to the given directory
 		The folder will include a pytorch model, and a json configuration file
 		"""
-		
+
 		os.makedirs(save_dir, exist_ok=True)
 		if is_min:
 			model_path = os.path.join(save_dir, "model-min.pt")
@@ -109,19 +124,19 @@ class Model(nn.Module):
 		with open(conf_path, "w", encoding="utf-8") as conf:
 			json.dump(self.config.as_json_dict(), conf)
 		self.log(f"Saved model to {model_path} and configuration to {conf_path}")
-	
+
 	@staticmethod
 	def load(load_dir: str):
 		"""
 		Load a model from a configuration directory
 		"""
-		
+
 		model_path = os.path.join(load_dir, "model.pt")
 		conf_path = os.path.join(load_dir, "config.json")
 		with open(conf_path, encoding="utf-8") as conf:
 			state_dict = torch.load(model_path, map_location=gpu)
 			config = ModelConfig.from_json_dict(json.load(conf))
-		
+
 		model = Model(config)
 		model.load_state_dict(state_dict)
 		model.to(gpu)
