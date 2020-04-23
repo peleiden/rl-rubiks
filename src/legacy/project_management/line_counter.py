@@ -65,14 +65,15 @@ os.system("git checkout master")
 plt.figure(figsize=(15, 10))
 for kw, lines in n_lines.items():
 	plt.plot(times, lines[1:], "-o", label=kw)
-xticks = np.linspace(0, len(commits)-1, 6, dtype=int)
+xticks = np.linspace(0, len(commits)-1, 10, dtype=int)
 tickcommits = [x for i, x in enumerate(commits) if i in xticks]
 xticklabels = [time.strftime("%d-%m-%Y", time.gmtime(x.committed_date)) for x in tickcommits]
-plt.xticks([times[i] for i in xticks], xticklabels, rotation=30)
+plt.xticks([times[i] for i in xticks], xticklabels, rotation=45)
 plt.xlabel("Number of commits")
 plt.ylabel("Nummer of non-empty/comment lines")
 plt.legend(loc=2)
 plt.grid(True)
+plt.tight_layout()
 plt.savefig(f"{repopath}/src/legacy/project_management/local_line_counts.png")
 plt.show()
 
