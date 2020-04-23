@@ -3,7 +3,7 @@ os.chdir(sys.path[0])
 from pathlib import Path
 import git
 import matplotlib.pyplot as plt
-plt.rcParams.update({"font.size": 18})
+plt.rcParams.update({"font.size": 16})
 import numpy as np
 from collections import deque, defaultdict
 import time
@@ -65,10 +65,10 @@ os.system("git checkout master")
 plt.figure(figsize=(15, 10))
 for kw, lines in n_lines.items():
 	plt.plot(times, lines[1:], "-o", label=kw)
-xticks = np.linspace(0, len(commits)-1, 10, dtype=int)
+xticks = np.linspace(0, len(commits)-1, 6, dtype=int)
 tickcommits = [x for i, x in enumerate(commits) if i in xticks]
 xticklabels = [time.strftime("%d-%m-%Y", time.gmtime(x.committed_date)) for x in tickcommits]
-plt.xticks([times[i] for i in xticks], xticklabels, rotation=45)
+plt.xticks([times[i] for i in xticks], xticklabels, rotation=30)
 plt.xlabel("Number of commits")
 plt.ylabel("Nummer of non-empty/comment lines")
 plt.legend(loc=2)
