@@ -364,3 +364,55 @@ class MCTS(DeepSearcher):
 		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
 
 
+class A_star(DeepSearcher):
+
+	def __init__(self, net: Model):
+		super().__init__(net)
+		self.net = net
+		self.open = dict()
+		self.closed = dict()
+
+	@no_grad
+	def search(self, state: np.ndarray, time_limit: float) -> bool:
+		# initializing/resetting stuff
+		self.tt.tick()
+		self.reset()
+		self.open = {}
+		if Cube.is_solved(state): return True
+		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': np.inf, 'parent': None}
+
+		# explore leaves
+		while self.tt.tock() < time_limit:
+			# choose current node as the node in open with the lowest f cost
+			idx = np.argmin([self.open[node]['g_cost'] + self.open[node]['h_cost'] for node in self.open])
+			current = list(self.open)[idx]
+			# add to closed and remove from open
+			self.closed[current] = self.open[current]
+			del self.open[current]
+			if self.closed[current]['h_cost'] == 0: return True
+			neighbors = self.get_neighbors(current)
+			for neighbor in neighbors:
+				if neighbor not in self.closed:
+					g_cost = self.get_g_cost(current)
+					h_cost = self.get_h_cost(neighbor)
+					if neighbor not in self.open or g_cost+h_cost < self.open[neighbor]['g_cost']+self.open[neighbor]['h_cost']:
+						self.open[neighbor] = {'g_cost': g_cost, 'h_cost': h_cost, 'parent': current}
+		return False
+
+	def get_neighbors(self, node):
+		neighbors = [None] * Cube.action_dim
+		node = np.fromstring(node, dtype=int)
+		for i in Cube.action_dim:
+			neighbor = Cube.rotate(node, *Cube.action_space[i])
+			neighbors[i] = neighbor.tostring()
+		return neighbors
+
+	def get_g_cost(self, node):
+		return self.closed[node]['g_cost'] + 1
+
+	def get_h_cost(self, node):
+		node = np.fromstring(node, dtype=int)
+		if Cube.is_solved(node):
+			return 0
+		else:
+			return NotImplementedError
