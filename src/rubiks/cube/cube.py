@@ -20,19 +20,6 @@ def _get_686solved(dtype):
 		solved_state[i, :, i] = 1
 	return solved_state
 
-def _sequence_scrambler(n: int, g:int):
-	"""
-	A non-inplace scrambler that returns the state to each of the scrambles useful for ADI
-	"""
-	env = _Cube2024 if get_repr() else _Cube686
-	scrambled_states = np.empty((n+1, *env.get_solved_instance().shape), dtype=env.dtype)
-	scrambled_states[0] = env.get_solved()
-
-	faces = np.random.randint(6, size = (n+1, ))
-	dirs = np.random.randint(2, size = (n+1, )).astype(bool)
-	for i, face, d in zip(range(n), faces, dirs):
-		scrambled_states[i+1] = env.rotate(scrambled_states[i], face, d)
-	return scrambled_states[:-1], env.as_oh(scrambled_states[:-1])
 
 class Cube:
 	# If the six sides are represented by an array, the order should be F, B, T, D, L, R
@@ -98,19 +85,6 @@ class Cube:
 			current_states = cls.multi_rotate(current_states, faces, dirs)
 		states = np.vstack(np.transpose(states, (1, 0, 2)))
 		oh_states = cls.as_oh(states)
-		return states, oh_states
-
-	@classmethod
-	def sequence_scrambler2(cls, games: int, n: int):
-		"""
-		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
-		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
-		"""
-		# Multithreads if over 1000 games
-		# Experimentally, this seems to be around the point at which multithreading is worth it
-		res = [_sequence_scrambler(n, _) for _ in range(games)]
-		states = np.array([x[0] for x in res])
-		oh_states = torch.stack([x[1] for x in res]).view(-1, cls.get_oh_shape())
 		return states, oh_states
 
 	@classmethod

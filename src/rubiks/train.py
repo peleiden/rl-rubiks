@@ -220,62 +220,36 @@ class Train:
 
 		net.eval()
 		self.tt.profile("Scrambling")
-		# method = Cube.sequence_scrambler
-		# states, oh_states = method(self.rollout_games, self.rollout_depth)
-		states2, oh_states2 = Cube.sequence_scrambler2(self.rollout_games, self.rollout_depth)
-		# assert np.all(states == states2.reshape(-1, *Cube.shape()))
-		# assert torch.all(oh_states==oh_states2)
+		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
-		# solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
-		solved_scrambled_states2 = np.array([
-			Cube.is_solved(scrambled_state)
-			for game_states in states2
-			for scrambled_state in game_states
-		], dtype=bool)
-		# assert np.all(solved_scrambled_states==solved_scrambled_states2)
+		solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
 		
 		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
-		# substates = np.vstack(np.transpose([
-		# 	Cube.multi_rotate(states, np.array([action[0]]*len(states)), np.array([action[1]]*len(states)))
-		# 	for action in Cube.action_space
-		# ], (1, 0, 2)))
-		substates2 = np.array([
-			Cube.rotate(scrambled_state, *action)
-			for game_states in states2
-			for scrambled_state in game_states
+		substates = np.vstack(np.transpose([
+			Cube.multi_rotate(states, np.array([action[0]]*len(states)), np.array([action[1]]*len(states)))
 			for action in Cube.action_space
-		], dtype=Cube.dtype)
-		# assert np.all(substates==substates2)
+		], (1, 0, 2)))
 		self.tt.end_profile("ADI substates")
 		self.tt.profile("One-hot encoding")
-		# substates_oh = Cube.as_oh(substates).to(gpu)
-		substates_oh2 = Cube.as_oh(substates2).to(gpu)
-		# assert torch.all(substates_oh==substates_oh2)
+		substates_oh = Cube.as_oh(substates).to(gpu)
 		self.tt.end_profile("One-hot encoding")
 
 		# Get rewards. 1 for solved states else -1
 		self.tt.profile("Reward")
-		# solved_substates = (substates == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
-		# rewards = torch.ones(*solved_substates.shape)
-		# rewards[~solved_substates] = -1
-		rewards2 = torch.tensor([1 if Cube.is_solved(substate) else -1 for substate in substates2])
-		# assert torch.all(rewards==rewards2)
+		solved_substates = (substates == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
+		rewards = torch.ones(*solved_substates.shape)
+		rewards[~solved_substates] = -1
 		self.tt.end_profile("Reward")
 		
 		# Generates policy and value targets
 		self.tt.profile("ADI feedforward")
 		while True:
 			try:
-				# value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
-				# values = torch.cat(value_parts).cpu()
-				# assert values.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
-				value_parts2 = [net(substates_oh2[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
-				values2 = torch.cat(value_parts2).cpu()
-				assert values2.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
-				# assert torch.all(values==values2)
+				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
+				values = torch.cat(value_parts).cpu()
 				break
 			except RuntimeError:  # Usually caused by running out of vram
 				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
@@ -283,14 +257,11 @@ class Train:
 		self.tt.end_profile("ADI feedforward")
 
 		self.tt.profile("Calculating targets")
-		# values += rewards
-		# values = values.reshape(-1, 12)
-		values2 += rewards2
-		values2 = values2.reshape(-1, 12)
-		# assert torch.all(values==values2)
-		policy_targets = torch.argmax(values2, dim=1)
-		value_targets = values2[np.arange(len(values2)), policy_targets]
-		value_targets[solved_scrambled_states2] = 0
+		values += rewards
+		values = values.reshape(-1, 12)
+		policy_targets = torch.argmax(values, dim=1)
+		value_targets = values[np.arange(len(values)), policy_targets]
+		value_targets[solved_scrambled_states] = 0
 		self.tt.end_profile("Calculating targets")
 		
 		if self.loss_weighting == "adaptive":
@@ -303,8 +274,8 @@ class Train:
 		else:
 			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
 		loss_weights /= loss_weights.sum()
-		
-		return oh_states2, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
+
+		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
