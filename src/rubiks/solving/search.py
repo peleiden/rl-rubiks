@@ -379,7 +379,11 @@ class A_star(DeepSearcher):
 		self.reset()
 		self.open = {}
 		if Cube.is_solved(state): return True
-		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': np.inf, 'parent': None}
+
+		oh = Cube.as_oh(state).to(gpu)
+		p, v = self.net(oh)  # Policy and value
+		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': -float(v.cpu()), 'parent': None}
+		del p, v
 
 		# explore leaves
 		while self.tt.tock() < time_limit:
@@ -399,20 +403,25 @@ class A_star(DeepSearcher):
 						self.open[neighbor] = {'g_cost': g_cost, 'h_cost': h_cost, 'parent': current}
 		return False
 
-	def get_neighbors(self, node):
+	def get_neighbors(self, node: str):
 		neighbors = [None] * Cube.action_dim
 		node = np.fromstring(node, dtype=int)
-		for i in Cube.action_dim:
+		for i in range(Cube.action_dim):
 			neighbor = Cube.rotate(node, *Cube.action_space[i])
 			neighbors[i] = neighbor.tostring()
 		return neighbors
 
-	def get_g_cost(self, node):
+	def get_g_cost(self, node: str):
 		return self.closed[node]['g_cost'] + 1
 
-	def get_h_cost(self, node):
+	def get_h_cost(self, node: str):
 		node = np.fromstring(node, dtype=int)
 		if Cube.is_solved(node):
 			return 0
 		else:
-			return NotImplementedError
+			oh = Cube.as_oh(node).to(gpu)
+			p, v = self.net(oh)
+			return -float(v.cpu()) #alternativ idé: 1/float(v.cpu())
+
+	def __str__(self):
+		return f"A* Search"
