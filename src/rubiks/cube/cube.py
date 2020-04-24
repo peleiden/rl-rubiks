@@ -272,7 +272,7 @@ class _Cube686(Cube):
 		# This representation is already one-hot encoded, so only ravelling is done
 		if len(states.shape) == 1:
 			states = np.expand_dims(states, 0)
-		states = torch.from_numpy(states.reshape(-1, 288)).float()
+		states = torch.from_numpy(states.reshape(-1, 288)).float()  # TODO: This may not work?
 		return states
 
 	@classmethod
