@@ -5,7 +5,7 @@ plt.rcParams.update({"font.size": 22})
 import numpy as np
 from time import perf_counter
 
-from src.rubiks import set_repr
+from src.rubiks import set_is2024
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
 from src.rubiks.utils.logger import Logger

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from src.rubiks import get_repr, set_repr
+from src.rubiks import get_is2024, set_is2024
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
 
 
@@ -49,13 +49,13 @@ class Cube:
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
-		method = _Cube2024.rotate if get_repr() else _Cube686.rotate
+		method = _Cube2024.rotate if get_is2024() else _Cube686.rotate
 		return method(state, face, pos_rev)
 
 	@classmethod
 	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_rev: np.ndarray):
 		# Performs action (faces[i], pos_revs[i]) on states[i]
-		method = _Cube2024.multi_rotate if get_repr() else _Cube686.multi_rotate
+		method = _Cube2024.multi_rotate if get_is2024() else _Cube686.multi_rotate
 		return method(states, faces, pos_rev)
 
 	@classmethod
@@ -80,6 +80,11 @@ class Cube:
 		return state, faces, dirs
 
 	@classmethod
+	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
+		assert not get_is2024()
+		return _Cube686.pad(oh, pad_size)
+
+	@classmethod
 	def sequence_scrambler(cls, games: int, depth: int):
 		"""
 		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
@@ -99,7 +104,7 @@ class Cube:
 	def get_solved_instance(cls):
 		# Careful - this method returns the instance - not a copy - so the output is readonly
 		# If speed is not critical, use get_solved()
-		return cls._solved2024 if get_repr() else cls._solved686
+		return cls._solved2024 if get_is2024() else cls._solved686
 
 	@classmethod
 	def get_solved(cls):
@@ -116,12 +121,12 @@ class Cube:
 	@classmethod
 	def as_oh(cls, states: np.ndarray) -> torch.tensor:
 		# Takes in n states and returns an n x 480 one-hot tensor
-		method = _Cube2024.as_oh if get_repr() else _Cube686.as_oh
+		method = _Cube2024.as_oh if get_is2024() else _Cube686.as_oh
 		return method(states)
 
 	@staticmethod
 	def get_oh_shape():
-		return 480 if get_repr() else 288
+		return 480 if get_is2024() else 288
 
 	@staticmethod
 	def rev_action(action: int):
@@ -132,7 +137,7 @@ class Cube:
 		"""
 		Order: F, B, T, D, L, R
 		"""
-		method = _Cube2024.as633 if get_repr() else _Cube686.as633
+		method = _Cube2024.as633 if get_is2024() else _Cube686.as633
 		return method(state)
 
 	@classmethod
@@ -284,6 +289,18 @@ class _Cube686(Cube):
 		return states
 
 	@classmethod
+	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
+		# Performs pad wrap of size one on each side
+		assert pad_size >= 1
+		oh = oh.reshape(-1, 6, 8, 6)
+		solved = (oh[:] == cls.get_solved_instance()).all(dim=3)
+		padded = torch.ones(len(oh), 6, 8+pad_size*2, 8)
+		padded[..., pad_size:8+pad_size] = solved
+		padded[..., :pad_size] = solved[..., -pad_size]
+		padded[..., -pad_size:] = solved[..., pad_size]
+		return padded
+
+	@classmethod
 	def as633(cls, state: np.ndarray):
 		state68 = np.where(state == 1)[2].reshape((6, 8))
 		state69 = (np.ones((9, 6)) * np.arange(6)).astype(int).T  # Nice
@@ -293,7 +310,7 @@ class _Cube686(Cube):
 
 
 if __name__ == "__main__":
-	set_repr(False)
+	set_is2024(False)
 	states = np.array([Cube.get_solved()]*2, dtype=Cube.dtype)
 	for _ in range(5):
 		faces, dirs = np.random.randint(0, 6, 2), np.random.randint(0, 1, 2)

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 import numpy as np
 
-from src.rubiks import gpu, set_repr
+from src.rubiks import gpu, set_is2024
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.search import Searcher, MCTS

@@ -10,7 +10,7 @@ from src.rubiks.utils.parse import Parser
 from src.rubiks.utils.ticktock import get_timestamp
 from src.rubiks.utils.logger import Logger
 
-from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr
+from src.rubiks import cpu, gpu, get_is2024, set_is2024, store_repr, restore_repr
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.train import Train
 
@@ -76,6 +76,12 @@ options = {
 		'type':	    literal_eval,
 		'choices':  [True, False],
 	},
+	'arch': {
+		'default':	'fc',
+		'help':		'Network architecture. fc for fully connected, res for fully connected with residual blocks, and conv for convolutional blocks',
+		'type':		str,
+		'choices':	['fc', 'res', 'conv'],
+	},
 }
 
 
@@ -93,8 +99,9 @@ class TrainJob:
 			lr: float,
 			gamma: float,
 			optim_fn: str,
-			is2024: bool,
 			evaluations: int,
+			is2024: bool,
+			arch: str,
 
 			# Currently not set by argparser/configparser
 
@@ -104,7 +111,6 @@ class TrainJob:
 			scrambling_depths: tuple = (8,),
 
 			verbose: bool = True,
-			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
 		):
 		self.name = name
 		assert isinstance(self.name, str)
@@ -137,13 +143,16 @@ class TrainJob:
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
-		self.model_cfg = model_cfg
+		self.model_cfg = ModelConfig(architecture=arch)
+		assert arch in ["fc", "res", "conv"]
+		if arch == "conv": assert not get_is2024()
 		assert isinstance(self.model_cfg, ModelConfig)
 
 	def execute(self):
 		store_repr()
-		set_repr(self.is2024)
-		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_repr() else '6x8x6'} representation\nLocation {self.location}")
+		set_is2024(self.is2024)
+		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}")
+		set_is2024(self.is2024)
 
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*self.evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
@@ -160,7 +169,7 @@ class TrainJob:
 				evaluator			= self.evaluator,
 		)
 
-		net = Model(self.model_cfg, self.logger).to(gpu)
+		net = Model.create(self.model_cfg, self.logger).to(gpu)
 		net, min_net = train.train(net)
 		net.save(self.location)
 		min_net.save(self.location, True)
