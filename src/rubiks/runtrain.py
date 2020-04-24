@@ -143,7 +143,7 @@ class TrainJob:
 	def execute(self):
 		store_repr()
 		set_repr(self.is2024)
-		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_repr() else '6x8x6'} representation")
+		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_repr() else '6x8x6'} representation\nLocation {self.location}")
 
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*self.evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,

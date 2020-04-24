@@ -133,7 +133,7 @@ class EvalJob:
 		self.logger.log(f"TIME ESTIMATE: {len(self.agents)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
 
 	def execute(self):
-		self.logger.log(f"Beginning evaluator {self.name}")
+		self.logger.log(f"Beginning evaluator {self.name} at location {self.location}")
 		agent_results = {}
 		for name, agent in self.agents.items():
 			self.logger.section(f'Evaluationg agent {name}')

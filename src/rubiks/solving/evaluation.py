@@ -96,13 +96,15 @@ class Evaluator:
 			'max_time': self.max_time,
 			'scrambling_depths': self.scrambling_depths
 		}
-		self.plot_an_eval(eval_results, save_dir, settings, **kwargs)
+		save_paths = self.plot_an_eval(eval_results, save_dir, settings, **kwargs)
+		self.log(f"Saved evaluation plots to {save_paths}")
 
 	@staticmethod
 	def plot_an_eval(eval_results: dict, save_dir: str,  eval_settings: dict, show: bool=False, title: str=''):
 		"""
 		{agent: results from self.eval}
 		"""
+		save_paths = []
 		#depth, win%-graph
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		ax.set_ylabel(f"Percentage of {eval_settings['n_games']} games won")
@@ -126,6 +128,7 @@ class Evaluator:
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_winrates.png")
 		plt.savefig(path)
+		save_paths.append(path)
 
 		if show: plt.show()
 		plt.clf()
@@ -155,6 +158,9 @@ class Evaluator:
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_sollengths.png")
 		plt.savefig(path)
+		save_paths.append(path)
 
 		if show: plt.show()
 		plt.clf()
+
+		return save_paths
