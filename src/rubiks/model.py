@@ -5,7 +5,7 @@ import torch.nn as nn
 from copy import deepcopy
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks import cpu, gpu
+from src.rubiks import cpu, gpu, get_is2024
 from src.rubiks.utils.logger import Logger, NullLogger
 
 from dataclasses import dataclass, field
@@ -161,7 +161,6 @@ class Model(nn.Module):
 class FFNet(Model):
 
 	def _construct_net(self):
-
 		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
 		policy_thiccness = [shared_thiccness[-1], *self.config.part_sizes, Cube.action_dim]
 		value_thiccness = [shared_thiccness[-1], *self.config.part_sizes, 1]
