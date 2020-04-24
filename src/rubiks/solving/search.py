@@ -174,7 +174,7 @@ class MCTS(DeepSearcher):
 		self.tt.tick()
 		if Cube.is_solved(state): return True
 		# First state is evaluated and expanded individually
-		# oh = Cube.as_oh(state).to(gpu)
+		oh = Cube.as_oh(state).to(gpu)
 		p, v = self.net(oh)  # Policy and value
 		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
@@ -253,14 +253,14 @@ class MCTS(DeepSearcher):
 		# Explores all new states
 		self.tt.profile("Getting new states to expand to")
 		states = np.array([leaf.state for leaf in leaves])
-		new_states = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
+		new_states_new = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
 		self.tt.end_profile("Getting new states to expand to")
 		self.tt.profile("Getting new states to expand to (classic)")  # TODO: Remove after confidence
-		new_states_classic = np.array([Cube.rotate(leaf.state, *action)
+		new_states = np.array([Cube.rotate(leaf.state, *action)
 							   for leaf in leaves
 							   for action in Cube.action_space])
 		self.tt.end_profile("Getting new states to expand to (classic)")
-		assert np.all(new_states==new_states_classic)
+		assert np.all(new_states==new_states_new)
 
 		# Checks for solutions
 		for i, state in enumerate(new_states):
