@@ -174,7 +174,7 @@ class MCTS(DeepSearcher):
 		self.tt.tick()
 		if Cube.is_solved(state): return True
 		# First state is evaluated and expanded individually
-		oh = Cube.as_oh(state).to(gpu)
+		# oh = Cube.as_oh(state).to(gpu)
 		p, v = self.net(oh)  # Policy and value
 		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
 		del p, v

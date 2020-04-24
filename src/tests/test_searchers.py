@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.rubiks import gpu
+from src.rubiks import gpu, set_repr
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.search import MCTS
@@ -11,6 +11,7 @@ from src.tests import MainTest
 class TestMCTS(MainTest):
 	
 	def test_search(self):
+		set_repr(False)
 		net = Model(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
 		searcher = MCTS(net, c=1, nu=.1, search_graph=True, workers=10)
@@ -40,6 +41,7 @@ class TestMCTS(MainTest):
 			assert (np.array(W) == state.W).all()
 			# Tests P
 			assert np.isclose(state.P.sum(), 1)
+			set_repr(True)
 
 
 
