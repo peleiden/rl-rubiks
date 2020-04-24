@@ -71,6 +71,7 @@ class Searcher:
 		raise NotImplementedError
 
 	def __len__(self):
+		# Returns number of states explored
 		return len(self.action_queue)
 
 
@@ -192,6 +193,7 @@ class MCTS(DeepSearcher):
 			# Gets new paths and leaves to expand from
 			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], time_limit) for _ in range(self.workers)])
 
+		self.action_queue = paths[solve_leaf] + deque([solve_action])  # Saves an action queue even if it loses which is its best guess
 		return False
 
 	def search_leaf(self, node: Node, time_limit: float) -> (list, Node):
@@ -276,7 +278,7 @@ class MCTS(DeepSearcher):
 				# However, this is so expensive that it has been found to reduce the number of explored states to around a quarter
 				# Also, it is not a major problem, as the edges will be updated when new_leaf is expanded, so the problem only exists on the edge of the graph
 				# TODO: Test performance difference after implementing this
-				# TODO: Save dum states when expanding. This should allow graph completeness without massive overhead
+				# TODO: Save dumb nodes when expanding. This should allow graph completeness without massive overhead
 			else:
 				leaf.neighs[action_idx] = self.states[state_str]
 				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf

@@ -14,10 +14,14 @@ class Agent:
 
 	def generate_action_queue(self, state: np.ndarray, time_limit: float) -> (bool, int):
 		solution_found = self._searcher.search(state, time_limit)
-		return solution_found, len(self._searcher.action_queue)
+		return solution_found, len(self)
 
 	def action(self) -> (int, bool):
 		return Cube.action_space[self._searcher.action_queue.popleft()]
+	
+	def actions(self) -> (int, bool):
+		while self._searcher.action_queue:
+			yield self.action()
 
 	def allow_mt(self):
 		# NN based agents see very little gain but much higher compute usage with standard mt implementation
