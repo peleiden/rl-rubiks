@@ -22,7 +22,7 @@ export class HttpService {
     { name: "Local", address: "http://127.0.0.1:5000" },
   ];
 
-  private selectedHost = this.hosts[0];
+  selectedHost = this.hosts[0];
 
   private getUrl(path: string) {
     return `${this.selectedHost.address}/${path}`;
