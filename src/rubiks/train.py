@@ -96,7 +96,7 @@ class Train:
 			f"Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}",
 			f"Evaluations: {len(self.evaluations)}",
 		]))
-		lowest_loss = float("inf")
+		best_solve = 0
 		min_net = net.clone()
 		self.agent.update_net(net)
 		params = net.get_params()
@@ -151,10 +151,6 @@ class Train:
 				if self.gamma != 1:
 					self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
 
-			if self.train_losses[rollout] < lowest_loss:
-				lowest_loss = self.train_losses[rollout]
-				min_net = net.clone()
-
 			model_change = torch.sqrt((net.get_params()-params)**2).mean().cpu()
 			model_total_change = torch.sqrt((net.get_params()-orig_params)**2).mean().cpu()
 			params = net.get_params()
@@ -182,6 +178,12 @@ class Train:
 				self.eval_rewards.append(eval_reward)
 				self.tt.end_profile(f"Evaluating using agent {self.agent}")
 
+				if eval_reward > best_solve:
+					best_solve = eval_reward
+					min_net = net.clone()
+					self.log(f"Updated best net with solve rate {eval_reward*100:.2f} % at depth {self.evaluator.scrambling_depths}")
+
+
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
@@ -191,13 +193,13 @@ class Train:
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * Cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
 		self.log("\n".join([
-			f"Best net found to have loss of {lowest_loss:.4f}",
+			f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}",
 			f"Total running time:            {self.tt.stringify_time(total_time, 's')}",
-			f"  Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
-			f"  Training time:               {self.tt.stringify_time(train_time, 's')} or {train_time/total_time*100:.2f} %",
-			f"  Evaluation time:             {self.tt.stringify_time(eval_time, 's')} or {eval_time/total_time*100:.2f} %",
+			f"- Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
+			f"- Training time:               {self.tt.stringify_time(train_time, 's')} or {train_time/total_time*100:.2f} %",
+			f"- Evaluation time:             {self.tt.stringify_time(eval_time, 's')} or {eval_time/total_time*100:.2f} %",
 			f"States witnessed:              {TickTock.thousand_seps(nstates)}",
-			f"  States per training second:  {TickTock.thousand_seps(states_per_sec)}",
+			f"- States per training second:  {TickTock.thousand_seps(states_per_sec)}",
 		]))
 
 		return net, min_net
