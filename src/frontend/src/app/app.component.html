@@ -71,7 +71,7 @@
       </form>
       <div *ngIf="commonService.hasSearchedForSolution">
         <p>
-          {{commonService.searchedStates}} states were explored
+          {{commonService.searchedStates || "An unknown number of"}} states were explored
           <span *ngIf="commonService.hasSolution">, and a solution of {{commonService.solveActions.length}} steps was found.</span>
           <span *ngIf="!commonService.hasSolution">, but a solution was not found.</span>
         </p>

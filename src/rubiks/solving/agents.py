@@ -28,8 +28,7 @@ class Agent:
 	
 	def __len__(self):
 		# Returns number of explored states
-		# This will not work properly with searchers using multiple workers if they do not maintain a states object
-		return len(self._searcher.states) if hasattr(self._searcher, "states") else len(self._searcher.action_queue)
+		return len(self._searcher)
 		
 
 class DeepAgent(Agent):

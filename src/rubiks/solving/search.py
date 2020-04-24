@@ -70,6 +70,9 @@ class Searcher:
 	def __str__(self):
 		raise NotImplementedError
 
+	def __len__(self):
+		return len(self.action_queue)
+
 
 class DeepSearcher(Searcher):
 	def __init__(self, net: Model):
@@ -346,7 +349,7 @@ class MCTS(DeepSearcher):
 		return -1
 
 	def _shorten_action_queue(self):
-		# TODO
+		# TODO: Implement and ensure graph completeness
 		# Generates new action queue with BFS through self.states
 		pass
 
@@ -362,9 +365,12 @@ class MCTS(DeepSearcher):
 
 	def __str__(self):
 		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
+	
+	def __len__(self):
+		return len(self.states)
 
 
-class A_star(DeepSearcher):
+class AStar(DeepSearcher):
 
 	def __init__(self, net: Model):
 		super().__init__(net)
@@ -425,3 +431,8 @@ class A_star(DeepSearcher):
 
 	def __str__(self):
 		return f"A* Search"
+	
+	def __len__(self):
+		# TODO
+		raise NotImplementedError
+

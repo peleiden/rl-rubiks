@@ -25,7 +25,7 @@ agents = [
 	{ "name": "BFS", "agent": Agent(BFS()) },
 	{ "name": "Greedy policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
 	{ "name": "Stochastic policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, True)) },
-	{ "name": "DeepCube", "agent": DeepAgent(MCTS.from_saved(net_loc, 1, 1, True, 1)) },
+	{ "name": "DeepCube", "agent": DeepAgent(MCTS.from_saved(net_loc, 0.6, 0.005, True, 10)) },
 ]
 
 def as69(state: np.ndarray):
@@ -98,6 +98,7 @@ def solve():
 	return jsonify({
 		"solution": solution_found,
 		"actions": actions,
+		"searchedStates": len(agent),
 		"states": states.tolist(),
 		"finalState20": finalOh.tolist(),
 	})
