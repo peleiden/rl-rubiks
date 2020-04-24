@@ -38,6 +38,7 @@ export interface ISolveRequest {
 
 export interface ISolveResponse {
 	solution: boolean;
+	searchedStates: number;
 	actions: number[];
 	states: cube[];
 	finalState20: cube20;

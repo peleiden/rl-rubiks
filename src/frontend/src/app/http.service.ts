@@ -17,7 +17,7 @@ export class HttpService {
 
   hosts = [
     { name: "Heroku", address: "https://rl-rubiks.herokuapp.com" },
-    { name: "Lokal", address: "http://127.0.0.1:5000" },
+    { name: "Local", address: "http://127.0.0.1:5000" },
   ];
   selectedHost = this.hosts[0];
 

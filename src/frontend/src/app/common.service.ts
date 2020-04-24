@@ -19,6 +19,7 @@ export class CommonService {
   hasSearchedForSolution = false;
   hasSolution: boolean;
   solveActions: string[];
+  searchedStates: number;
 
   state: cube;
   state20: cube20;
@@ -83,9 +84,10 @@ export class CommonService {
       timeLimit: this.timeLimit,
       state20: this.state20,
     };
-    const { solution, actions, states, finalState20 } = await this.httpService.solve(solveRequest);
+    const { solution, actions, searchedStates, states, finalState20 } = await this.httpService.solve(solveRequest);
     this.hasSearchedForSolution = true;
     this.hasSolution = solution;
+    this.searchedStates = searchedStates;
     this.solveActions = actions.map(val => this.actions[2*val[0] + val[1]]);
     this.state20 = finalState20;
     if (this.hasSolution) {
@@ -102,7 +104,6 @@ export class CommonService {
       })
       this.state = await promise;
     }
-    console.log("Færdig med scarmbulering");
     return null;
   }
 }

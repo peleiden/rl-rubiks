@@ -21,11 +21,11 @@ net_loc = os.path.join(
 	'hpc-20-04-12'
 )
 agents = [
-	{ "name": "Tilfældige træk", "agent": Agent(RandomDFS()) },
+	{ "name": "Random actions", "agent": Agent(RandomDFS()) },
 	{ "name": "BFS", "agent": Agent(BFS()) },
-	{ "name": "Deterministisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
-	{ "name": "Stokastisk politik", "agent": DeepAgent(PolicySearch.from_saved(net_loc, True)) },
-	{ "name": "Dybkube", "agent": DeepAgent(MCTS.from_saved(net_loc, 1, 1, True, 1)) },
+	{ "name": "Greedy policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
+	{ "name": "Stochastic policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, True)) },
+	{ "name": "DeepCube", "agent": DeepAgent(MCTS.from_saved(net_loc, 1, 1, True, 1)) },
 ]
 
 def as69(state: np.ndarray):

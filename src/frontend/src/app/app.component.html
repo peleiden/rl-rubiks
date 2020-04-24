@@ -1,6 +1,6 @@
 <div class="content">
   <div class="row">
-    <h1 class="col-10">Dybkube</h1>
+    <h1 class="col-10">Solving Rubik's Cube with Reinforcement Learning</h1>
     <span class="col-2">
       <p>Server</p>
       <select [(ngModel)]="httpService.selectedHost">
@@ -11,15 +11,14 @@
   <div class="row" *ngIf="!(commonService.status.loading && !commonService.status.hasData) else loading">
     <div class="col-4">
       <p>
-        Udviklet af Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
-        Søren Winkel Holm (<a href="mailto:s183911@student.dtu.dk">s183911@student.dtu.dk</a>) og
+        Developed by Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
+        Søren Winkel Holm (<a href="mailto:s183911@student.dtu.dk">s183911@student.dtu.dk</a>), and
         Anne Agathe Pedersen (<a href="mailto:s174300@student.dtu.dk">s174300@student.dtu.dk</a>).
-        Repository tilgængeligt på <a href="https://github.com/sorenmulli/rl-rubiks">GitHub</a>.
+        Repository available on <a href="https://github.com/sorenmulli/rl-rubiks">GitHub</a>.
       </p>
 
-      <h2 class="h5 mt-4">Foretag handling</h2>
-      <!-- Træk -->
-      <!-- TODO: Overvej toolbar https://getbootstrap.com/docs/4.4/components/btn-group/ -->
+      <h2 class="h5 mt-4">Perform action</h2>
+      <!-- Actions -->
       <div style="max-width: 450px;">
         <div class="row my-1">
           <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
@@ -36,28 +35,28 @@
           </div>
         </div>
       </div>
-      <!-- Nulstilling -->
-      <button class="btn btn-secondary my-1" (click)="commonService.getSolved()" [disabled]="commonService.status.loading">Nulstil</button>
+      <!-- Reset -->
+      <button class="btn btn-secondary my-1" (click)="commonService.getSolved()" [disabled]="commonService.status.loading">Reset</button>
       <!-- Scrambling -->
       <form class="form-inline my-1" (ngSubmit)="commonService.scramble(scrambleDepth)">
-        <button class="btn btn-secondary" type="submit" [disabled]="commonService.status.loading">Foretag</button>
+        <button class="btn btn-secondary" type="submit" [disabled]="commonService.status.loading">Perform</button>
         <div class="form-group mx-2">
           <input type="number" class="form-control" style="width: 6rem;" [(ngModel)]="scrambleDepth" [ngModelOptions]="{standalone: true}">
         </div>
-        tilfældige træk.
+        random actions.
       </form>
 
-      <h2 class="h5 mt-4">Agenter</h2>
-      <p>Agenterne opretter en kø af træk, der giver den løste tilstand, såfremt den er fundet.</p>
+      <h2 class="h5 mt-4">Agents</h2>
+      <p>All agents create an an action queue, which if followed produces the solved states, insofar as it was found.</p>
       <p *ngIf="!commonService.cuda">
-        Vær opmærksom på, at cuda ikke er tilgængelig på den valgte server, så agenter med neuralt netværk vil køre forholdsvist langsomt.
+        Be aware that CUDA is not available on the selected server. Agents depending on a neural network will run fairly slow.
       </p>
-      <p *ngIf="!commonService.cuda && httpService.selectedHost.name !== 'Lokal'">
-        Hvis cuda er tilgængelig på din maskine, kan du med fordel starte en lokal server op ved at køre src/__init__.py-scriptet.
+      <p *ngIf="!commonService.cuda && httpService.selectedHost.name !== 'Local'">
+        If CUDA is available on your machine, you can start start a local server by running the src/api.py script.
       </p>
       <form class="form-inline" (ngSubmit)="commonService.solve()">
-        <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Forsøg</button>
-        at løse på
+        <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Try</button>
+        to solve
         <div class="form-group mx-2">
           <input type="number"
                  class="form-control"
@@ -65,23 +64,29 @@
                  [(ngModel)]="commonService.timeLimit"
                  [ngModelOptions]="{standalone: true}">
         </div>
-        sekunder med
+        seconds with
         <select class="my-2" [(ngModel)]="commonService.selectedAgent" [ngModelOptions]="{standalone: true}">
           <option *ngFor="let agent of commonService.agents; let i = index" [ngValue]="i">{{agent}}</option>
         </select>
       </form>
       <div *ngIf="commonService.hasSearchedForSolution">
-        <p *ngIf="commonService.hasSolution">En løsning på {{commonService.solveActions.length}} træk blev fundet.</p>
-        <p *ngIf="commonService.hasSolution">Træk: {{commonService.solveActions.join(" ")}}</p>
-        <p *ngIf="!commonService.hasSolution">{{commonService.solveActions.length+1}} tilstande blev undersøgt, men en løsning blev ikke fundet.</p>
+        <p>
+          {{commonService.searchedStates}} states were explored
+          <span *ngIf="commonService.hasSolution">, and a solution of {{commonService.solveActions.length}} steps was found.</span>
+          <span *ngIf="!commonService.hasSolution">, but a solution was not found.</span>
+        </p>
+        <p *ngIf="commonService.hasSolution"></p>
+        <p *ngIf="commonService.hasSolution">Steps: {{commonService.solveActions.join(" ")}}</p>
       </div>
     </div>
 
     <div class="col-8">
-      <div style="height: 50;"></div>
+      <div style="height: 50px;"></div>
       <app-rubiks></app-rubiks>
-      <div style="height: 100;"></div>
-      <ng-container *ngIf="commonService.status.loading" [ngTemplateOutlet]="loading"></ng-container>
+      <div style="height: 50px;"></div>
+      <div style="padding-right: 100px;">
+        <ng-container *ngIf="commonService.status.loading" [ngTemplateOutlet]="loading"></ng-container>
+      </div>
     </div>
   </div>
 </div>
