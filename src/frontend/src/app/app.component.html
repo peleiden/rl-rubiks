@@ -3,7 +3,7 @@
     <h1 class="col-10">Solving Rubik's Cube with Reinforcement Learning</h1>
     <span class="col-2">
       <p>Server</p>
-      <select [(ngModel)]="httpService.selectedHost">
+      <select [ngModel]="httpService.selectedHost" (ngModelChange)="commonService.setSelectedHost($event)">
         <option *ngFor="let host of httpService.hosts" [ngValue]="host">{{host.name}}</option>
       </select>
     </span>

@@ -72,8 +72,8 @@ export class CommonService {
     const scrambleRequest: IScrambleRequest = { depth, state20: this.state20, };
     const { states, finalState20 } = await this.httpService.scramble(scrambleRequest);
     this.state20 = finalState20;
-    await this.animateStates(states);
     this.status.loading = false;
+    await this.animateStates(states);
   }
 
   public async solve() {
@@ -90,10 +90,10 @@ export class CommonService {
     this.searchedStates = searchedStates;
     this.solveActions = actions.map(val => this.actions[2*val[0] + val[1]]);
     this.state20 = finalState20;
+    this.status.loading = false;
     if (this.hasSolution) {
       await this.animateStates(states);
     }
-    this.status.loading = false;
   }
 
   private async animateStates(states: cube[]) {
