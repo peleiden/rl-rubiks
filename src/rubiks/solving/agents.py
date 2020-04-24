@@ -14,7 +14,7 @@ class Agent:
 
 	def generate_action_queue(self, state: np.ndarray, time_limit: float) -> (bool, int):
 		solution_found = self._searcher.search(state, time_limit)
-		return solution_found, len(self)
+		return solution_found, len(self._searcher.action_queue)
 
 	def action(self) -> (int, bool):
 		return Cube.action_space[self._searcher.action_queue.popleft()]
