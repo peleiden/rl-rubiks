@@ -237,6 +237,8 @@ class Train:
 			Cube.multi_rotate(states, np.array([action[0]]*len(states)), np.array([action[1]]*len(states)))
 			for action in Cube.action_space
 		], (1, 0, *np.arange(2, len(Cube.shape())+2))))
+		substates_new = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
+		assert np.all(substates==substates_new)  # TODO: Remove after confidence - passes pytest
 		self.tt.end_profile("ADI substates")
 		self.tt.profile("One-hot encoding")
 		substates_oh = Cube.as_oh(substates).to(gpu)

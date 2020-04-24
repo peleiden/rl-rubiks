@@ -202,7 +202,7 @@ class MCTS(DeepSearcher):
 		self.tt.profile("Exploring next node")
 		while not node.is_leaf and self.tt.tock() < time_limit:
 			sqrtN = np.sqrt(node.N.sum())
-			if sqrtN < self.eps:  # Randomly chooses path the first time a path is found
+			if sqrtN < self.eps:  # Randomly chooses path the first time a state is explored
 				action = np.random.choice(Cube.action_dim)
 			else:
 				U = self.c * node.P * sqrtN / (1 + node.N)
@@ -223,10 +223,17 @@ class MCTS(DeepSearcher):
 		# Used for node expansion
 		"""
 		state_str = state.tostring()
+		new_states = Cube.multi_rotate(
+			np.tile(state, (Cube.action_dim, 1)),
+			*Cube.iter_actions()
+		)
+		new_states_strs = [x.tostring() for x in new_states]
 		for i, action in enumerate(Cube.action_space):
 			self.tt.profile("Update neighbors")
 			new_state = Cube.rotate(state, *action)
+			assert np.all(new_state==new_states[i])  # TODO: Remove after confidence
 			new_state_str = new_state.tostring()
+			assert new_state_str == new_states_strs[i]
 			if new_state_str in self.states:
 				self.states[state_str].neighs[i] = self.states[new_state_str]
 				self.states[new_state_str].neighs[Cube.rev_action(i)] = self.states[state_str]
@@ -244,9 +251,17 @@ class MCTS(DeepSearcher):
 		"""
 
 		# Explores all new states
-		new_states = np.array([Cube.rotate(leaf.state, *action)
+		self.tt.profile("Getting new states to expand to")
+		states = np.array([leaf.state for leaf in leaves])
+		new_states = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
+		self.tt.end_profile("Getting new states to expand to")
+		self.tt.profile("Getting new states to expand to (classic)")  # TODO: Remove after confidence
+		new_states_classic = np.array([Cube.rotate(leaf.state, *action)
 							   for leaf in leaves
 							   for action in Cube.action_space])
+		self.tt.end_profile("Getting new states to expand to (classic)")
+		assert np.all(new_states==new_states_classic)
+
 		# Checks for solutions
 		for i, state in enumerate(new_states):
 			if Cube.is_solved(state):

@@ -59,6 +59,14 @@ class Cube:
 		return method(states, faces, pos_rev)
 
 	@classmethod
+	def iter_actions(cls, n: int=1):
+		"""
+		Returns a numpy array of size 2 x n*cls.action_dim containing repeated actions
+		Practical for use with multi_rotate, e.g. Cube.multi_rotate(states, *Cube.iter_actions())
+		"""
+		return np.array(list(zip(*cls.action_space*n)), dtype=np.uint8)
+
+	@classmethod
 	def scramble(cls, n: int, force_not_solved=False):
 		faces = np.random.randint(6, size=(n,))
 		dirs = np.random.randint(2, size=(n,)).astype(bool)
