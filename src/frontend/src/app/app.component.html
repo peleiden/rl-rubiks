@@ -9,7 +9,7 @@
     </span>
   </div>
   <div class="row" *ngIf="!(commonService.status.loading && !commonService.status.hasData) else loading">
-    <div class="col-4">
+    <div class="col-5">
       <p>
         Developed by Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
         Søren Winkel Holm (<a href="mailto:s183911@student.dtu.dk">s183911@student.dtu.dk</a>), and
@@ -65,22 +65,26 @@
                  [ngModelOptions]="{standalone: true}">
         </div>
         seconds with
-        <select class="my-2" [(ngModel)]="commonService.selectedAgent" [ngModelOptions]="{standalone: true}">
+        <select class="my-2 ml-2" [(ngModel)]="commonService.selectedAgent" [ngModelOptions]="{standalone: true}">
           <option *ngFor="let agent of commonService.agents; let i = index" [ngValue]="i">{{agent}}</option>
         </select>
       </form>
-      <div *ngIf="commonService.hasSearchedForSolution">
+      <div *ngIf="commonService.hasSearchedForSolution" class="mt-2">
         <p>
-          {{commonService.searchedStates || "An unknown number of"}} states were explored
-          <span *ngIf="commonService.hasSolution">, and a solution of {{commonService.solveActions.length}} steps was found.</span>
-          <span *ngIf="!commonService.hasSolution">, but a solution was not found.</span>
+          {{commonService.searchedStates || "A number of"}} states were explored,
+          <span *ngIf="commonService.hasSolution">and a solution of {{commonService.exploredStates}} steps was found.</span>
+          <span *ngIf="!commonService.hasSolution">but a solution was not found.</span>
         </p>
         <p *ngIf="commonService.hasSolution"></p>
-        <p *ngIf="commonService.hasSolution">Steps: {{commonService.solveActions.join(" ")}}</p>
+        <div *ngIf="commonService.hasSolution && commonService.actionQueue.length">
+          <p>Actions to solution: {{commonService.actionQueue.join(" ")}}</p>
+          <button class="btn btn-secondary mr-2" (click)="commonService.step()">Perform one action</button>
+          <button class="btn btn-secondary" (click)="commonService.animateStates()">Perform remaining actions</button>
+        </div>
       </div>
     </div>
 
-    <div class="col-8">
+    <div class="col-7">
       <div style="height: 50px;"></div>
       <app-rubiks></app-rubiks>
       <div style="height: 50px;"></div>
