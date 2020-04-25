@@ -8,7 +8,7 @@ class Agent:
 
 	def __init__(self, searcher: Searcher):
 		"""
-		time_limit: Number of seconds that the tree search part of the algorithm is allowed to searc
+		time_limit: Number of seconds that the tree search part of the algorithm is allowed to search
 		"""
 		self._searcher = searcher
 
