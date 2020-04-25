@@ -236,7 +236,7 @@ class Train:
 		substates = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
 		self.tt.end_profile("ADI substates")
 		self.tt.profile("One-hot encoding")
-		substates_oh = Cube.as_oh(substates).to(gpu)
+		substates_oh = Cube.as_oh(substates)
 		self.tt.end_profile("One-hot encoding")
 
 		# Get rewards. 1 for solved states else -1

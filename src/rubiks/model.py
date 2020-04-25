@@ -153,7 +153,7 @@ class Model(nn.Module):
 		# This avoids skewing evaluation results
 		with torch.no_grad():
 			model.eval()
-			model(Cube.as_oh(Cube.get_solved()).to(gpu))
+			model(Cube.as_oh(Cube.get_solved()))
 			model.train()
 		return model
 

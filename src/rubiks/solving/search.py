@@ -151,7 +151,7 @@ class PolicySearch(DeepSearcher):
 		self.sample_policy = sample_policy
 
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
-		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state).to(gpu), value=False).cpu(), dim=1).numpy().squeeze()
+		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state), value=False).cpu(), dim=1).numpy().squeeze()
 		action = np.random.choice(Cube.action_dim, p=policy) if self.sample_policy else policy.argmax()
 		state = Cube.rotate(state, *Cube.action_space[action])
 		return action, state, Cube.is_solved(state)
@@ -184,7 +184,7 @@ class MCTS(DeepSearcher):
 
 		if Cube.is_solved(state): return True
 		# First state is evaluated and expanded individually
-		oh = Cube.as_oh(state).to(gpu)
+		oh = Cube.as_oh(state).
 		p, v = self.net(oh)  # Policy and value
 		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
@@ -276,7 +276,7 @@ class MCTS(DeepSearcher):
 		# Gets information about new states
 		new_states_str = [state.tostring() for state in new_states]
 		self.tt.profile("One-hot encoding")
-		new_states_oh = Cube.as_oh(new_states).to(gpu)
+		new_states_oh = Cube.as_oh(new_states)
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
 		policies, values = self.net(new_states_oh)
@@ -341,7 +341,7 @@ class MCTS(DeepSearcher):
 
 		# Passes new states through net
 		self.tt.profile("One-hot encoding new states")
-		new_states_oh = Cube.as_oh(new_states).to(gpu)
+		new_states_oh = Cube.as_oh(new_states)
 		self.tt.end_profile("One-hot encoding new states")
 		self.tt.profile("Feedforwarding")
 		p, v = self.net(new_states_oh)
@@ -405,7 +405,7 @@ class AStar(DeepSearcher):
 		self.open = {}
 		if Cube.is_solved(state): return True
 
-		oh = Cube.as_oh(state).to(gpu)
+		oh = Cube.as_oh(state)
 		p, v = self.net(oh)  # Policy and value
 		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': -float(v.cpu()), 'parent': None}
 		del p, v
@@ -444,7 +444,7 @@ class AStar(DeepSearcher):
 		if Cube.is_solved(node):
 			return 0
 		else:
-			oh = Cube.as_oh(node).to(gpu)
+			oh = Cube.as_oh(node)
 			p, v = self.net(oh)
 			return -float(v.cpu()) #alternativ idé: 1/float(v.cpu())
 

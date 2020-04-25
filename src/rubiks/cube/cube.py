@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from src.rubiks import get_is2024, set_is2024
+from src.rubiks import cpu, gpu, get_is2024, set_is2024
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
 
 
@@ -188,11 +188,11 @@ class _Cube2024(Cube):
 	def as_oh(cls, states: np.ndarray):
 		# Takes in n states and returns an n x 480 one-hot tensor
 		if len(states.shape) == 1:
-			oh = torch.zeros(1, 480)
+			oh = torch.zeros(1, 480, device=gpu)
 			idcs = np.arange(20) * 24 + states
 			oh[0, idcs] = 1
 		else:
-			oh = torch.zeros(states.shape[0], 480)
+			oh = torch.zeros(states.shape[0], 480, device=gpu)
 			idcs = np.arange(20) * 24 + states
 			all_idcs = np.repeat(np.arange(len(states)), 20)
 			oh[all_idcs, idcs.ravel()] = 1
