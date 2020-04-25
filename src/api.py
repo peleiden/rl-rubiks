@@ -87,7 +87,6 @@ def solve():
 	agent = agents[data["agentIdx"]]["agent"]
 	state = np.array(data["state20"])
 	solution_found, n_steps = agent.generate_action_queue(state, time_limit)
-	searched_states = len(agent)
 	actions = list(agent.actions())
 	states = []
 	if solution_found:
@@ -99,7 +98,7 @@ def solve():
 	return jsonify({
 		"solution": solution_found,
 		"actions": actions,
-		"searchedStates": searched_states,
+		"searchedStates": len(agent),
 		"states": states.tolist(),
 		"finalState20": finalOh.tolist(),
 	})

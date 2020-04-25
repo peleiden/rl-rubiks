@@ -42,6 +42,7 @@ class Node:
 class Searcher:
 	with_mt = False
 	eps = np.finfo("float").eps
+	_explored_states = 0
 
 	def __init__(self):
 		self.action_queue = deque()
@@ -57,13 +58,18 @@ class Searcher:
 		while self.tt.tock() < time_limit:
 			action, state, solution_found = self._step(state)
 			self.action_queue.append(action)
-			if solution_found: return True
+			if solution_found:
+				self._explored_states = len(self.action_queue)
+				return True
+
+		self._explored_states = len(self.action_queue)
 		return False
 
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		raise NotImplementedError
 
 	def reset(self):
+		self._explored_states = 0
 		self.action_queue = deque()
 		self.tt.reset()
 
@@ -72,7 +78,8 @@ class Searcher:
 
 	def __len__(self):
 		# Returns number of states explored
-		return len(self.action_queue)
+		# FIXME: Will not work with external multithreading
+		return self._explored_states
 
 
 class DeepSearcher(Searcher):
@@ -123,10 +130,13 @@ class BFS(Searcher):
 					while states[tstate][0] is not None:
 						self.action_queue.appendleft(states[tstate][1])
 						tstate = states[tstate][0]
+					self.explored_states = len(self.action_queue)
 					return True
 				else:
 					states[new_tstate] = (tstate, i)
 					queue.append(new_state)
+
+		self.explored_states = len(self.action_queue)
 		return False
 
 	def __str__(self):
@@ -170,8 +180,8 @@ class MCTS(DeepSearcher):
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float) -> bool:
 		self.reset()
-
 		self.tt.tick()
+
 		if Cube.is_solved(state): return True
 		# First state is evaluated and expanded individually
 		oh = Cube.as_oh(state).to(gpu)
