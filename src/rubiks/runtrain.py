@@ -5,7 +5,7 @@ from ast import literal_eval
 import numpy as np
 import torch
 
-from src.rubiks.utils import seedsetter
+from src.rubiks.utils import seedsetter, get_commit
 from src.rubiks.utils.parse import Parser
 from src.rubiks.utils.ticktock import get_timestamp
 from src.rubiks.utils.logger import Logger
@@ -151,7 +151,7 @@ class TrainJob:
 	def execute(self):
 		store_repr()
 		set_is2024(self.is2024)
-		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}")
+		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
 		set_is2024(self.is2024)
 
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*self.evaluator.approximate_time()/60:.2f} min")
