@@ -58,8 +58,13 @@ options = {
 	},
 	'gamma': {
 		'default':  1,
-		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr 100 times during training',
+		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr lr_reductions times during training',
 		'type':	    float,
+	},
+	'lr_reductions': {
+		'default':	100,
+		'help':		'Number of times the learning rate is reduced during training. Reductions are evenly spaces',
+		'type':		int,
 	},
 	'optim_fn': {
 		'default':  'RMSprop',
@@ -99,6 +104,7 @@ class TrainJob:
 			batch_size: int,
 			lr: float,
 			gamma: float,
+			lr_reductions: int,
 			optim_fn: str,
 			evaluations: int,
 			is2024: bool,
@@ -132,6 +138,8 @@ class TrainJob:
 		assert float(lr) and lr <= 1
 		self.gamma = gamma
 		assert 0 < gamma <= 1
+		self.lr_reductions = lr_reductions
+		assert 0 <= lr_reductions
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
 
@@ -171,6 +179,7 @@ class TrainJob:
 				optim_fn			= self.optim_fn,
 				lr					= self.lr,
 				gamma				= self.gamma,
+				lr_reductions		= self.lr_reductions,
 				agent				= self.agent,
 				logger				= self.logger,
 				evaluations			= self.evaluations,

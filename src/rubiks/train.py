@@ -8,7 +8,7 @@ import torch
 
 from src.rubiks.solving.search import DeepSearcher
 from src.rubiks.solving.agents import DeepAgent
-from src.rubiks import cpu, gpu, no_grad
+from src.rubiks import cpu, gpu, no_grad, reset_cuda
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
@@ -39,6 +39,7 @@ class Train:
 			optim_fn,
 			lr: float,
 			gamma: float,
+			lr_reductions: int,
 			agent: DeepAgent,
 			evaluator: Evaluator,
 			evaluations: int,
@@ -61,17 +62,18 @@ class Train:
 		self.agent = agent
 
 		self.lr	= lr
+		self.gamma = gamma
+		self.lr_reductions = lr_reductions
 		self.optim = optim_fn
 		self.policy_criterion = policy_criterion(reduction='none')
 		self.value_criterion = value_criterion(reduction='none')
-		self.gamma = gamma
 
 		self.evaluator = evaluator
 		self.log = logger
 		self.log("\n".join([
 			"Created trainer",
 			f"Learning rate and gamma: {self.lr} and {self.gamma}",
-			f"  Learning rate will update 100 times during training: lr <- gamma * lr",
+			f"  Learning rate will update {self.lr_reductions} times during training: lr <- gamma * lr",
 			f"Optimizer:      {self.optim}",
 			f"Policy and value criteria: {self.policy_criterion} and {self.value_criterion}",
 			f"Rollouts:       {self.rollouts}",
@@ -111,8 +113,7 @@ class Train:
 		self.param_changes, self.param_total_changes = list(), list()
 
 		for rollout in range(self.rollouts):
-			torch.cuda.empty_cache()
-			if torch.cuda.is_available(): torch.cuda.synchronize()
+			reset_cuda()
 
 			self.tt.profile("ADI training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
@@ -124,8 +125,8 @@ class Train:
 			self.tt.end_profile("To cuda")
 			self.tt.end_profile("ADI training data")
 
-			torch.cuda.empty_cache()
-			if torch.cuda.is_available(): torch.cuda.synchronize()
+			reset_cuda()
+
 			self.tt.profile("Training loop")
 			net.train()
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
@@ -136,7 +137,6 @@ class Train:
 				# Use loss on both policy and value
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
 				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
-				# print(policy_loss, value_loss)
 				loss = policy_loss + value_loss
 				loss.backward()
 				optimizer.step()
@@ -144,8 +144,9 @@ class Train:
 				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
 			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
 			self.tt.end_profile("Training loop")
-			
-			if rollout in np.linspace(self.rollouts*.01, self.rollouts*.99, 100).astype(int):
+
+			# Updates learning rate
+			if rollout in np.linspace(0, self.rollouts, self.lr_reductions, dtype=int)[1:-1]:
 				lr_scheduler.step()
 				lr = optimizer.param_groups[0]["lr"]
 				if self.gamma != 1:
@@ -204,7 +205,7 @@ class Train:
 
 		return net, min_net
 
-	def get_adi_ff_slices(self):
+	def _get_adi_ff_slices(self):
 		data_points = self.rollout_games * self.rollout_depth * Cube.action_dim
 		slice_size = data_points // self.adi_ff_batches + 1
 		# Final slice may have overflow, however this is simply ignored when indexing
@@ -250,7 +251,7 @@ class Train:
 		self.tt.profile("ADI feedforward")
 		while True:
 			try:
-				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
+				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self._get_adi_ff_slices()]
 				values = torch.cat(value_parts).cpu()
 				break
 			except RuntimeError:  # Usually caused by running out of vram

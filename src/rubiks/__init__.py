@@ -3,6 +3,10 @@ import torch
 cpu = torch.device("cpu")
 gpu = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+def reset_cuda():
+	torch.cuda.empty_cache()
+	if torch.cuda.is_available(): torch.cuda.synchronize()
+
 _is2024 = True
 _stored_repr: bool
 
