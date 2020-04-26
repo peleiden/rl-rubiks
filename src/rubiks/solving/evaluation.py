@@ -121,9 +121,10 @@ class Evaluator:
 			ax.plot(eval_settings['scrambling_depths'], win_percentages, linestyle='dashdot', color=color)
 			ax.scatter(eval_settings['scrambling_depths'], win_percentages, color=color, label=f"Win % of {agent}")
 		ax.legend()
-		fig.tight_layout()
+		ax.set_ylim([-.05, 1.05])
 		ax.grid(True)
 		ax.set_title(title if title else f"Cubes solved in {eval_settings['max_time']:.2f} seconds")
+		fig.tight_layout()
 
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_winrates.png")
