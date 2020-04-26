@@ -41,6 +41,7 @@ class DeepAgent(Agent):
 
 	def update_net(self, net):
 		self._searcher.net = net
+		self._searcher.net.eval()
 
 
 
