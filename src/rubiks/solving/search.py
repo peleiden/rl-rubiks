@@ -432,7 +432,7 @@ class AStar(DeepSearcher):
 
 	def get_neighbors(self, node: str):
 		neighbors = [None] * Cube.action_dim
-		node = np.fromstring(node, dtype=int)
+		node = np.fromstring(node, dtype=Cube.dtype)
 		for i in range(Cube.action_dim):
 			neighbor = Cube.rotate(node, *Cube.action_space[i])
 			neighbors[i] = neighbor.tostring()
