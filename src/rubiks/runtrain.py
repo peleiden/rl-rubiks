@@ -1,4 +1,5 @@
 import sys, os
+from shutil import rmtree
 
 from ast import literal_eval
 
@@ -112,6 +113,7 @@ class TrainJob:
 
 			verbose: bool = True,
 		):
+
 		self.name = name
 		assert isinstance(self.name, str)
 
@@ -149,6 +151,12 @@ class TrainJob:
 		assert isinstance(self.model_cfg, ModelConfig)
 
 	def execute(self):
+
+		# Clears directory to avoid clutter and mixing of experiments
+		rmtree(self.location, ignore_errors=True)
+		os.makedirs(self.location)
+
+		# Sets representation
 		store_repr()
 		set_is2024(self.is2024)
 		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
