@@ -72,6 +72,8 @@ class Searcher:
 		self._explored_states = 0
 		self.action_queue = deque()
 		self.tt.reset()
+		if hasattr(self, "net"):
+			self.net.eval()
 
 	def __str__(self):
 		raise NotImplementedError
@@ -86,7 +88,6 @@ class DeepSearcher(Searcher):
 	def __init__(self, net: Model):
 		super().__init__()
 		self.net = net
-		self.net.eval()
 
 	@classmethod
 	def from_saved(cls, loc: str):
