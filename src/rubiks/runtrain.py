@@ -93,6 +93,9 @@ options = {
 
 
 class TrainJob:
+	eval_games = 200  # Not given as arguments to __init__, as they should be accessible in runtime_estim
+	max_time = 0.01
+
 	def __init__(self,
 			name: str,
 			# Set by parser, should correspond to values in `options`  above and defaults can be controlled there
@@ -112,8 +115,6 @@ class TrainJob:
 
 			# Currently not set by argparser/configparser
 			agent = DeepAgent(PolicySearch(None, True)),
-			eval_games: int = 200,
-			max_time: float = .01,
 			scrambling_depths: tuple = (8,),
 
 			verbose: bool = True,
@@ -146,7 +147,7 @@ class TrainJob:
 		self.logger = Logger(f"{self.location}/train.log", name, verbose) #Already creates logger at init to test whether path works
 		self.logger.log(f"Initialized {self.name}")
 
-		self.evaluator = Evaluator(n_games=eval_games, max_time=max_time, scrambling_depths=scrambling_depths, logger=self.logger)
+		self.evaluator = Evaluator(n_games=self.eval_games, max_time=self.max_time, scrambling_depths=scrambling_depths, logger=self.logger)
 		self.evaluations = evaluations
 		assert isinstance(self.evaluations, int) and 0 <= self.evaluations <= self.rollouts
 		self.agent = agent
