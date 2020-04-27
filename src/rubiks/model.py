@@ -23,9 +23,11 @@ class ModelConfig:
 	part_sizes: tuple = None
 	conv_channels: tuple = None
 	intermediate_sizes: tuple = None
+	res_blocks: int = None
+	res_size: int = None
 
 	_fc_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,)}
-	_res_arch: ClassVar[dict] = {"shared_sizes": (5000, 1000), "part_sizes": (100,)}
+	_res_arch: ClassVar[dict] = {"shared_sizes": (4096, 1024), "part_sizes": (512,), "res_blocks": 4, "res_size": 1024,}
 	_conv_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,), "conv_channels": (4, 4), "intermediate_sizes": (1024,)}
 
 	def __post_init__(self):
@@ -35,9 +37,12 @@ class ModelConfig:
 			self.part_sizes = self._get_arch()["part_sizes"]
 		if self.conv_channels is None and self.architecture == "conv":
 			self.conv_channels = self._get_arch()["conv_channels"]
-		if self.intermediate_sizes is None and self.activation_function == "conv":
+		if self.intermediate_sizes is None and self.architecture == "conv":
 			self.intermediate_sizes = self._get_arch()["intermediate_sizes"]
-
+		if self.res_blocks is None and self.architecture == "res":
+			self.res_blocks = self._get_arch()["res_blocks"]
+		if self.res_size is None and self.architecture == "res":
+			self.res_size = self._get_arch()["res_size"]
 	def _get_arch(self):
 		return getattr(self, f"_{self.architecture}_arch")
 
@@ -189,14 +194,45 @@ class Model(nn.Module):
 		return model
 
 
+class NonConvResBlock(nn.Module):
+	"""
+	A residual block of two linear layers with the same size.
+	"""
+	def __init__(self, layer_size: int,  activation: nn.Module, with_batchnorm: bool):
+		super().__init__()
+		self.layer1, self.layer2 = nn.Linear(layer_size, layer_size), nn.Linear(layer_size, layer_size)
+		self.activate = activation
+		self.with_batchnorm = with_batchnorm
+		if self.with_batchnorm:
+			# Uses two batchnorms as PyTorch trains some running momentum parameters for each bnorm
+			self.batchnorm1 = nn.BatchNorm1d(layer_size)
+			self.batchnorm2 = nn.BatchNorm1d(layer_size)
 
+	def forward(self, x):
+		residual = x
+		# Layer 1
+		x = self.layer1(x)
+		if self.with_batchnorm: x = self.batchnorm1(x)
+		x = self.activate(x)
+		# Layer 2
+		x = self.layer2(x)
+		if self.with_batchnorm: x = self.batchnorm2(x)
+		# Residual added
+		x += residual
+		x = self.activate(x)
+		return x
 
 class ResNet(Model):
 	"""
-	A Residual Neural Network.
+	A Linear Residual Neural Network.
 	"""
 	def _construct_net(self):
-		raise NotImplementedError
+		# Uses FF constructor to set up feed forward nets. Resblocks are added only to shared net
+		super()._construct_net()
+		for i in range(self.config.res_blocks):
+			resblock = NonConvResBlock(self.config.res_size, self.config.activation_function, self.config.batchnorm)
+			self.shared_net.add_module(f'resblock{i}', resblock)
+
 
 class ConvNet(Model):
 
@@ -215,5 +251,4 @@ class ConvNet(Model):
 		assert policy or value
 		padded_x = Cube.pad(x, len(self.config.conv_channels))
 		raise NotImplementedError
-
 

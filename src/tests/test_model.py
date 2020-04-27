@@ -20,6 +20,16 @@ class TestModel(MainTest):
 		model.train()
 		model(x)
 
+	def test_resnet(self):
+		config = ModelConfig(architecture = 'res')
+		model = Model.create(config).to(gpu)
+		assert next(model.parameters()).device.type == gpu.type
+		model.eval()
+		x = torch.randn(2, 480).to(gpu)
+		model(x)
+		model.train()
+		model(x)
+
 	def test_save_and_load(self):
 		torch.manual_seed(42)
 
