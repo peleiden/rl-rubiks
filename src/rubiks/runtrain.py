@@ -155,7 +155,7 @@ class TrainJob:
 		self.is2024 = is2024
 		self.model_cfg = ModelConfig(architecture=arch)
 		assert arch in ["fc", "res", "conv"]
-		if arch == "conv": assert not get_is2024()
+		if arch == "conv": assert not self.is2024
 		assert isinstance(self.model_cfg, ModelConfig)
 
 	def execute(self):

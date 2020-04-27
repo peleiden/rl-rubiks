@@ -28,7 +28,7 @@ class ModelConfig:
 
 	_fc_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,)}
 	_res_arch: ClassVar[dict] = {"shared_sizes": (4096, 1024), "part_sizes": (512,), "res_blocks": 4, "res_size": 1024,}
-	_conv_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,), "conv_channels": (4, 4), "intermediate_sizes": (1024,)}
+	_conv_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,), "conv_channels": (12, 24), "intermediate_sizes": (1024,)}
 
 	def __post_init__(self):
 		if self.shared_sizes is None:
@@ -43,6 +43,7 @@ class ModelConfig:
 			self.res_blocks = self._get_arch()["res_blocks"]
 		if self.res_size is None and self.architecture == "res":
 			self.res_size = self._get_arch()["res_size"]
+
 	def _get_arch(self):
 		return getattr(self, f"_{self.architecture}_arch")
 
@@ -105,8 +106,8 @@ class Model(nn.Module):
 		Constructs a feed forward fully connected DNN.
 		"""
 		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
-		policy_thiccness = [shared_thiccness[-1], *self.config.part_sizes, Cube.action_dim]
-		value_thiccness = [shared_thiccness[-1], *self.config.part_sizes, 1]
+		policy_thiccness = [self.config.shared_sizes[-1], *self.config.part_sizes, Cube.action_dim]
+		value_thiccness = [self.config.shared_sizes[-1], *self.config.part_sizes, 1]
 
 		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
 		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
@@ -237,18 +238,53 @@ class ResNet(Model):
 class ConvNet(Model):
 
 	shared_conv_net: nn.Sequential
+	cat_net: nn.Sequential
+
+	# x -> conv layers                 policy layers
+	#                   > cat layer <
+	# x -> fc layers                   value layers
 
 	def _construct_net(self):
 		super()._construct_net()
+
+		# Creates all convolutional layers
+		channels_list = (6,) + self.config.conv_channels
 		conv_layers = []
-		conv_layers = [nn.Conv1d(1, self.config.conv_channels[0], 1)]
-		for channels in self.config.conv_channels[1:]:
+		for in_channels, out_channels in zip(channels_list[:-1], channels_list[1:]):
+			conv_layers.append(nn.Conv1d(in_channels, out_channels, 3, padding=2, padding_mode="circular"))
 			conv_layers.append(self.config.activation_function)
-			# conv_layers.append(nn.BatchNorm1d())  # TODO: Calculate number of features
-			conv_layers.append(nn.Conv1d())
+			# if self.config.batchnorm:  # TODO: Figure out size
+			# 	conv_layers.append(batchnorm)
+		self.shared_conv_net = nn.Sequential(*conv_layers)
+
+		# Creates concatenation layer
+		# Its input size is the raveled conv size + fc output size
+		# Its output size is fc output size, as this is also the input size for the policy and value nets
+		cat_input_size = channels_list[-1] * 8 + self.config.shared_sizes[-1]
+		cat_layers = [
+			nn.Linear(cat_input_size, self.config.shared_sizes[-1]),
+			self.config.activation_function,
+		]
+		if self.config.batchnorm:
+			cat_layers.append(nn.BatchNorm1d(self.config.shared_sizes[-1]))
+		self.cat_net = nn.Sequential(*cat_layers)
 
 	def forward(self, x, policy=True, value=True):
 		assert policy or value
-		padded_x = Cube.pad(x, len(self.config.conv_channels))
-		raise NotImplementedError
+
+		# Shared part of network
+		fc_out = self.shared_net(x)
+		conv_out = self.shared_conv_net(Cube.as_correct(x)).view(len(x), -1)
+		x = torch.cat([fc_out, conv_out], dim=1)
+		x = self.cat_net(x)
+
+		# Policy and value parts
+		return_values = []
+		if policy:
+			policy = self.policy_net(x)
+			return_values.append(policy)
+		if value:
+			value = self.value_net(x)
+			return_values.append(value)
+		return return_values if len(return_values) > 1 else return_values[0]
 

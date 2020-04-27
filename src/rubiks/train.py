@@ -193,8 +193,8 @@ class Train:
 		adi_time = self.tt.profiles["ADI training data"].sum()
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * Cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
+		self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
 		self.log("\n".join([
-			f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}",
 			f"Total running time:            {self.tt.stringify_time(total_time, 's')}",
 			f"- Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
 			f"- Training time:               {self.tt.stringify_time(train_time, 's')} or {train_time/total_time*100:.2f} %",

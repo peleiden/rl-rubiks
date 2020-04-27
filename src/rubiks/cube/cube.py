@@ -124,6 +124,11 @@ class Cube:
 		method = _Cube2024.as_oh if get_is2024() else _Cube686.as_oh
 		return method(states)
 
+	@classmethod
+	def as_correct(cls, t: torch.tensor) -> torch.tensor:
+		assert not get_is2024()
+		return _Cube686.as_correct(t)
+
 	@staticmethod
 	def get_oh_shape():
 		return 480 if get_is2024() else 288
@@ -249,6 +254,8 @@ class _Cube686(Cube):
 	# Number of times the 8 long vector has to be shifted to the left to start at (0, 0) in 3x3
 	shifts = np.array([0, 6, 6, 4, 2, 4])
 
+	solved_cuda = torch.from_numpy(_get_686solved(Cube.dtype)).to(gpu)
+
 	@staticmethod
 	def _shift_left(a: np.ndarray, num_elems: int):
 		return np.roll(a, -num_elems, axis=0)
@@ -281,7 +288,7 @@ class _Cube686(Cube):
 		return np.array([cls.rotate(state, face, pos_rev) for state, face, pos_rev in zip(states, faces, pos_revs)], dtype=cls.dtype)
 
 	@classmethod
-	def as_oh(cls, states: np.ndarray):
+	def as_oh(cls, states: np.ndarray) -> torch.tensor:
 		# This representation is already one-hot encoded, so only ravelling is done
 		if len(states.shape) == 3:
 			states = np.expand_dims(states, 0)
@@ -289,16 +296,16 @@ class _Cube686(Cube):
 		return states
 
 	@classmethod
-	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
-		# Performs pad wrap of size one on each side
-		assert pad_size >= 1
-		oh = oh.reshape(-1, 6, 8, 6)
-		solved = (oh[:] == cls.get_solved_instance()).all(dim=3)
-		padded = torch.ones(len(oh), 6, 8+pad_size*2, 8)
-		padded[..., pad_size:8+pad_size] = solved
-		padded[..., :pad_size] = solved[..., -pad_size]
-		padded[..., -pad_size:] = solved[..., pad_size]
-		return padded
+	def as_correct(cls, t: torch.tensor) -> torch.tensor:
+		"""
+		oh is a one-hot encoded tensor of shape n x 288 as produced by _Cube686.as_oh
+		This methods creates a correctness representation of the tensor of shape n x 6 x 8
+		"""
+		oh = t.reshape(len(t), 6, 8, 6)
+		assert torch.all(t.reshape(len(t), 6, 8, 6)==oh)  # TODO: Remove after confidence
+		correct_repr = torch.all(oh[:] == cls.solved_cuda, dim=3).long()
+		correct_repr[~correct_repr] = -1
+		return correct_repr.float()
 
 	@classmethod
 	def as633(cls, state: np.ndarray):
@@ -308,51 +315,4 @@ class _Cube686(Cube):
 			state69[i, cls.map633] = cls._shift_left(state68[i], cls.shifts[i])
 		return state69.reshape((6, 3, 3))
 
-
-if __name__ == "__main__":
-	set_is2024(False)
-	states = np.array([Cube.get_solved()]*2, dtype=Cube.dtype)
-	for _ in range(5):
-		faces, dirs = np.random.randint(0, 6, 2), np.random.randint(0, 1, 2)
-		states_classic = np.array([Cube.rotate(state, face, d) for state, face, d in zip(states, faces, dirs)], dtype=Cube.dtype)
-		states = Cube.multi_rotate(states, faces, dirs)
-		assert (states_classic == states).all()
-	
-	# set_repr(False)
-	# state = Cube.get_solved()
-	# print(Cube.as633(state))
-	# print(Cube.stringify(state))
-	# print()
-	# state = Cube.rotate(state, 0, True)
-	# state68 = np.where(state == 1)[2].reshape((6, 8))
-	# print(state68)
-	# print(Cube.stringify(state))
-	# print()
-	# state = Cube.rotate(state, 0, False)
-	# print(Cube.as633(state))
-	# print()
-	
-	
-	# Benchmarking example
-	# from src.rubiks.utils.benchmark import Benchmark
-	# def test_scramble(games):
-	# 	# Function is weird, as it is designed to work for both single and multithreaded benchmarks
-	# 	if hasattr(games, "__iter__"):
-	# 		for _ in games:
-	# 			Cube.as_oh(Cube.scramble(n)[0])
-	# 	else:
-	# 		Cube.as_oh(Cube.scramble(n)[0])
-	#
-	# n = int(1e5)
-	# nt = range(1, 7)
-	# games = [None] * 24
-	#
-	# title = f"Scramble bench: {len(games)} cubes each with {n} scrambles"
-	# bm = Benchmark(test_scramble, "local_benchmarks/scramble_2024", title)
-	# bm.singlethreaded("Using 20 x 24 representation", games)
-	# threads, times = bm.multithreaded(nt, games, "Using 20 x 24 representation")
-	# bm.plot_mt_results(threads, times, f"{title} using 20 x 24")
-
-	
-	
 
