@@ -84,12 +84,10 @@ class Model(nn.Module):
 	def create(config: ModelConfig, logger=NullLogger()):
 		# As only subclasses of this classes are ever instantiated, __init__ is never called directly
 		# Instead, instantiation should happen through this method
-		if config.architecture == "fc":
-			return FFNet(config, logger)
-		elif config.architecture == "res":
-			return ResNet(config, logger)
-		elif config.architecture == "conv":
-			return ConvNet(config, logger)
+		if config.architecture == "fc": return FFNet(config, logger)
+		if config.architecture == "res": return ResNet(config, logger)
+		if config.architecture == "conv": return ConvNet(config, logger)
+
 		raise KeyError(f"Network architecture should be 'fc', 'res', or 'conv', but '{config.architecture}' was given")
 
 	def forward(self, x, policy=True, value=True):
@@ -103,6 +101,21 @@ class Model(nn.Module):
 			value = self.value_net(x)
 			return_values.append(value)
 		return return_values if len(return_values) > 1 else return_values[0]
+
+	def _create_fc_layers(self, thiccness: list, final: bool):
+		"""
+		Helper function to return fully connected feed forward layers given a list of layer sizes and
+		a final output size.
+		"""
+		layers = []
+		for i in range(len(thiccness)-1):
+			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
+			if not (final and i == len(thiccness) - 2):
+				layers.append(self.config.activation_function)
+				if self.config.batchnorm:
+					layers.append(nn.BatchNorm1d(thiccness[i+1]))
+
+		return layers
 
 	def clone(self):
 		new_state_dict = {}
@@ -168,24 +181,15 @@ class FFNet(Model):
 		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
 		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness, True))
 
-	def _create_fc_layers(self, thiccness: list, final: bool):
-		layers = []
-		for i in range(len(thiccness)-1):
-			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
-			if not (final and i == len(thiccness) - 2):
-				layers.append(self.config.activation_function)
-				if self.config.batchnorm:
-					layers.append(nn.BatchNorm1d(thiccness[i+1]))
-
-		return layers
 
 class ResNet(Model):
-
+	"""
+	A Residual Neural Network.
+	"""
 	def _construct_net(self):
 		raise NotImplementedError
 
-class ConvNet(FFNet):
-	# Inherits from FFNet, as this class is essentially as superset of FFNet
+class ConvNet(Model):
 
 	shared_conv_net: nn.Sequential
 
