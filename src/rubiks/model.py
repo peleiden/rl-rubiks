@@ -18,17 +18,17 @@ class ModelConfig:
 	batchnorm: bool = True
 	architecture: str = 'fc'  # Options: 'fc', 'res', 'convo'
 
-	# Hidden layer sizes in  shared network and in the two part networks given as tuples. If None: The value is controlled by architecture (often wanted)
-	shared_sizes: tuple = None
-	part_sizes: tuple = None
-	conv_channels: tuple = None
-	intermediate_sizes: tuple = None
+	# Hidden layer sizes in shared network and in the two part networks given as lists. If None: The value is controlled by architecture (often wanted)
+	shared_sizes: list = None
+	part_sizes: list = None
+	conv_channels: list = None
+	cat_sizes: list = None
 	res_blocks: int = None
 	res_size: int = None
 
-	_fc_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,)}
-	_res_arch: ClassVar[dict] = {"shared_sizes": (4096, 1024), "part_sizes": (512,), "res_blocks": 4, "res_size": 1024,}
-	_conv_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,), "conv_channels": (12, 24), "intermediate_sizes": (1024,)}
+	_fc_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512]}
+	_res_arch: ClassVar[dict] = {"shared_sizes": [4096, 1024], "part_sizes": [512], "res_blocks": 4, "res_size": 1024,}
+	_conv_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [12, 24], "cat_sizes": [1024]}
 
 	def __post_init__(self):
 		if self.shared_sizes is None:
@@ -37,8 +37,8 @@ class ModelConfig:
 			self.part_sizes = self._get_arch()["part_sizes"]
 		if self.conv_channels is None and self.architecture == "conv":
 			self.conv_channels = self._get_arch()["conv_channels"]
-		if self.intermediate_sizes is None and self.architecture == "conv":
-			self.intermediate_sizes = self._get_arch()["intermediate_sizes"]
+		if self.cat_sizes is None and self.architecture == "conv":
+			self.cat_sizes = self._get_arch()["cat_sizes"]
 		if self.res_blocks is None and self.architecture == "res":
 			self.res_blocks = self._get_arch()["res_blocks"]
 		if self.res_size is None and self.architecture == "res":
@@ -101,13 +101,15 @@ class Model(nn.Module):
 
 		raise KeyError(f"Network architecture should be 'fc', 'res', or 'conv', but '{config.architecture}' was given")
 
-	def _construct_net(self):
+	def _construct_net(self, pv_input_size: int=None):
 		"""
 		Constructs a feed forward fully connected DNN.
 		"""
+		pv_input_size = pv_input_size or self.config.shared_sizes[-1]
+
 		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
-		policy_thiccness = [self.config.shared_sizes[-1], *self.config.part_sizes, Cube.action_dim]
-		value_thiccness = [self.config.shared_sizes[-1], *self.config.part_sizes, 1]
+		policy_thiccness = [pv_input_size, *self.config.part_sizes, Cube.action_dim]
+		value_thiccness = [pv_input_size, *self.config.part_sizes, 1]
 
 		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
 		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
@@ -168,7 +170,7 @@ class Model(nn.Module):
 		torch.save(self.state_dict(), model_path)
 		conf_path = os.path.join(save_dir, "config.json")
 		with open(conf_path, "w", encoding="utf-8") as conf:
-			json.dump(self.config.as_json_dict(), conf)
+			json.dump(self.config.as_json_dict(), conf, indent=4)
 		self.log(f"Saved model to {model_path} and configuration to {conf_path}")
 
 	@staticmethod
@@ -245,10 +247,10 @@ class ConvNet(Model):
 	# x -> fc layers                   value layers
 
 	def _construct_net(self):
-		super()._construct_net()
 
 		# Creates all convolutional layers
-		channels_list = (6,) + self.config.conv_channels
+		channels_list = [6, *self.config.conv_channels]
+		cat_input_size = channels_list[-1] * 8 + self.config.shared_sizes[-1]
 		conv_layers = []
 		for in_channels, out_channels in zip(channels_list[:-1], channels_list[1:]):
 			conv_layers.append(nn.Conv1d(in_channels, out_channels, 3, padding=2, padding_mode="circular"))
@@ -257,17 +259,20 @@ class ConvNet(Model):
 			# 	conv_layers.append(batchnorm)
 		self.shared_conv_net = nn.Sequential(*conv_layers)
 
-		# Creates concatenation layer
+		# Creates concatenation layers
 		# Its input size is the raveled conv size + fc output size
 		# Its output size is fc output size, as this is also the input size for the policy and value nets
-		cat_input_size = channels_list[-1] * 8 + self.config.shared_sizes[-1]
-		cat_layers = [
-			nn.Linear(cat_input_size, self.config.shared_sizes[-1]),
-			self.config.activation_function,
-		]
-		if self.config.batchnorm:
-			cat_layers.append(nn.BatchNorm1d(self.config.shared_sizes[-1]))
+		cat_layers = []
+		cat_sizes = [cat_input_size] + self.config.cat_sizes
+		for in_size, out_size in zip(cat_sizes[:-1], cat_sizes[1:]):
+			cat_layers.append(nn.Linear(in_size, out_size))
+			cat_layers.append(self.config.activation_function)
+			if self.config.batchnorm:
+				cat_layers.append(nn.BatchNorm1d(out_size))
 		self.cat_net = nn.Sequential(*cat_layers)
+
+		# Constructs the rest of the network
+		super()._construct_net(cat_sizes[-1])
 
 	def forward(self, x, policy=True, value=True):
 		assert policy or value

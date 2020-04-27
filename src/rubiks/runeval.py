@@ -85,7 +85,7 @@ class EvalJob:
 			# Currently not set by parser
 			mcts_workers: int = 100,
 			verbose: bool = True,
-			in_subfolder: bool = False, #Should be true if there are multiple experiments
+			in_subfolder: bool = False, # Should be true if there are multiple experiments
 		):
 		self.name = name
 		self.location = location

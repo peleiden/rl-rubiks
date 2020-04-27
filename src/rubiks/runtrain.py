@@ -111,7 +111,6 @@ class TrainJob:
 			arch: str,
 
 			# Currently not set by argparser/configparser
-
 			agent = DeepAgent(PolicySearch(None, True)),
 			eval_games: int = 200,
 			max_time: float = .01,
