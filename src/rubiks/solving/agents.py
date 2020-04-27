@@ -23,10 +23,6 @@ class Agent:
 		while self._searcher.action_queue:
 			yield self.action()
 
-	def allow_mt(self):
-		# NN based agents see very little gain but much higher compute usage with standard mt implementation
-		return self._searcher.with_mt
-
 	def __str__(self):
 		return str(self._searcher)
 	

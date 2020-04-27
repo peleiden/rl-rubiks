@@ -304,7 +304,7 @@ class _Cube686(Cube):
 		oh = t.reshape(len(t), 6, 8, 6)
 		assert torch.all(t.reshape(len(t), 6, 8, 6)==oh)  # TODO: Remove after confidence
 		correct_repr = torch.all(oh[:] == cls.solved_cuda, dim=3).long()
-		correct_repr[~correct_repr] = -1
+		correct_repr[correct_repr==0] = -1
 		return correct_repr.float()
 
 	@classmethod

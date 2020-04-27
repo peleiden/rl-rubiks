@@ -40,7 +40,6 @@ class Node:
 
 
 class Searcher:
-	with_mt = False
 	eps = np.finfo("float").eps
 	_explored_states = 0
 
@@ -100,7 +99,6 @@ class DeepSearcher(Searcher):
 
 
 class RandomDFS(Searcher):
-	with_mt = True  # TODO: Implement multithreading natively in search method and set to False
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		action = np.random.randint(Cube.action_dim)
 		state = Cube.rotate(state, *Cube.action_space[action])
@@ -146,7 +144,6 @@ class BFS(Searcher):
 
 
 class PolicySearch(DeepSearcher):
-	with_mt = not torch.cuda.is_available()
 
 	def __init__(self, net: Model, sample_policy=False):
 		super().__init__(net)
