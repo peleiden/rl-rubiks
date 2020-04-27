@@ -67,7 +67,10 @@ class ModelConfig:
 
 
 class Model(nn.Module):
-
+	"""
+	A fully connected, feed forward Neural Network.
+	Also the instantiator class of other network architectures through `create`.
+	"""
 	shared_net: nn.Sequential
 	policy_net: nn.Sequential
 	value_net: nn.Sequential
@@ -82,13 +85,27 @@ class Model(nn.Module):
 
 	@staticmethod
 	def create(config: ModelConfig, logger=NullLogger()):
-		# As only subclasses of this classes are ever instantiated, __init__ is never called directly
-		# Instead, instantiation should happen through this method
-		if config.architecture == "fc": return FFNet(config, logger)
+		"""
+		Allows this class to be used to instantiate other Network architectures based on the content
+		of the configuartion file.
+		"""
+		if config.architecture == "fc": return Model(config, logger)
 		if config.architecture == "res": return ResNet(config, logger)
 		if config.architecture == "conv": return ConvNet(config, logger)
 
 		raise KeyError(f"Network architecture should be 'fc', 'res', or 'conv', but '{config.architecture}' was given")
+
+	def _construct_net(self):
+		"""
+		Constructs a feed forward fully connected DNN.
+		"""
+		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
+		policy_thiccness = [shared_thiccness[-1], *self.config.part_sizes, Cube.action_dim]
+		value_thiccness = [shared_thiccness[-1], *self.config.part_sizes, 1]
+
+		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
+		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
+		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness, True))
 
 	def forward(self, x, policy=True, value=True):
 		assert policy or value
@@ -101,6 +118,7 @@ class Model(nn.Module):
 			value = self.value_net(x)
 			return_values.append(value)
 		return return_values if len(return_values) > 1 else return_values[0]
+
 
 	def _create_fc_layers(self, thiccness: list, final: bool):
 		"""
@@ -171,15 +189,6 @@ class Model(nn.Module):
 		return model
 
 
-class FFNet(Model):
-
-	def _construct_net(self):
-		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
-		policy_thiccness = [shared_thiccness[-1], *self.config.part_sizes, Cube.action_dim]
-		value_thiccness = [shared_thiccness[-1], *self.config.part_sizes, 1]
-		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
-		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
-		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness, True))
 
 
 class ResNet(Model):
