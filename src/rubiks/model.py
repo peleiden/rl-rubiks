@@ -198,7 +198,7 @@ class NonConvResBlock(nn.Module):
 	"""
 	A residual block of two linear layers with the same size.
 	"""
-	def __init__(self, layer_size: int,  activation: nn.Module, with_batchnorm: bool):
+	def __init__(self, layer_size: int, activation: nn.Module, with_batchnorm: bool):
 		super().__init__()
 		self.layer1, self.layer2 = nn.Linear(layer_size, layer_size), nn.Linear(layer_size, layer_size)
 		self.activate = activation
