@@ -149,7 +149,7 @@ class TrainJob:
 
 		self.evaluator = Evaluator(n_games=self.eval_games, max_time=self.max_time, scrambling_depths=scrambling_depths, logger=self.logger)
 		self.evaluations = evaluations
-		assert isinstance(self.evaluations, int) and 0 <= self.evaluations <= self.rollouts
+		assert isinstance(self.evaluations, int) and 0 <= self.evaluations
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
