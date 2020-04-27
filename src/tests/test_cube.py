@@ -1,6 +1,6 @@
 from src.tests import MainTest
 
-from src.rubiks import get_repr, set_repr
+from src.rubiks import get_is2024, set_is2024
 from src.rubiks.cube.cube import Cube
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 
@@ -15,13 +15,13 @@ class TestRubiksCube(MainTest):
 		assert Cube.get_solved_instance().shape == (20,)
 
 	def test_cube(self):
-		set_repr(True)
+		set_is2024(True)
 		self._rotation_tests()
 		self._multi_rotate_test()
-		set_repr(False)
+		set_is2024(False)
 		self._rotation_tests()
 		self._multi_rotate_test()
-		set_repr(True)
+		set_is2024(True)
 
 	def _rotation_tests(self):
 		state = Cube.get_solved()
@@ -110,6 +110,13 @@ class TestRubiksCube(MainTest):
 		for f, d in zip(reversed(faces), reversed([not item for item in dirs])):
 			state = Cube.rotate(state, *(f, d))
 		assert Cube.is_solved(state)
+
+	def test_iter_actions(self):
+		actions = np.array([
+			[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]*2,
+			[True, False, True, False, True, False, True, False, True, False, True, False]*2,
+		], dtype=np.uint8)
+		assert np.all(actions==Cube.iter_actions(2))
 
 	def test_as_oh(self):
 		state = Cube.get_solved()

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from src.rubiks import get_repr, set_repr
+from src.rubiks import cpu, gpu, get_is2024, set_is2024
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
 
 
@@ -20,19 +20,6 @@ def _get_686solved(dtype):
 		solved_state[i, :, i] = 1
 	return solved_state
 
-def _sequence_scrambler(n: int, g:int):
-	"""
-	A non-inplace scrambler that returns the state to each of the scrambles useful for ADI
-	"""
-	env = _Cube2024 if get_repr() else _Cube686
-	scrambled_states = np.empty((n+1, *env.get_solved_instance().shape), dtype=env.dtype)
-	scrambled_states[0] = env.get_solved()
-
-	faces = np.random.randint(6, size = (n+1, ))
-	dirs = np.random.randint(2, size = (n+1, )).astype(bool)
-	for i, face, d in zip(range(n), faces, dirs):
-		scrambled_states[i+1] = env.rotate(scrambled_states[i], face, d)
-	return scrambled_states[:-1], env.as_oh(scrambled_states[:-1])
 
 class Cube:
 	# If the six sides are represented by an array, the order should be F, B, T, D, L, R
@@ -62,14 +49,22 @@ class Cube:
 		"""
 		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
 		"""
-		method = _Cube2024.rotate if get_repr() else _Cube686.rotate
+		method = _Cube2024.rotate if get_is2024() else _Cube686.rotate
 		return method(state, face, pos_rev)
 
 	@classmethod
 	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_rev: np.ndarray):
 		# Performs action (faces[i], pos_revs[i]) on states[i]
-		method = _Cube2024.multi_rotate if get_repr() else _Cube686.multi_rotate
+		method = _Cube2024.multi_rotate if get_is2024() else _Cube686.multi_rotate
 		return method(states, faces, pos_rev)
+
+	@classmethod
+	def iter_actions(cls, n: int=1):
+		"""
+		Returns a numpy array of size 2 x n*cls.action_dim containing repeated actions
+		Practical for use with multi_rotate, e.g. Cube.multi_rotate(states, *Cube.iter_actions())
+		"""
+		return np.array(list(zip(*cls.action_space*n)), dtype=np.uint8)
 
 	@classmethod
 	def scramble(cls, n: int, force_not_solved=False):
@@ -85,6 +80,11 @@ class Cube:
 		return state, faces, dirs
 
 	@classmethod
+	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
+		assert not get_is2024()
+		return _Cube686.pad(oh, pad_size)
+
+	@classmethod
 	def sequence_scrambler(cls, games: int, depth: int):
 		"""
 		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
@@ -96,28 +96,15 @@ class Cube:
 			states.append(current_states)
 			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
 			current_states = cls.multi_rotate(current_states, faces, dirs)
-		states = np.vstack(np.transpose(states, (1, 0, 2)))
+		states = np.vstack(np.transpose(states, (1, 0, *np.arange(2, len(cls.shape())+2))))
 		oh_states = cls.as_oh(states)
-		return states, oh_states
-
-	@classmethod
-	def sequence_scrambler2(cls, games: int, n: int):
-		"""
-		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
-		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
-		"""
-		# Multithreads if over 1000 games
-		# Experimentally, this seems to be around the point at which multithreading is worth it
-		res = [_sequence_scrambler(n, _) for _ in range(games)]
-		states = np.array([x[0] for x in res])
-		oh_states = torch.stack([x[1] for x in res]).view(-1, cls.get_oh_shape())
 		return states, oh_states
 
 	@classmethod
 	def get_solved_instance(cls):
 		# Careful - this method returns the instance - not a copy - so the output is readonly
 		# If speed is not critical, use get_solved()
-		return cls._solved2024 if get_repr() else cls._solved686
+		return cls._solved2024 if get_is2024() else cls._solved686
 
 	@classmethod
 	def get_solved(cls):
@@ -134,12 +121,12 @@ class Cube:
 	@classmethod
 	def as_oh(cls, states: np.ndarray) -> torch.tensor:
 		# Takes in n states and returns an n x 480 one-hot tensor
-		method = _Cube2024.as_oh if get_repr() else _Cube686.as_oh
+		method = _Cube2024.as_oh if get_is2024() else _Cube686.as_oh
 		return method(states)
 
 	@staticmethod
 	def get_oh_shape():
-		return 480 if get_repr() else 288
+		return 480 if get_is2024() else 288
 
 	@staticmethod
 	def rev_action(action: int):
@@ -150,7 +137,7 @@ class Cube:
 		"""
 		Order: F, B, T, D, L, R
 		"""
-		method = _Cube2024.as633 if get_repr() else _Cube686.as633
+		method = _Cube2024.as633 if get_is2024() else _Cube686.as633
 		return method(state)
 
 	@classmethod
@@ -193,7 +180,6 @@ class _Cube2024(Cube):
 		maps = np.array([cls.map_pos[face] if pos_rev else cls.map_neg[face] for face, pos_rev in zip(faces, pos_revs)])
 		idcs8 = np.repeat(np.arange(len(states)), 8)
 		idcs12 = np.repeat(np.arange(len(states)), 12)
-		# breakpoint()
 		altered_states[:, :8] += maps[idcs8, 0, altered_states[:, :8].ravel()].reshape((-1, 8))
 		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
 		return altered_states
@@ -202,11 +188,11 @@ class _Cube2024(Cube):
 	def as_oh(cls, states: np.ndarray):
 		# Takes in n states and returns an n x 480 one-hot tensor
 		if len(states.shape) == 1:
-			oh = torch.zeros(1, 480)
+			oh = torch.zeros(1, 480, device=gpu)
 			idcs = np.arange(20) * 24 + states
 			oh[0, idcs] = 1
 		else:
-			oh = torch.zeros(states.shape[0], 480)
+			oh = torch.zeros(states.shape[0], 480, device=gpu)
 			idcs = np.arange(20) * 24 + states
 			all_idcs = np.repeat(np.arange(len(states)), 20)
 			oh[all_idcs, idcs.ravel()] = 1
@@ -297,10 +283,22 @@ class _Cube686(Cube):
 	@classmethod
 	def as_oh(cls, states: np.ndarray):
 		# This representation is already one-hot encoded, so only ravelling is done
-		if len(states.shape) == 1:
+		if len(states.shape) == 3:
 			states = np.expand_dims(states, 0)
-		states = torch.from_numpy(states.reshape(-1, 288)).float()
+		states = torch.from_numpy(states.reshape(len(states), 288)).float()
 		return states
+
+	@classmethod
+	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
+		# Performs pad wrap of size one on each side
+		assert pad_size >= 1
+		oh = oh.reshape(-1, 6, 8, 6)
+		solved = (oh[:] == cls.get_solved_instance()).all(dim=3)
+		padded = torch.ones(len(oh), 6, 8+pad_size*2, 8)
+		padded[..., pad_size:8+pad_size] = solved
+		padded[..., :pad_size] = solved[..., -pad_size]
+		padded[..., -pad_size:] = solved[..., pad_size]
+		return padded
 
 	@classmethod
 	def as633(cls, state: np.ndarray):
@@ -312,7 +310,7 @@ class _Cube686(Cube):
 
 
 if __name__ == "__main__":
-	set_repr(False)
+	set_is2024(False)
 	states = np.array([Cube.get_solved()]*2, dtype=Cube.dtype)
 	for _ in range(5):
 		faces, dirs = np.random.randint(0, 6, 2), np.random.randint(0, 1, 2)

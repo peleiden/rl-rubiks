@@ -1,16 +1,17 @@
 import sys, os
+from shutil import rmtree
 
 from ast import literal_eval
 
 import numpy as np
 import torch
 
-from src.rubiks.utils import seedsetter
+from src.rubiks.utils import seedsetter, get_commit
 from src.rubiks.utils.parse import Parser
 from src.rubiks.utils.ticktock import get_timestamp
 from src.rubiks.utils.logger import Logger
 
-from src.rubiks import cpu, gpu, get_repr, set_repr, store_repr, restore_repr
+from src.rubiks import cpu, gpu, get_is2024, set_is2024, store_repr, restore_repr
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.train import Train
 
@@ -57,8 +58,13 @@ options = {
 	},
 	'gamma': {
 		'default':  1,
-		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr 100 times during training',
+		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr lr_reductions times during training',
 		'type':	    float,
+	},
+	'lr_reductions': {
+		'default':	100,
+		'help':		'Number of times the learning rate is reduced during training. Reductions are evenly spaces',
+		'type':		int,
 	},
 	'optim_fn': {
 		'default':  'RMSprop',
@@ -76,6 +82,12 @@ options = {
 		'type':	    literal_eval,
 		'choices':  [True, False],
 	},
+	'arch': {
+		'default':	'fc',
+		'help':		'Network architecture. fc for fully connected, res for fully connected with residual blocks, and conv for convolutional blocks',
+		'type':		str,
+		'choices':	['fc', 'res', 'conv'],
+	},
 }
 
 
@@ -92,9 +104,11 @@ class TrainJob:
 			batch_size: int,
 			lr: float,
 			gamma: float,
+			lr_reductions: int,
 			optim_fn: str,
-			is2024: bool,
 			evaluations: int,
+			is2024: bool,
+			arch: str,
 
 			# Currently not set by argparser/configparser
 
@@ -104,8 +118,8 @@ class TrainJob:
 			scrambling_depths: tuple = (8,),
 
 			verbose: bool = True,
-			model_cfg: ModelConfig = ModelConfig(batchnorm=False),
 		):
+
 		self.name = name
 		assert isinstance(self.name, str)
 
@@ -124,6 +138,8 @@ class TrainJob:
 		assert float(lr) and lr <= 1
 		self.gamma = gamma
 		assert 0 < gamma <= 1
+		self.lr_reductions = lr_reductions
+		assert 0 <= lr_reductions
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
 
@@ -137,13 +153,22 @@ class TrainJob:
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
-		self.model_cfg = model_cfg
+		self.model_cfg = ModelConfig(architecture=arch)
+		assert arch in ["fc", "res", "conv"]
+		if arch == "conv": assert not get_is2024()
 		assert isinstance(self.model_cfg, ModelConfig)
 
 	def execute(self):
-		self.logger(f"Starting job:\n{self.name}")
+
+		# Clears directory to avoid clutter and mixing of experiments
+		rmtree(self.location, ignore_errors=True)
+		os.makedirs(self.location)
+
+		# Sets representation
 		store_repr()
-		set_repr(self.is2024)
+		set_is2024(self.is2024)
+		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
+		set_is2024(self.is2024)
 
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*self.evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
@@ -154,13 +179,14 @@ class TrainJob:
 				optim_fn			= self.optim_fn,
 				lr					= self.lr,
 				gamma				= self.gamma,
+				lr_reductions		= self.lr_reductions,
 				agent				= self.agent,
 				logger				= self.logger,
 				evaluations			= self.evaluations,
 				evaluator			= self.evaluator,
 		)
 
-		net = Model(self.model_cfg, self.logger).to(gpu)
+		net = Model.create(self.model_cfg, self.logger).to(gpu)
 		net, min_net = train.train(net)
 		net.save(self.location)
 		min_net.save(self.location, True)
@@ -168,12 +194,14 @@ class TrainJob:
 		train.plot_training(self.location)
 		train.plot_value_targets(self.location)
 		train.plot_net_changes(self.location)
-		np.save(f"{self.location}/rollouts.npy", train.train_rollouts)
-		np.save(f"{self.location}/policy_losses.npy", train.policy_losses)
-		np.save(f"{self.location}/value_losses.npy", train.value_losses)
-		np.save(f"{self.location}/losses.npy", train.train_losses)
-		np.save(f"{self.location}/evaluation_rollouts.npy", train.evaluations)
-		np.save(f"{self.location}/evaluations.npy", train.eval_rewards)
+		datapath = os.path.join(self.location, "train-data")
+		os.mkdir(datapath)
+		np.save(f"{datapath}/rollouts.npy", train.train_rollouts)
+		np.save(f"{datapath}/policy_losses.npy", train.policy_losses)
+		np.save(f"{datapath}/value_losses.npy", train.value_losses)
+		np.save(f"{datapath}/losses.npy", train.train_losses)
+		np.save(f"{datapath}/evaluation_rollouts.npy", train.evaluations)
+		np.save(f"{datapath}/evaluations.npy", train.eval_rewards)
 
 		restore_repr()
 

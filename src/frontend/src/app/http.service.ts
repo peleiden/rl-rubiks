@@ -15,13 +15,14 @@ const urls = {
 })
 export class HttpService {
 
+  constructor(private http: HttpClient) { }
+
   hosts = [
     { name: "Heroku", address: "https://rl-rubiks.herokuapp.com" },
-    { name: "Lokal", address: "http://127.0.0.1:5000" },
+    { name: "Local", address: "http://127.0.0.1:5000" },
   ];
-  selectedHost = this.hosts[0];
 
-  constructor(private http: HttpClient) { }
+  selectedHost = this.hosts[0];
 
   private getUrl(path: string) {
     return `${this.selectedHost.address}/${path}`;

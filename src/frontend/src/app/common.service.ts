@@ -18,7 +18,10 @@ export class CommonService {
   selectedAgent: number;
   hasSearchedForSolution = false;
   hasSolution: boolean;
-  solveActions: string[];
+  exploredStates: number;
+  actionQueue: string[];
+  statesLeft: cube[];
+  searchedStates: number;
 
   state: cube;
   state20: cube20;
@@ -29,12 +32,19 @@ export class CommonService {
   setSelectedHost(host: { name: string, address: string }) {
     this.httpService.selectedHost = host;
     this.getInfo();
+    if (!this.status.hasData) {
+      this.getSolved();
+    }
   }
 
   public async getInfo() {
     try {
       this.status.loading = true;
       const { cuda, agents } = await this.httpService.getInfo();
+      if (this.status.hasData) {
+        this.status.loading = false;
+        return;
+      };
       this.cuda = cuda;
       this.agents = agents;
       this.selectedAgent = 0;
@@ -70,9 +80,10 @@ export class CommonService {
     this.status.loading = true;
     const scrambleRequest: IScrambleRequest = { depth, state20: this.state20, };
     const { states, finalState20 } = await this.httpService.scramble(scrambleRequest);
+    this.statesLeft = states;
     this.state20 = finalState20;
-    await this.animateStates(states);
     this.status.loading = false;
+    this.animateStates();
   }
 
   public async solve() {
@@ -83,26 +94,30 @@ export class CommonService {
       timeLimit: this.timeLimit,
       state20: this.state20,
     };
-    const { solution, actions, states, finalState20 } = await this.httpService.solve(solveRequest);
+    const { solution, actions, searchedStates, states, finalState20 } = await this.httpService.solve(solveRequest);
     this.hasSearchedForSolution = true;
     this.hasSolution = solution;
-    this.solveActions = actions.map(val => this.actions[2*val[0] + val[1]]);
+    this.searchedStates = searchedStates;
+    this.exploredStates = states.length;
+    this.actionQueue = actions.map(val => this.actions[2*val[0] + val[1]]);
     this.state20 = finalState20;
-    if (this.hasSolution) {
-      await this.animateStates(states);
-    }
+    this.statesLeft = states;
     this.status.loading = false;
   }
 
-  private async animateStates(states: cube[]) {
-    const frameLength = Math.min(1000 / states.length, 100);
-    for (const state of states) {
-      const promise = new Promise<cube>((resolve, reject) => {
-        setTimeout(() => resolve(state), frameLength);
+  public step() {
+    this.state = this.statesLeft.shift();
+    if (this.actionQueue?.length) this.actionQueue.shift();
+  }
+
+  public async animateStates() {
+    const frameLength = Math.min(1000 / this.statesLeft.length, 100);
+    while (this.statesLeft.length) {
+      const promise = new Promise((resolve, reject) => {
+        setTimeout(() => resolve(), frameLength);
       })
-      this.state = await promise;
+      await promise;
+      this.step();
     }
-    console.log("Færdig med scarmbulering");
-    return null;
   }
 }

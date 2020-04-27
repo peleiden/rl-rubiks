@@ -6,7 +6,7 @@ import { CommonService } from './common.service';
   selector: 'app-root',
   templateUrl: './app.component.html',
   styles: [
-    "button.btn-action { width: 71px; }"
+    "button.btn-action { width: 65px; }"
   ],
 })
 export class AppComponent implements OnInit {

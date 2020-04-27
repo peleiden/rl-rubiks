@@ -8,7 +8,7 @@ import torch
 
 from src.rubiks.solving.search import DeepSearcher
 from src.rubiks.solving.agents import DeepAgent
-from src.rubiks import cpu, gpu, no_grad
+from src.rubiks import cpu, gpu, no_grad, reset_cuda
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
@@ -39,6 +39,7 @@ class Train:
 			optim_fn,
 			lr: float,
 			gamma: float,
+			lr_reductions: int,
 			agent: DeepAgent,
 			evaluator: Evaluator,
 			evaluations: int,
@@ -61,17 +62,18 @@ class Train:
 		self.agent = agent
 
 		self.lr	= lr
+		self.gamma = gamma
+		self.lr_reductions = lr_reductions
 		self.optim = optim_fn
 		self.policy_criterion = policy_criterion(reduction='none')
 		self.value_criterion = value_criterion(reduction='none')
-		self.gamma = gamma
 
 		self.evaluator = evaluator
 		self.log = logger
 		self.log("\n".join([
 			"Created trainer",
 			f"Learning rate and gamma: {self.lr} and {self.gamma}",
-			f"  Learning rate will update 100 times during training: lr <- gamma * lr",
+			f"  Learning rate will update {self.lr_reductions} times during training: lr <- gamma * lr",
 			f"Optimizer:      {self.optim}",
 			f"Policy and value criteria: {self.policy_criterion} and {self.value_criterion}",
 			f"Rollouts:       {self.rollouts}",
@@ -96,7 +98,7 @@ class Train:
 			f"Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}",
 			f"Evaluations: {len(self.evaluations)}",
 		]))
-		lowest_loss = float("inf")
+		best_solve = 0
 		min_net = net.clone()
 		self.agent.update_net(net)
 		params = net.get_params()
@@ -111,7 +113,7 @@ class Train:
 		self.param_changes, self.param_total_changes = list(), list()
 
 		for rollout in range(self.rollouts):
-			torch.cuda.empty_cache()
+			reset_cuda()
 
 			self.tt.profile("ADI training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
@@ -123,6 +125,8 @@ class Train:
 			self.tt.end_profile("To cuda")
 			self.tt.end_profile("ADI training data")
 
+			reset_cuda()
+
 			self.tt.profile("Training loop")
 			net.train()
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
@@ -133,7 +137,6 @@ class Train:
 				# Use loss on both policy and value
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
 				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
-				# print(policy_loss, value_loss)
 				loss = policy_loss + value_loss
 				loss.backward()
 				optimizer.step()
@@ -141,16 +144,13 @@ class Train:
 				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
 			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
 			self.tt.end_profile("Training loop")
-			
-			if rollout in np.linspace(self.rollouts*.01, self.rollouts*.99, 100).astype(int):
+
+			# Updates learning rate
+			if rollout in np.linspace(0, self.rollouts, self.lr_reductions, dtype=int)[1:-1]:
 				lr_scheduler.step()
 				lr = optimizer.param_groups[0]["lr"]
 				if self.gamma != 1:
 					self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
-
-			if self.train_losses[rollout] < lowest_loss:
-				lowest_loss = self.train_losses[rollout]
-				min_net = net.clone()
 
 			model_change = torch.sqrt((net.get_params()-params)**2).mean().cpu()
 			model_total_change = torch.sqrt((net.get_params()-orig_params)**2).mean().cpu()
@@ -179,6 +179,12 @@ class Train:
 				self.eval_rewards.append(eval_reward)
 				self.tt.end_profile(f"Evaluating using agent {self.agent}")
 
+				if eval_reward > best_solve:
+					best_solve = eval_reward
+					min_net = net.clone()
+					self.log(f"Updated best net with solve rate {eval_reward*100:.2f} % at depth {self.evaluator.scrambling_depths}")
+
+
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
@@ -188,18 +194,18 @@ class Train:
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * Cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
 		self.log("\n".join([
-			f"Best net found to have loss of {lowest_loss:.4f}",
+			f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}",
 			f"Total running time:            {self.tt.stringify_time(total_time, 's')}",
-			f"  Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
-			f"  Training time:               {self.tt.stringify_time(train_time, 's')} or {train_time/total_time*100:.2f} %",
-			f"  Evaluation time:             {self.tt.stringify_time(eval_time, 's')} or {eval_time/total_time*100:.2f} %",
+			f"- Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
+			f"- Training time:               {self.tt.stringify_time(train_time, 's')} or {train_time/total_time*100:.2f} %",
+			f"- Evaluation time:             {self.tt.stringify_time(eval_time, 's')} or {eval_time/total_time*100:.2f} %",
 			f"States witnessed:              {TickTock.thousand_seps(nstates)}",
-			f"  States per training second:  {TickTock.thousand_seps(states_per_sec)}",
+			f"- States per training second:  {TickTock.thousand_seps(states_per_sec)}",
 		]))
 
 		return net, min_net
 
-	def get_adi_ff_slices(self):
+	def _get_adi_ff_slices(self):
 		data_points = self.rollout_games * self.rollout_depth * Cube.action_dim
 		slice_size = data_points // self.adi_ff_batches + 1
 		# Final slice may have overflow, however this is simply ignored when indexing
@@ -220,62 +226,33 @@ class Train:
 
 		net.eval()
 		self.tt.profile("Scrambling")
-		# method = Cube.sequence_scrambler
-		# states, oh_states = method(self.rollout_games, self.rollout_depth)
-		states2, oh_states2 = Cube.sequence_scrambler2(self.rollout_games, self.rollout_depth)
-		# assert np.all(states == states2.reshape(-1, *Cube.shape()))
-		# assert torch.all(oh_states==oh_states2)
+		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
-		# solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
-		solved_scrambled_states2 = np.array([
-			Cube.is_solved(scrambled_state)
-			for game_states in states2
-			for scrambled_state in game_states
-		], dtype=bool)
-		# assert np.all(solved_scrambled_states==solved_scrambled_states2)
+		solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
 		
 		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
-		# substates = np.vstack(np.transpose([
-		# 	Cube.multi_rotate(states, np.array([action[0]]*len(states)), np.array([action[1]]*len(states)))
-		# 	for action in Cube.action_space
-		# ], (1, 0, 2)))
-		substates2 = np.array([
-			Cube.rotate(scrambled_state, *action)
-			for game_states in states2
-			for scrambled_state in game_states
-			for action in Cube.action_space
-		], dtype=Cube.dtype)
-		# assert np.all(substates==substates2)
+		substates = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
 		self.tt.end_profile("ADI substates")
 		self.tt.profile("One-hot encoding")
-		# substates_oh = Cube.as_oh(substates).to(gpu)
-		substates_oh2 = Cube.as_oh(substates2).to(gpu)
-		# assert torch.all(substates_oh==substates_oh2)
+		substates_oh = Cube.as_oh(substates)
 		self.tt.end_profile("One-hot encoding")
 
 		# Get rewards. 1 for solved states else -1
 		self.tt.profile("Reward")
-		# solved_substates = (substates == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
-		# rewards = torch.ones(*solved_substates.shape)
-		# rewards[~solved_substates] = -1
-		rewards2 = torch.tensor([1 if Cube.is_solved(substate) else -1 for substate in substates2])
-		# assert torch.all(rewards==rewards2)
+		solved_substates = (substates == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
+		rewards = torch.ones(*solved_substates.shape)
+		rewards[~solved_substates] = -1
 		self.tt.end_profile("Reward")
 		
 		# Generates policy and value targets
 		self.tt.profile("ADI feedforward")
 		while True:
 			try:
-				# value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
-				# values = torch.cat(value_parts).cpu()
-				# assert values.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
-				value_parts2 = [net(substates_oh2[slice_], policy=False, value=True).squeeze() for slice_ in self.get_adi_ff_slices()]
-				values2 = torch.cat(value_parts2).cpu()
-				assert values2.shape == torch.Size([self.rollout_games*self.rollout_depth*Cube.action_dim])
-				# assert torch.all(values==values2)
+				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self._get_adi_ff_slices()]
+				values = torch.cat(value_parts).cpu()
 				break
 			except RuntimeError:  # Usually caused by running out of vram
 				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
@@ -283,14 +260,11 @@ class Train:
 		self.tt.end_profile("ADI feedforward")
 
 		self.tt.profile("Calculating targets")
-		# values += rewards
-		# values = values.reshape(-1, 12)
-		values2 += rewards2
-		values2 = values2.reshape(-1, 12)
-		# assert torch.all(values==values2)
-		policy_targets = torch.argmax(values2, dim=1)
-		value_targets = values2[np.arange(len(values2)), policy_targets]
-		value_targets[solved_scrambled_states2] = 0
+		values += rewards
+		values = values.reshape(-1, 12)
+		policy_targets = torch.argmax(values, dim=1)
+		value_targets = values[np.arange(len(values)), policy_targets]
+		value_targets[solved_scrambled_states] = 0
 		self.tt.end_profile("Calculating targets")
 		
 		if self.loss_weighting == "adaptive":
@@ -303,8 +277,8 @@ class Train:
 		else:
 			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
 		loss_weights /= loss_weights.sum()
-		
-		return oh_states2, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
+
+		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""

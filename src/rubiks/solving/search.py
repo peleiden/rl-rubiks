@@ -42,6 +42,7 @@ class Node:
 class Searcher:
 	with_mt = False
 	eps = np.finfo("float").eps
+	_explored_states = 0
 
 	def __init__(self):
 		self.action_queue = deque()
@@ -57,18 +58,30 @@ class Searcher:
 		while self.tt.tock() < time_limit:
 			action, state, solution_found = self._step(state)
 			self.action_queue.append(action)
-			if solution_found: return True
+			if solution_found:
+				self._explored_states = len(self.action_queue)
+				return True
+
+		self._explored_states = len(self.action_queue)
 		return False
 
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		raise NotImplementedError
 
 	def reset(self):
+		self._explored_states = 0
 		self.action_queue = deque()
 		self.tt.reset()
+		if hasattr(self, "net"):
+			self.net.eval()
 
 	def __str__(self):
 		raise NotImplementedError
+
+	def __len__(self):
+		# Returns number of states explored
+		# FIXME: Will not work with external multithreading
+		return self._explored_states
 
 
 class DeepSearcher(Searcher):
@@ -119,10 +132,13 @@ class BFS(Searcher):
 					while states[tstate][0] is not None:
 						self.action_queue.appendleft(states[tstate][1])
 						tstate = states[tstate][0]
+					self.explored_states = len(self.action_queue)
 					return True
 				else:
 					states[new_tstate] = (tstate, i)
 					queue.append(new_state)
+
+		self.explored_states = len(self.action_queue)
 		return False
 
 	def __str__(self):
@@ -137,7 +153,7 @@ class PolicySearch(DeepSearcher):
 		self.sample_policy = sample_policy
 
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
-		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state).to(gpu), value=False).cpu(), dim=1).numpy().squeeze()
+		policy = torch.nn.functional.softmax(self.net(Cube.as_oh(state), value=False).cpu(), dim=1).numpy().squeeze()
 		action = np.random.choice(Cube.action_dim, p=policy) if self.sample_policy else policy.argmax()
 		state = Cube.rotate(state, *Cube.action_space[action])
 		return action, state, Cube.is_solved(state)
@@ -166,11 +182,11 @@ class MCTS(DeepSearcher):
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float) -> bool:
 		self.reset()
-
 		self.tt.tick()
+
 		if Cube.is_solved(state): return True
 		# First state is evaluated and expanded individually
-		oh = Cube.as_oh(state).to(gpu)
+		oh = Cube.as_oh(state)
 		p, v = self.net(oh)  # Policy and value
 		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
@@ -189,6 +205,7 @@ class MCTS(DeepSearcher):
 			# Gets new paths and leaves to expand from
 			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], time_limit) for _ in range(self.workers)])
 
+		self.action_queue = paths[solve_leaf] + deque([solve_action])  # Saves an action queue even if it loses which is its best guess
 		return False
 
 	def search_leaf(self, node: Node, time_limit: float) -> (list, Node):
@@ -197,7 +214,7 @@ class MCTS(DeepSearcher):
 		self.tt.profile("Exploring next node")
 		while not node.is_leaf and self.tt.tock() < time_limit:
 			sqrtN = np.sqrt(node.N.sum())
-			if sqrtN < self.eps:  # Randomly chooses path the first time a path is found
+			if sqrtN < self.eps:  # Randomly chooses path the first time a state is explored
 				action = np.random.choice(Cube.action_dim)
 			else:
 				U = self.c * node.P * sqrtN / (1 + node.N)
@@ -218,10 +235,13 @@ class MCTS(DeepSearcher):
 		# Used for node expansion
 		"""
 		state_str = state.tostring()
-		for i, action in enumerate(Cube.action_space):
+		new_states = Cube.multi_rotate(
+			np.tile(state, (Cube.action_dim, 1)),
+			*Cube.iter_actions()
+		)
+		new_states_strs = [x.tostring() for x in new_states]
+		for i, (new_state, new_state_str) in enumerate(zip(new_states, new_states_strs)):
 			self.tt.profile("Update neighbors")
-			new_state = Cube.rotate(state, *action)
-			new_state_str = new_state.tostring()
 			if new_state_str in self.states:
 				self.states[state_str].neighs[i] = self.states[new_state_str]
 				self.states[new_state_str].neighs[Cube.rev_action(i)] = self.states[state_str]
@@ -239,10 +259,13 @@ class MCTS(DeepSearcher):
 		"""
 
 		# Explores all new states
-		new_states = np.array([Cube.rotate(leaf.state, *action)
-							   for leaf in leaves
-							   for action in Cube.action_space])
+		self.tt.profile("Getting new states to expand to")
+		states = np.array([leaf.state for leaf in leaves])
+		new_states = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
+		self.tt.end_profile("Getting new states to expand to")
+
 		# Checks for solutions
+		self.tt.profile("Checking for solved state")
 		for i, state in enumerate(new_states):
 			if Cube.is_solved(state):
 				leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
@@ -250,11 +273,12 @@ class MCTS(DeepSearcher):
 				self.states[state.tostring()] = solved_leaf
 				self._update_neighbors(state)
 				return i // Cube.action_dim, i % Cube.action_dim
+		self.tt.end_profile("Checking for solved state")
 
 		# Gets information about new states
 		new_states_str = [state.tostring() for state in new_states]
 		self.tt.profile("One-hot encoding")
-		new_states_oh = Cube.as_oh(new_states).to(gpu)
+		new_states_oh = Cube.as_oh(new_states)
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
 		policies, values = self.net(new_states_oh)
@@ -273,7 +297,7 @@ class MCTS(DeepSearcher):
 				# However, this is so expensive that it has been found to reduce the number of explored states to around a quarter
 				# Also, it is not a major problem, as the edges will be updated when new_leaf is expanded, so the problem only exists on the edge of the graph
 				# TODO: Test performance difference after implementing this
-				# TODO: Save dum states when expanding. This should allow graph completeness without massive overhead
+				# TODO: Save dumb nodes when expanding. This should allow graph completeness without massive overhead
 			else:
 				leaf.neighs[action_idx] = self.states[state_str]
 				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf
@@ -319,7 +343,7 @@ class MCTS(DeepSearcher):
 
 		# Passes new states through net
 		self.tt.profile("One-hot encoding new states")
-		new_states_oh = Cube.as_oh(new_states).to(gpu)
+		new_states_oh = Cube.as_oh(new_states)
 		self.tt.end_profile("One-hot encoding new states")
 		self.tt.profile("Feedforwarding")
 		p, v = self.net(new_states_oh)
@@ -346,7 +370,7 @@ class MCTS(DeepSearcher):
 		return -1
 
 	def _shorten_action_queue(self):
-		# TODO
+		# TODO: Implement and ensure graph completeness
 		# Generates new action queue with BFS through self.states
 		pass
 
@@ -362,9 +386,12 @@ class MCTS(DeepSearcher):
 
 	def __str__(self):
 		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
+	
+	def __len__(self):
+		return len(self.states)
 
 
-class A_star(DeepSearcher):
+class AStar(DeepSearcher):
 
 	def __init__(self, net: Model):
 		super().__init__(net)
@@ -379,7 +406,11 @@ class A_star(DeepSearcher):
 		self.reset()
 		self.open = {}
 		if Cube.is_solved(state): return True
-		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': np.inf, 'parent': None}
+
+		oh = Cube.as_oh(state)
+		p, v = self.net(oh)  # Policy and value
+		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': -float(v.cpu()), 'parent': None}
+		del p, v
 
 		# explore leaves
 		while self.tt.tock() < time_limit:
@@ -399,20 +430,30 @@ class A_star(DeepSearcher):
 						self.open[neighbor] = {'g_cost': g_cost, 'h_cost': h_cost, 'parent': current}
 		return False
 
-	def get_neighbors(self, node):
+	def get_neighbors(self, node: str):
 		neighbors = [None] * Cube.action_dim
-		node = np.fromstring(node, dtype=int)
-		for i in Cube.action_dim:
+		node = np.fromstring(node, dtype=Cube.dtype)
+		for i in range(Cube.action_dim):
 			neighbor = Cube.rotate(node, *Cube.action_space[i])
 			neighbors[i] = neighbor.tostring()
 		return neighbors
 
-	def get_g_cost(self, node):
+	def get_g_cost(self, node: str):
 		return self.closed[node]['g_cost'] + 1
 
-	def get_h_cost(self, node):
+	def get_h_cost(self, node: str):
 		node = np.fromstring(node, dtype=int)
 		if Cube.is_solved(node):
 			return 0
 		else:
-			return NotImplementedError
+			oh = Cube.as_oh(node)
+			p, v = self.net(oh)
+			return -float(v.cpu()) #alternativ idé: 1/float(v.cpu())
+
+	def __str__(self):
+		return f"A* Search"
+	
+	def __len__(self):
+		# TODO
+		raise NotImplementedError
+

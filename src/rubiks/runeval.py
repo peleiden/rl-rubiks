@@ -9,9 +9,9 @@ from src.rubiks.solving.agents import Agent, DeepAgent
 from src.rubiks.solving import search
 from src.rubiks.model import Model, ModelConfig
 
+from src.rubiks.utils import seedsetter, get_commit
 from src.rubiks.utils.logger import Logger
 from src.rubiks.utils.parse import Parser
-from src.rubiks.utils import seedsetter
 
 train_folders = sorted(glob('data/local_train2*')) #Stops working in the next millenium
 
@@ -133,7 +133,7 @@ class EvalJob:
 		self.logger.log(f"TIME ESTIMATE: {len(self.agents)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
 
 	def execute(self):
-		self.logger.log(f"Beginning evaluator {self.name}")
+		self.logger.log(f"Beginning evaluator {self.name}\nLocation {self.location}\nCommit: {get_commit()}")
 		agent_results = {}
 		for name, agent in self.agents.items():
 			self.logger.section(f'Evaluationg agent {name}')

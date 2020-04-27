@@ -8,7 +8,7 @@ class Agent:
 
 	def __init__(self, searcher: Searcher):
 		"""
-		time_limit: Number of seconds that the tree search part of the algorithm is allowed to searc
+		time_limit: Number of seconds that the tree search part of the algorithm is allowed to search
 		"""
 		self._searcher = searcher
 
@@ -18,6 +18,10 @@ class Agent:
 
 	def action(self) -> (int, bool):
 		return Cube.action_space[self._searcher.action_queue.popleft()]
+	
+	def actions(self) -> (int, bool):
+		while self._searcher.action_queue:
+			yield self.action()
 
 	def allow_mt(self):
 		# NN based agents see very little gain but much higher compute usage with standard mt implementation
@@ -28,8 +32,7 @@ class Agent:
 	
 	def __len__(self):
 		# Returns number of explored states
-		# This will not work properly with searchers using multiple workers if they do not maintain a states object
-		return len(self._searcher.states) if hasattr(self._searcher, "states") else len(self._searcher.action_queue)
+		return len(self._searcher)
 		
 
 class DeepAgent(Agent):

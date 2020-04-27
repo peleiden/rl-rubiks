@@ -30,6 +30,6 @@ class TestAgent(MainTest):
 	def _test_agent(self, agent: Agent):
 		state, _, _ = Cube.scramble(4)
 		solution_found, steps = agent.generate_action_queue(state, .01)
-		for _ in range(steps):
-			state = Cube.rotate(state, *agent.action())
+		for action in agent.actions():
+			state = Cube.rotate(state, *action)
 		assert solution_found == Cube.is_solved(state)

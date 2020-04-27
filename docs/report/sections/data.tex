@@ -54,37 +54,57 @@ Inde for Rubiks terning betegnes det mindste antal træk, der skal til for at l�
 \section{Repræsentation af terninger}\label{sec:repr}
 Der findes en lang række måder at repræsentere tilstanden af en terning på.
 For at opnå de bedste resultater, skal den valgte repræsentation
-\begin{itemize}
+\begin{enumerate}
 	\item undgå overflødighed
 	\item bruge lidt hukommelse
 	\item kunne foretage rotationer hurtigt
 	\item fungere godt med neurale netværk
-\end{itemize}
-Den mest oplagte måde at repræsentere terningen på er en $ 6\times 9 $-tensor, hvor hver indgang er et tal svarende til en farve.
+\end{enumerate}
+I rapporten vil tre forskellige repræsentationer blive undersøgt: $ 6\times 8\times 6, 20\times 24 $ og korrekthed.
+
+\paragraph{$\mathbf{6\times 8\times 6}$}
+Den mest oplagte måde at repræsentere terningen på er en $ 6\times 9 $-matrix, hvor hver indgang er et tal svarende til en farve.
 Det er dog ikke nødvendigt at modellere det midterste kvadrat, så længe terningens orientering er fastlagt, hvilket reducerer repræsentationen til $ 6\times 8 $.
 Denne repræsentation bruger kun $ 6\cdot 8\cdot 4=192 $ bytes, når tallene gemmes som 32 bit floating points.
-Det er også muligt at foretage rotationer hurtigt, men det er muligt at repræsentere en lang række tilstande, der ikke ligger i tilstandsrummet -- fx at alle kvadrater på alle sider har samme farve.
+Til gengæld er rotationer langsomme at foretage, da det kræver rulning af matricen langs andenaksen, hvilket er en forhorldsvist langsom proces, som det ikke er nemt at foretage flere af i samme operation.
+Det ville ellers give en betydelig forbedring i rotationshastigheden i \code{numpy}, som benyttes til at arbejde med repræsentationerne.
+En anden ulempe er den store mængde repræsenterbare tilstande, der ikke ligger i tilstandsrummet -- fx at alle kvadrater på alle sider har samme farve.
 Med seks farver består det repræsenterbare tilstandsrum af $ 6^{6\cdot 8}\approx 2,25\ctp{37} $ tilstande, langt større end de $ 4,3\ctp{19} $ lovlige tilstande.
 Repræsentationen er heller ikke velfungerende med neurale netværk, hvor én ud af \(6\)-kodning er at foretrække.
-Ved at tilføje en ekstra akse til tensoren er en ud af \(6\)-kodning muligt, men det kræver $ 6\cdot 8\cdot 6\cdot 4=1152 $ bytes og løser stadig ikke overflødighedsproblemet.\\
-\\
-En anden, mindre intuitiv repræsentation er en $ 20\times 24 $-tensor.
-Den tager udgangspunkt i Rubiks terning som bestående af de 26 cubies, hvorefter man fjerner de seks midtercubies og har 20 kuber, der skal repræsenteres.
-Disse inkluderer 8 hjørnecubies og 12 sidecubies.
+Ved at tilføje en ekstra akse til matricen er en-af-\(K\)-kodning muligt, men det kræver $ 6\cdot 8\cdot 6\cdot 4=1152 $ bytes og løser stadig ikke overflødighedsproblemet.
+Med denne ændring fås den første repræsentation, som vil blive undersøgt.
+Den vurderes til at opfylde punkt 4 og til en vis grad punkt 2.
+
+\paragraph{$ \mathbf{20\times 24} $}
+En anden, mindre intuitiv repræsentation er en $ 20 $ lang vektor, hvor hver indgang er et heltal i intervallet $ [0, 23] $.
+Den tager udgangspunkt i Rubiks terning som bestående af de 26 cubies, hvorefter man fjerner de seks midterkuber og står tilbage med 20 kuber, der skal repræsenteres -- 8 hjørnekuber og 12 sidekuber.
+Kvadraterne på hver cubie har en unik farvekombination, og det er derfor muligt at repræsentere hver kube ved blot ét af dens kvadrater.
 Hjørnekuberne kan sidde 8 steder og have tre forskellige orienteringer, hvilket giver 24 mulige tilstande.
 Tilsvarende kan sidekuberne sidde 12 steder med to orienteringer, hvorfor de også har 24 mulige tilstande.
-Klistermærkerne på hver cubie har en unik farvekombination,\footnote{Det er muligt at overbevise sig selv om det ved at forestille sig den løste terning.} og det er derfor muligt at repræsentere hver kube ved blot ét af dens klistermærker.
 Repræsentationen er visualiseret på figur \ref{fig:kuberepr} og følger direkte repræsentationen i \cite{HumansBeGone}, hvorfra illustrationen også er taget.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\textwidth]{repr}
 	\caption{Repræsentation af Rubiks terning. Der holdes styr på de hvide kvadrater på (c) og (d). \cite{HumansBeGone}}\label{fig:kuberepr}
-\end{figure}\noindent
-Denne repræsentation kan repræsentere $ 24^{20}\approx 4,02\ctp{27} $ tilstande -- et stykke over tilstandsrummets størrelse, men stadig langt bedre end det omtalte alternativ.
-Til gengæld kræver det $ 20\times 24\times 4=1920 $ bytes at gemme en tilstand, men rotationer kan foretages hurtigt.
-Endeligt er tilstande én af \(24\)-kodede, hvilket gør det anvendeligt til neurale netværk.
-Samlet set vurderes denne repræsentation til bedre at opfylde kravene og det er den, der anvendes som datagrundlag i rapporten.
+\end{figure}
+\noindent
+I repræsentationen findes $ 24^{20}\approx 4,02\ctp{27} $ tilstande -- et stykke over størrelsen af terningens tilstandsrum, men stadig langt bedre end det omtalte alternativ.
+En anden, væsentlig fordel ved repræsentationen er rotationshastigheden.
+Når en rotation foretages, skal placeringerne og orienteringerne på hver kube opdateres.
+Med den rigtige kortlægning over rotationers effekt på tilstanden kan det udtrykkes med blot én addition pr. kube eller 20 additioner i alt.
+Ydermere er det trivielt at samle flere rotationer i en enkelt \code{numpy}-operation.
+I vores implementering foretages enkelte rotationer omtrent fem gange hurtigere end i $ 6\times 8\times 6 $-repræsentationen.
+Hvis der foretages flere ad gangen, hvilket ofte er tilfældet, kan det gå op mod 50 gange hurtigere.
+Repræsentationen er dog ikke én-af-$ K $-kodet.
+Det er derfor nødvendigt at foretage en sådan kodning, inden repræsentationen føres ind i et neuralt netværk.
+Operationen er forholdsvist hurtig, så den samlet tidsbesparelse er stadig betydelig.
+Til gengæld kræver det $ 20\cdot 24\cdot 4=1920 $ bytes at opbevare en tilstand.
+Samlet set opfylder $ 20\times 24 $-repræsentationen punkt 1, 3 og 4.
 
+\paragraph{Korrekthed}
+Den sidste repræsentation er ikke en fuldstændig repræsentation i sig selv.
+Det er i stedet en overbygning på $ 6\times 8\times 6 $-repræsentationen, som har til formål at fungere med konvolutionelle netværk.
+%TODO
 
 \end{document}
 

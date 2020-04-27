@@ -3,9 +3,10 @@ os.chdir(sys.path[0])
 from pathlib import Path
 import git
 import matplotlib.pyplot as plt
-plt.rcParams.update({"font.size": 22})
+plt.rcParams.update({"font.size": 14})
 import numpy as np
 from collections import deque, defaultdict
+import time
 
 def exclude(d: str):
 	exclude_patterns = ["local", "node_modules", "dist", ".idea", "__pycache__", ".git"]
@@ -35,17 +36,18 @@ repopath = os.path.realpath(os.path.join(os.getcwd(), "..", "..", ".."))
 os.chdir(repopath)
 print(repopath)
 repo = git.Repo(repopath)
-commits = list(reversed([str(x) for x in repo.iter_commits()]))
+commits = list(reversed(list(repo.iter_commits())))
 patterns = {
 	".py": (".py", "#"),
 	".ts": (".ts", "//"),
 	".tex": (".tex", "%"),
 	".md": (".md", "None"*10),
 }
-n_commits = np.arange(0, len(commits)+1)
+times = []
 n_lines = {kw: np.zeros(len(commits)+1) for kw in patterns}
 
 for i, commit in enumerate(commits):
+	times.append(commit.committed_date)
 	cmd = f"git checkout {commit}"
 	print(f"{i+1} / {len(commits)} >>> {cmd}")
 	os.system(cmd)
@@ -62,11 +64,16 @@ os.system("git checkout master")
 
 plt.figure(figsize=(15, 10))
 for kw, lines in n_lines.items():
-	plt.plot(n_commits, lines, "-o", label=kw)
-plt.xlabel("Number of commits")
-plt.ylabel("Nummer of non-empty/comment lines")
+	plt.plot(times, lines[1:], "-o", label=kw)
+xticks = np.linspace(0, len(commits)-1, 10, dtype=int)
+tickcommits = [x for i, x in enumerate(commits) if i in xticks]
+xticklabels = [time.strftime("%d-%m-%Y", time.gmtime(x.committed_date)) for x in tickcommits]
+plt.xticks([times[i] for i in xticks], xticklabels, rotation=60)
+plt.xlabel("Date of commit")
+plt.ylabel("Nummer of lines (excl. empty lines and comments)")
 plt.legend(loc=2)
 plt.grid(True)
+plt.tight_layout()
 plt.savefig(f"{repopath}/src/legacy/project_management/local_line_counts.png")
 plt.show()
 
