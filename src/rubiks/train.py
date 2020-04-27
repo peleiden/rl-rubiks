@@ -287,11 +287,11 @@ class Train:
 		self.log("Making plot of training")
 		ylim = np.array([-0.05, 1.05])
 		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8))
-		loss_ax.set_xlabel(f"Rollout, each of {self.states_per_rollout} states")
+		loss_ax.set_xlabel(f"Rollout, each of {TickTock.thousand_seps(self.states_per_rollout)} states")
 		loss_ax.set_ylim(ylim*np.max(self.train_losses))
 
 		colour = "red"
-		loss_ax.set_ylabel("Cross Entropy + MSE, weighted", color = colour)
+		loss_ax.set_ylabel(f"Cross Entropy + MSE loss ({self.loss_weighting})", color = colour)
 		loss_ax.plot(self.train_rollouts, self.train_losses, label="Training loss", color=colour)
 		loss_ax.plot(self.train_rollouts, self.policy_losses, linestyle="dashdot", label="Policy loss", color="orange")
 		loss_ax.plot(self.train_rollouts, self.value_losses, linestyle="dotted", label="Value loss", color="green")
