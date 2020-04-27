@@ -1,9 +1,11 @@
 import os
+import json
 from glob import glob as glob #glob
 from ast import literal_eval
 
 import numpy as np
 
+from src.rubiks import store_repr, set_is2024, restore_repr
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.solving.agents import Agent, DeepAgent
 from src.rubiks.solving import search
@@ -104,7 +106,7 @@ class EvalJob:
 		assert issubclass(searcher, search.Searcher)
 
 		if issubclass(searcher, search.DeepSearcher):
-			self.agents, search_args = {}, {}
+			self.agents, self.reps, search_args = {}, {}, {}
 
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
@@ -116,11 +118,20 @@ class EvalJob:
 			else: raise Exception(f"Kwargs have not been prepared for the DeepSearcher {searcher}")
 
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
-			#DeepSearchers might have to test multiple NN's
+			# DeepSearchers might have to test multiple NN's
 			for folder in glob(f"{search_location}/*/")+[search_location]:
 				if not os.path.isfile(os.path.join(folder, 'model.pt')): continue
+
+				store_repr()
+				key = f'{searcher} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'
+				with open(f"{folder}/config.json") as f:
+					cfg = json.load(f)
+					self.reps[key] = cfg["is2024"]
+					set_is2024(cfg["is2024"])
 				searcher = searcher.from_saved(folder, **search_args)
-				self.agents[f'{searcher} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'] = DeepAgent(searcher)
+				self.agents[key] = DeepAgent(searcher)
+				restore_repr()
+
 			if not self.agents:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
 			self.logger.log(f"Loaded model from {search_location}")
@@ -128,6 +139,7 @@ class EvalJob:
 		else:
 			searcher = searcher()
 			self.agents = {searcher: Agent(searcher)}
+			self.reps = {searcher: True}
 
 		self.logger.log(f"Initialized {self.name} with agents {' '.join(str(agent) for agent in self.agents)}")
 		self.logger.log(f"TIME ESTIMATE: {len(self.agents)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
@@ -135,11 +147,14 @@ class EvalJob:
 	def execute(self):
 		self.logger.log(f"Beginning evaluator {self.name}\nLocation {self.location}\nCommit: {get_commit()}")
 		agent_results = {}
-		for name, agent in self.agents.items():
+		for (name, agent), representation in zip(self.agents.items(), self.reps.values()):
+			store_repr()
+			set_is2024(representation)
 			self.logger.section(f'Evaluationg agent {name}')
 			res = self.evaluator.eval(agent)
 			np.save(f"{self.location}/{name}_results.npy", res)
 			agent_results[name] = res
+			restore_repr()
 
 		self.evaluator.plot_this_eval(agent_results, self.location)
 

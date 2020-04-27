@@ -5,7 +5,7 @@ import torch.nn as nn
 from copy import deepcopy
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks import cpu, gpu, get_is2024
+from src.rubiks import cpu, gpu, get_is2024, set_is2024
 from src.rubiks.utils.logger import Logger, NullLogger
 
 from dataclasses import dataclass, field
@@ -29,6 +29,8 @@ class ModelConfig:
 	_fc_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512]}
 	_res_arch: ClassVar[dict] = {"shared_sizes": [4096, 1024], "part_sizes": [512], "res_blocks": 4, "res_size": 1024,}
 	_conv_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [12, 24], "cat_sizes": [1024]}
+
+	is2024: bool = True
 
 	def __post_init__(self):
 		if self.shared_sizes is None:
@@ -126,7 +128,6 @@ class Model(nn.Module):
 			value = self.value_net(x)
 			return_values.append(value)
 		return return_values if len(return_values) > 1 else return_values[0]
-
 
 	def _create_fc_layers(self, thiccness: list, final: bool):
 		"""

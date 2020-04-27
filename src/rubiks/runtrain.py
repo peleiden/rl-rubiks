@@ -152,7 +152,7 @@ class TrainJob:
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
-		self.model_cfg = ModelConfig(architecture=arch)
+		self.model_cfg = ModelConfig(architecture=arch, is2024=is2024)
 		assert arch in ["fc", "res", "conv"]
 		if arch == "conv": assert not self.is2024
 		assert isinstance(self.model_cfg, ModelConfig)

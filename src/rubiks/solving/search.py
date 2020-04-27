@@ -233,7 +233,7 @@ class MCTS(DeepSearcher):
 		"""
 		state_str = state.tostring()
 		new_states = Cube.multi_rotate(
-			np.tile(state, (Cube.action_dim, 1)),
+			np.tile(state, (Cube.action_dim, *[1]*len(Cube.get_solved_instance().shape))),
 			*Cube.iter_actions()
 		)
 		new_states_strs = [x.tostring() for x in new_states]
