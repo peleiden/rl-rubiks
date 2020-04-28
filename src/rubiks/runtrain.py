@@ -154,6 +154,14 @@ class TrainJob:
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
 		self.model_cfg = ModelConfig(architecture=arch, is2024=is2024)
+		###################
+		# Temporary change of residual architecture to check for difference
+		if arch == 'res':
+			self.model_cfg.part_sizes = [512]
+			self.model_cfg.res_size = 3000
+			self.model_cfg.res_blocks = 2
+			self.model_cfg.shared_sizes = []
+		##################
 		assert arch in ["fc", "res", "conv"]
 		if arch == "conv": assert not self.is2024
 		assert isinstance(self.model_cfg, ModelConfig)
