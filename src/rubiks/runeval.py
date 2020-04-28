@@ -27,7 +27,7 @@ options = {
 		'default':  'MCTS',
 		'help':	    'Name of searcher for agent corresponding to searcher class in src.rubiks.solving.search',
 		'type':	    str,
-		'choices':  ['MCTS', 'PolicySearch','BFS', 'RandomDFS',],
+		'choices':  ['MCTS', 'PolicySearch','BFS', 'RandomDFS', 'AStar',],
 	},
 	'games': {
 		'default':  10,
@@ -115,6 +115,8 @@ class EvalJob:
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}
+			elif searcher == search.AStar:
+				search_args = {} # Non-parametric method goes brrrr
 			else: raise Exception(f"Kwargs have not been prepared for the DeepSearcher {searcher}")
 
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
