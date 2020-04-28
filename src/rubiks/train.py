@@ -231,7 +231,7 @@ class Train:
 
 		# Keeps track of solved states - Max Lapan's convergence fix
 		solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
-		
+
 		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
 		substates = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
@@ -246,7 +246,7 @@ class Train:
 		rewards = torch.ones(*solved_substates.shape)
 		rewards[~solved_substates] = -1
 		self.tt.end_profile("Reward")
-		
+
 		# Generates policy and value targets
 		self.tt.profile("ADI feedforward")
 		while True:
@@ -254,8 +254,8 @@ class Train:
 				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self._get_adi_ff_slices()]
 				values = torch.cat(value_parts).cpu()
 				break
-			except RuntimeError:  # Usually caused by running out of vram
-				self.log.verbose(f"Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
+			except RuntimeError as e:  # Usually caused by running out of vram
+				self.log.verbose(f"Intercepted RuntimeError {e}. Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
 				self.adi_ff_batches *= 2
 		self.tt.end_profile("ADI feedforward")
 
@@ -266,7 +266,7 @@ class Train:
 		value_targets = values[np.arange(len(values)), policy_targets]
 		value_targets[solved_scrambled_states] = 0
 		self.tt.end_profile("Calculating targets")
-		
+
 		if self.loss_weighting == "adaptive":
 			weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
 			unweighted = np.ones_like(weighted)
