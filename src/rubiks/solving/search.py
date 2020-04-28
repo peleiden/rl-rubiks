@@ -164,12 +164,14 @@ class PolicySearch(DeepSearcher):
 	def __str__(self):
 		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
 
+
 class MCTS(DeepSearcher):
-	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers=10):
+	def __init__(self, net: Model, c: float, nu: float, complete_graph: bool, search_graph: bool, workers=10):
 		super().__init__(net)
 		# Hyperparameters: c controls exploration and nu controls virtual loss updation us
 		self.c = c
 		self.nu = nu
+		self.complete_graph = complete_graph
 		self.search_graph = search_graph
 		self.workers = workers
 
@@ -295,6 +297,9 @@ class MCTS(DeepSearcher):
 				# Also, it is not a major problem, as the edges will be updated when new_leaf is expanded, so the problem only exists on the edge of the graph
 				# TODO: Test performance difference after implementing this
 				# TODO: Save dumb nodes when expanding. This should allow graph completeness without massive overhead
+				if self.complete_graph:
+					self._update_neighbors(state)
+
 			else:
 				leaf.neighs[action_idx] = self.states[state_str]
 				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf
@@ -376,10 +381,10 @@ class MCTS(DeepSearcher):
 		self.states = dict()
 
 	@classmethod
-	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool, workers: int):
+	def from_saved(cls, loc: str, c: float, nu: float, complete_graph: bool, search_graph: bool, workers: int):
 		net = Model.load(loc)
 		net.to(gpu)
-		return cls(net, c, nu, search_graph, workers)
+		return cls(net, c=c, nu=nu, complete_graph=complete_graph, search_graph=search_graph, workers=workers)
 
 	def __str__(self):
 		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"

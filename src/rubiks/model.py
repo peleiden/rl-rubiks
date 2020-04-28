@@ -181,12 +181,12 @@ class Model(nn.Module):
 		self.log(f"Saved model to {model_path} and configuration to {conf_path}")
 
 	@staticmethod
-	def load(load_dir: str, logger=NullLogger()):
+	def load(load_dir: str, logger=NullLogger(), load_min=False):
 		"""
 		Load a model from a configuration directory
 		"""
 
-		model_path = os.path.join(load_dir, "model.pt")
+		model_path = os.path.join(load_dir, "model.pt" if not load_min else "model-min.pt")
 		conf_path = os.path.join(load_dir, "config.json")
 		with open(conf_path, encoding="utf-8") as conf:
 			state_dict = torch.load(model_path, map_location=gpu)
