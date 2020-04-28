@@ -158,9 +158,9 @@ class TrainJob:
 		# Temporary change of residual architecture to check for difference
 		if arch == 'res':
 			self.model_cfg.part_sizes = [512]
-			self.model_cfg.res_size = 3000
-			self.model_cfg.res_blocks = 2
-			self.model_cfg.shared_sizes = []
+			self.model_cfg.res_size = 1000
+			self.model_cfg.res_blocks = 1
+			self.model_cfg.shared_sizes = [4096]
 		##################
 		assert arch in ["fc", "res", "conv"]
 		if arch == "conv": assert not self.is2024
