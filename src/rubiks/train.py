@@ -255,6 +255,8 @@ class Train:
 				values = torch.cat(value_parts).cpu()
 				break
 			except RuntimeError as e:  # Usually caused by running out of vram
+				if not "alloc" in str(e):
+					raise e
 				self.log.verbose(f"Intercepted RuntimeError {e}. Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
 				self.adi_ff_batches *= 2
 		self.tt.end_profile("ADI feedforward")
