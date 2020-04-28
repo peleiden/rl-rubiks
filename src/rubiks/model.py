@@ -1,15 +1,16 @@
 import json
 import os
+from copy import deepcopy
+from dataclasses import dataclass
+from typing import ClassVar
+
 import torch
 import torch.nn as nn
-from copy import deepcopy
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks import cpu, gpu, get_is2024, set_is2024
-from src.rubiks.utils.logger import Logger, NullLogger
+from src.rubiks import gpu, get_is2024, set_is2024
+from src.rubiks.utils.logger import  NullLogger
 
-from dataclasses import dataclass, field
-from typing import ClassVar
 
 
 @dataclass
