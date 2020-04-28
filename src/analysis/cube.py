@@ -2,19 +2,14 @@ import os
 
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
-import numpy as np
-from time import perf_counter
 
 from src.rubiks import set_is2024
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
 from src.rubiks.utils.logger import Logger
 
-from datetime import datetime
-from time import perf_counter
 import numpy as np
 
-# set_repr(False)
 scrambles, depth, actions = 1000, 50, 100_000
 
 tt = TickTock()
@@ -31,7 +26,7 @@ def scramble():
 def sequence_sramble():
 	n = 100
 	tt.profile(f"Generating {n} sequence scrambles of depth {depth}")
-	states = Cube.sequence_scrambler(n, depth)
+	states, oh = Cube.sequence_scrambler(n, depth)
 	tt.end_profile(f"Generating {n} sequence scrambles of depth {depth}")
 	return states
 
@@ -57,37 +52,35 @@ def analyse_cube():
 		f"Scrambling depth: {depth}",
 		f"Actions: {TickTock.thousand_seps(actions)}",
 	]))
-	# log.section("Scrambling")
-	# states = scramble()
+	log.section("Scrambling")
+	states = scramble()
 
 	log.section("Sequence scrambles")
 	for i in range(100):
 		states = sequence_sramble()
 
-	# log.section(f"One-hot encoding {scrambles} states")
-	# for i in range(1000):
-	# 	oh(states)
-	#
-	# log.section(f"One-hot encoding one state {scrambles} times")
-	# for i in range(10_000):
-	# 	oh(Cube.get_solved())
-	#
-	# log.section(f"Performing {actions} actions")
-	# perform_actions()
-	#
+	log.section(f"One-hot encoding {scrambles} states")
+	for i in range(1000):
+		oh(states)
+
+	log.section(f"One-hot encoding one state {scrambles} times")
+	for i in range(10_000):
+		oh(Cube.get_solved())
+
+	log.section(f"Performing {actions} actions")
+	perform_actions()
+
 	log.section("Running time")
 	log(tt)
-
-	# for kw, v in tt.get_sections().items():
-	# 	print(kw)
-	# 	print(f't[0] / max(t[1:]): {v["hits"][0] / max(v["hits"][1:]):.2f}')
-	# 	plt.hist(v["hits"][1:], label=kw)
-	# 	plt.title(kw)
-	# 	plt.show()
 
 
 if __name__ == "__main__":
 
+	log.section("20x24 representation")
+	analyse_cube()
+	tt.reset()
+	set_is2024(False)
+	log.section("6x8x6 representation")
 	analyse_cube()
 
 
