@@ -9,11 +9,15 @@ from src.tests import MainTest
 
 
 class TestMCTS(MainTest):
-	
+
 	def test_search(self):
+		self._mcts_test(False)
+		self._mcts_test(True)
+	
+	def _mcts_test(self, complete_graph: bool):
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
-		searcher = MCTS(net, c=1, nu=.1, search_graph=True, workers=10)
+		searcher = MCTS(net, c=1, nu=.1, complete_graph=complete_graph, search_graph=True, workers=10)
 		
 		# Generates a search tree and tests its correctness
 		searcher.search(state, 1)
@@ -23,13 +27,12 @@ class TestMCTS(MainTest):
 			for i, neigh in enumerate(state.neighs):
 				new_state = Cube.rotate(state.state, *Cube.action_space[i])
 				if neigh:
-					# FIXME This test fails on 6x8x6 representation
 					if not np.all(neigh.state==new_state):
 						breakpoint()
 					assert neigh.state.tostring() == new_state.tostring()
 					assert new_state.tostring() in searcher.states
-				# else:
-				# 	assert new_state.tostring() not in searcher.states
+				elif complete_graph:
+					assert new_state.tostring() not in searcher.states
 			# Assert that all W's are calculated correctly
 			W = np.zeros(Cube.action_dim)
 			for i, neigh in enumerate(state.neighs):
