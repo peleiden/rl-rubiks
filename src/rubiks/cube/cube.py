@@ -25,16 +25,6 @@ class Cube:
 	# If the six sides are represented by an array, the order should be F, B, T, D, L, R
 	# For niceness
 	F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
-	# Corresponding colours
-	colours = ["red", "orange", "white", "yellow", "green", "blue"]
-	rgba = [
-		(1, 0, 0, 1),
-		(1, .6, 0, 1),
-		(1, 1, 1, 1),
-		(1, 1, 0, 1),
-		(0, 1, 0, 1),
-		(0, 0, 1, 1),
-	]
 
 	dtype = np.int8  # Data type used for internal representation
 	_solved2024 = _get_2024solved(dtype)
@@ -94,7 +84,7 @@ class Cube:
 		current_states = np.array([cls.get_solved_instance()]*games)
 		for d in range(depth):
 			states.append(current_states)
-			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
+			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 2, games)
 			current_states = cls.multi_rotate(current_states, faces, dirs)
 		states = np.vstack(np.transpose(states, (1, 0, *np.arange(2, len(cls.shape())+2))))
 		oh_states = cls.as_oh(states)
@@ -235,7 +225,7 @@ class _Cube2024(Cube):
 class _Cube686(Cube):
 
 	# The i'th index contain the neighbors of the i'th side in positive direction
-	neighbours = np.array([
+	neighbors = np.array([
 		[4, 3, 5, 2],  # Front
 		[3, 4, 2, 5],  # Back
 		[0, 5, 1, 4],  # Top
@@ -243,12 +233,19 @@ class _Cube686(Cube):
 		[2, 1, 3, 0],  # Left
 		[1, 2, 0, 3],  # Right
 	])
-	adjacents = np.array([  # TODO
+	adjacents_classic = np.array([
 		[6, 7, 0],
 		[2, 3, 4],
 		[4, 5, 6],
 		[0, 1, 2],
 	])
+	adjacents = np.array([6, 7, 0, 2, 3, 4, 4, 5, 6, 0, 1, 2])
+	rolled_adjecents = np.roll(adjacents, 3)
+	n3_03 = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
+	n3_n13 = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1, 2, 2, 2])
+	roll_left = np.array([2, 3, 4, 5, 6, 7, 0, 1])
+	roll_right = np.array([6, 7, 0, 1, 2, 3, 4, 5])
+
 	# Maps an 8 long vector starting at (0, 0) in 3x3 onto a 9 long vector which can be reshaped to 3x3
 	map633 = np.array([0, 3, 6, 7, 8, 5, 2, 1])
 	# Number of times the 8 long vector has to be shifted to the left to start at (0, 0) in 3x3
@@ -271,15 +268,16 @@ class _Cube686(Cube):
 		"""
 
 		altered_state = state.copy()
-		altered_state[face] = cls._shift_right(state[face], 2) if pos_rev else cls._shift_left(state[face], 2)
-		ini_state = state[cls.neighbours[face]]
+		ini_state = state[cls.neighbors[face]]
 
 		if pos_rev:
-			for i in range(4):
-				altered_state[cls.neighbours[face, i], cls.adjacents[i]] = ini_state[i-1, cls.adjacents[i-1]]
+			altered_state[face] = state[face, cls.roll_right]
+			as_idcs0 = cls.neighbors[[face]*12, cls.n3_03]
+			altered_state[as_idcs0, cls.adjacents] = ini_state[cls.n3_n13, cls.rolled_adjecents]
 		else:
-			for i in range(4):
-				altered_state[cls.neighbours[face, i-1], cls.adjacents[i-1]] = ini_state[i, cls.adjacents[i]]
+			altered_state[face] = state[face, cls.roll_left]
+			as_idcs0 = cls.neighbors[[face]*12, cls.n3_n13]
+			altered_state[as_idcs0, cls.rolled_adjecents] = ini_state[cls.n3_03, cls.adjacents]
 
 		return altered_state
 
@@ -313,5 +311,4 @@ class _Cube686(Cube):
 		for i in range(6):
 			state69[i, cls.map633] = cls._shift_left(state68[i], cls.shifts[i])
 		return state69.reshape((6, 3, 3))
-
 
