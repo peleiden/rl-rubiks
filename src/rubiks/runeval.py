@@ -47,12 +47,12 @@ options = {
 		'type':	    lambda args: [int(args.split()[0]), int(args.split()[1])],
 	},
 	'mcts_c': {
-		'default':	0.6897,
+		'default':	0.6,
 		'help':		'Exploration parameter c for MCTS',
 		'type':		float,
 	},
 	'mcts_nu': {
-		'default':	.0062,
+		'default':	.005,
 		'help':		'Virtual loss nu for MCTS',
 		'type':		float,
 	},
@@ -168,8 +168,6 @@ class EvalJob:
 			restore_repr()
 
 		self.evaluator.plot_this_eval(agent_results, self.location)
-
-
 
 
 if __name__ == "__main__":
