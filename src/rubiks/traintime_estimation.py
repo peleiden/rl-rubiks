@@ -15,7 +15,6 @@ if __name__ == "__main__":
 	tt = TickTock()
 	job_settings = parser.parse(False)
 	for settings in job_settings:
-		print(settings["location"])
 		job_rollouts = settings["rollouts"]
 		job_evaulations = settings["evaluations"]
 		settings["rollouts"] = 5  # Five rollouts should be good enough to give a decent estimate
