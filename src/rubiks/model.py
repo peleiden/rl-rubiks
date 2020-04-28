@@ -34,14 +34,19 @@ class ModelConfig:
 	is2024: bool = True
 
 	def __post_init__(self):
+		# General standard values
 		if self.shared_sizes is None:
 			self.shared_sizes = self._get_arch()["shared_sizes"]
 		if self.part_sizes is None:
 			self.part_sizes = self._get_arch()["part_sizes"]
+
+		# CNN standard values
 		if self.conv_channels is None and self.architecture == "conv":
 			self.conv_channels = self._get_arch()["conv_channels"]
 		if self.cat_sizes is None and self.architecture == "conv":
 			self.cat_sizes = self._get_arch()["cat_sizes"]
+
+		# ResNet standard values
 		if self.res_blocks is None and self.architecture == "res":
 			self.res_blocks = self._get_arch()["res_blocks"]
 		if self.res_size is None and self.architecture == "res":
@@ -108,7 +113,7 @@ class Model(nn.Module):
 		"""
 		Constructs a feed forward fully connected DNN.
 		"""
-		pv_input_size = pv_input_size or self.config.shared_sizes[-1]
+		pv_input_size =  self.config.shared_sizes[-1] if pv_input_size is None else pv_input_size
 
 		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
 		policy_thiccness = [pv_input_size, *self.config.part_sizes, Cube.action_dim]
@@ -231,9 +236,15 @@ class ResNet(Model):
 	"""
 	A Linear Residual Neural Network.
 	"""
+	#				    /-> policy fc layer(s)
+	#  x-> fc layers -> residual blocks
+	#				    \-> value fc layer(s)
 	def _construct_net(self):
+		# Resblock class is very simple currently (does not change size), so its input must match the res_size
+		assert self.config.shared_sizes[-1] == self.config.res_size or (not self.config.shared_sizes and self.config.res_size == Cube.get_oh_shape())
+
 		# Uses FF constructor to set up feed forward nets. Resblocks are added only to shared net
-		super()._construct_net()
+		super()._construct_net( pv_input_size = self.config.res_size )
 		for i in range(self.config.res_blocks):
 			resblock = NonConvResBlock(self.config.res_size, self.config.activation_function, self.config.batchnorm)
 			self.shared_net.add_module(f'resblock{i}', resblock)
