@@ -61,11 +61,6 @@ options = {
 		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr lr_reductions times during training',
 		'type':	    float,
 	},
-	'lr_reductions': {
-		'default':	100,
-		'help':		'Number of times the learning rate is reduced during training. Reductions are evenly spaces',
-		'type':		int,
-	},
 	'optim_fn': {
 		'default':  'RMSprop',
 		'help':	    'Name of optimization function corresponding to class in torch.optim',
@@ -107,13 +102,13 @@ class TrainJob:
 			batch_size: int,
 			lr: float,
 			gamma: float,
-			lr_reductions: int,
 			optim_fn: str,
 			evaluations: int,
 			is2024: bool,
 			arch: str,
 
 			# Currently not set by argparser/configparser
+			lr_reductions: int = 100,
 			agent = DeepAgent(PolicySearch(None, True)),
 			scrambling_depths: tuple = (8,),
 
