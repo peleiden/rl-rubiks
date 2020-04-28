@@ -17,14 +17,16 @@ if __name__ == "__main__":
 	for settings in job_settings:
 		print(settings["location"])
 		job_rollouts = settings["rollouts"]
+		job_evaulations = settings["evaluations"]
 		settings["rollouts"] = 5  # Five rollouts should be good enough to give a decent estimate
+		settings["evaluations"] = 0
 		# Estimates training time
 		tt.tick()
 		train = TrainJob(**settings)
 		train.execute()
 		estimated_runtime += tt.tock() * job_rollouts / settings["rollouts"]
 		# Estimates evaluation time
-		estimated_runtime += settings["evaluations"] * TrainJob.eval_games * TrainJob.max_time
+		estimated_runtime += job_evaulations * TrainJob.eval_games * TrainJob.max_time
 
 		# Cleans up
 		shutil.rmtree(settings["location"])

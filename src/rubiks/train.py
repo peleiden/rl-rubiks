@@ -257,7 +257,7 @@ class Train:
 			except RuntimeError as e:  # Usually caused by running out of vram
 				if "alloc" not in str(e):
 					raise e
-				self.log.verbose(f"Intercepted RuntimeError {e}. Increasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
+				self.log.verbose(f"Intercepted RuntimeError {e}\nIncreasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
 				self.adi_ff_batches *= 2
 		self.tt.end_profile("ADI feedforward")
 
