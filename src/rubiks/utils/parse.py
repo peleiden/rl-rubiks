@@ -68,7 +68,7 @@ class Parser:
 
 		self.configparser = ConfigParser()
 
-	def parse(self, document = True) -> list:
+	def parse(self, document = True) -> (list, str):
 		conf_arg, args = self.config_receiver.parse_known_args()
 
 		experiments, with_config = self._read_config(conf_arg, args)

@@ -228,6 +228,10 @@ class TrainJob:
 		return train.train_rollouts, train.train_losses
 
 
+def clear_topfolder(loc: str):
+	pass
+
+
 if __name__ == "__main__":
 	description = r"""
 
@@ -239,14 +243,17 @@ ___________________________________________________________________
  \_\_\_\/\/	| |\ \| |____ | |\ \| |_| | |_/ /_| |_| |\  \/\__/ /
   \_\_\_\/	\_| \_\_____/ \_| \_|\___/\____/ \___/\_| \_/\____/
 __________________________________________________________________
+
 Start one or more Reinforcement Learning training session(s)
 on the Rubik's Cube using config or CLI arguments.
- """
+"""
 	# SET SEED
 	seedsetter()
 
 	parser = Parser(options, description=description, name='train')
 	jobs = [TrainJob(**settings) for settings in  parser.parse()]
+	rmtree(parser.save_location, ignore_errors=True)
+	os.mkdir(parser.save_location)
 	for job in jobs:
 		job.execute()
 
