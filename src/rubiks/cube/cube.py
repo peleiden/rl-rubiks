@@ -63,10 +63,10 @@ class Cube:
 		state = cls.get_solved()
 		for face, d in zip(faces, dirs):
 			state = cls.rotate(state, face, d)
-		
+
 		if force_not_solved and cls.is_solved(state):
 			return cls.scramble(n, True)
-		
+
 		return state, faces, dirs
 
 	@classmethod
@@ -92,7 +92,7 @@ class Cube:
 
 	@classmethod
 	def get_solved_instance(cls):
-		# Careful - this method returns the instance - not a copy - so the output is readonly
+		# Careful, Ned, careful now - this method returns the instance - not a copy - so the output is readonly
 		# If speed is not critical, use get_solved()
 		return cls._solved2024 if get_is2024() else cls._solved686
 
@@ -156,7 +156,7 @@ class _Cube2024(Cube):
 
 	map_pos, map_neg = get_tensor_map(Cube.dtype)
 	corner_633map, side_633map = get_633maps(Cube.F, Cube.B, Cube.T, Cube.D, Cube.L, Cube.R)
-	
+
 	@classmethod
 	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool):
 		"""
@@ -178,7 +178,7 @@ class _Cube2024(Cube):
 		altered_states[:, :8] += maps[idcs8, 0, altered_states[:, :8].ravel()].reshape((-1, 8))
 		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
 		return altered_states
-	
+
 	@classmethod
 	def as_oh(cls, states: np.ndarray):
 		# Takes in n states and returns an n x 480 one-hot tensor
@@ -192,7 +192,7 @@ class _Cube2024(Cube):
 			all_idcs = np.repeat(np.arange(len(states)), 20)
 			oh[all_idcs, idcs.ravel()] = 1
 		return oh
-	
+
 	@classmethod
 	def as633(cls, state: np.ndarray):
 		"""

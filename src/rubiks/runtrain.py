@@ -83,6 +83,12 @@ options = {
 		'type':		str,
 		'choices':	['fc', 'res', 'conv'],
 	},
+	'analysis': {
+		'default': False,
+		'help':	   'If true, analysis of model changes, value and loss behaviour is done in each rollout and ADI pass',
+		'type':	    literal_eval,
+		'choices':  [True, False],
+	},
 }
 
 
@@ -107,6 +113,8 @@ class TrainJob:
 			evaluations: int,
 			is2024: bool,
 			arch: str,
+			analysis: bool,
+
 
 			# Currently not set by argparser/configparser
 			lr_reductions: int = 100,
@@ -150,6 +158,10 @@ class TrainJob:
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
 		self.model_cfg = ModelConfig(architecture=arch, is2024=is2024)
+
+		self.analysis = analysis
+		assert isinstance(self.analysis, bool)
+
 		###################
 		# Temporary change of residual architecture to check for difference
 		if arch == 'res':
@@ -186,6 +198,7 @@ class TrainJob:
 				logger				= self.logger,
 				evaluations			= self.evaluations,
 				evaluator			= self.evaluator,
+				with_analysis			= self.analysis
 		)
 
 		net = Model.create(self.model_cfg, self.logger).to(gpu)
@@ -194,10 +207,17 @@ class TrainJob:
 		min_net.save(self.location, True)
 
 		train.plot_training(self.location)
-		train.plot_value_targets(self.location)
-		train.plot_net_changes(self.location)
 		datapath = os.path.join(self.location, "train-data")
 		os.mkdir(datapath)
+
+		if self.analysis:
+			train.analysis.plot_substate_distributions(self.location)
+			train.analysis.plot_value_targets(self.location)
+			train.analysis.plot_net_changes(self.location)
+			np.save(f"{datapath}/avg_target_values.npy", train.analysis.avg_value_targets)
+			np.save(f"{datapath}/policy_entropies.npy", train.analysis.policy_entropies)
+			np.save(f"{datapath}/substate_val_stds.npy", train.analysis.substate_val_stds)
+
 		np.save(f"{datapath}/rollouts.npy", train.train_rollouts)
 		np.save(f"{datapath}/policy_losses.npy", train.policy_losses)
 		np.save(f"{datapath}/value_losses.npy", train.value_losses)

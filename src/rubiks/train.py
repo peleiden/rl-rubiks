@@ -14,6 +14,7 @@ from src.rubiks.model import Model, ModelConfig
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.utils.logger import Logger, NullLogger, unverbose
 from src.rubiks.utils.ticktock import TickTock
+from src.rubiks.analysis import TrainAnalysis
 
 
 class Train:
@@ -24,11 +25,7 @@ class Train:
 	value_losses: np.ndarray
 	policy_losses: np.ndarray
 	train_losses: np.ndarray
-	param_changes = list()
-	param_total_changes = list()
 	eval_rewards = list()
-	depths: np.ndarray
-	avg_value_targets: List[np.ndarray] = list()
 
 	def __init__(self,
 			rollouts: int,
@@ -43,17 +40,21 @@ class Train:
 			agent: DeepAgent,
 			evaluator: Evaluator,
 			evaluations: int,
-			logger: Logger		= NullLogger(),
+			with_analysis: bool,
 			policy_criterion	= torch.nn.CrossEntropyLoss,
 			value_criterion		= torch.nn.MSELoss,
+			logger: Logger		= NullLogger(),
 		):
+		"""Sets up evaluation array, instantiates critera and stores and documents settings
 
+
+		:param bool with_analysis: If true, a number of statistics relating to loss behaviour and model output are stored.
+		""" #TODO: Document params
 		self.rollouts = rollouts
 		self.train_rollouts = np.arange(self.rollouts)
 		self.batch_size = self.states_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
-		self.depths = np.arange(1, rollout_depth)
 		self.loss_weighting = loss_weighting
 		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Reduces vram usage
 
@@ -61,12 +62,14 @@ class Train:
 		self.evaluations.sort()
 		self.agent = agent
 
+
 		self.lr	= lr
 		self.gamma = gamma
 		self.lr_reductions = lr_reductions
 		self.optim = optim_fn
 		self.policy_criterion = policy_criterion(reduction='none')
 		self.value_criterion = value_criterion(reduction='none')
+
 
 		self.evaluator = evaluator
 		self.log = logger
@@ -82,13 +85,26 @@ class Train:
 			f"Rollout depth:  {self.rollout_depth}",
 			f"Loss weighting: {self.loss_weighting}",
 		]))
+
+		self.with_analysis = with_analysis
+		if self.with_analysis:
+			self.analysis = TrainAnalysis(self.evaluations, self.rollout_games, self.rollout_depth, extra_evals=50, logger=self.log) #Logger should not be set in standard use
+
 		self.tt = TickTock()
 
+
 	def train(self, net: Model) -> (Model, Model):
+		""" Training loop: generates data, optimizes parameters, evaluates (sometimes) and repeats.
+
+		Trains `net` for `self.rollouts` rollouts each consisting of `self.rollout_games` games and scrambled  `self.rollout_depth`.
+		The network is evaluated for each rollout number in `self.evaluations` according to `self.evaluator`.
+		Stores multiple performance and training results.
+
+		:param torch.nn.Model net: The network to be trained. Must accept input consistent with Cube.get_oh_size()
+		:return: The network after all evaluations and the network with the best evaluation score (win fraction)
+		:rtype: (torch.nn.Model, torch.nn.Model)
 		"""
-		Trains `net` for `rollouts` rollouts each consisting of `rollout_games` games and scrambled for `rollout_depth`.
-		Every `evaluation_interval` (or never if evaluation_interval = 0), an evaluation is made of the model at the current stage playing `evaluation_length` games according to `self.evaluator`.
-		"""
+
 		self.tt.reset()
 		self.tt.tick()
 		self.states_per_rollout = (self.rollout_depth) * self.rollout_games
@@ -101,8 +117,7 @@ class Train:
 		best_solve = 0
 		min_net = net.clone()
 		self.agent.update_net(net)
-		params = net.get_params()
-		orig_params = params
+		if self.with_analysis: self.analysis.orig_params = net.get_params()
 
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, self.gamma)
@@ -110,7 +125,6 @@ class Train:
 																											  np.zeros(self.rollouts),\
 																											  np.empty(self.rollouts),\
 																											  list(), list()
-		self.param_changes, self.param_total_changes = list(), list()
 
 		for rollout in range(self.rollouts):
 			reset_cuda()
@@ -132,7 +146,8 @@ class Train:
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
 			for i, batch in enumerate(batches):
 				optimizer.zero_grad()
-				policy_pred, value_pred = net(training_data[batch], policy = True, value = True)
+				policy_pred, value_pred = net(training_data[batch], policy=True, value=True)
+
 
 				# Use loss on both policy and value
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
@@ -142,6 +157,12 @@ class Train:
 				optimizer.step()
 				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy()
 				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
+
+				if self.with_analysis: #Save policy output to compute entropy
+					with torch.no_grad(): self.analysis.rollout_policy.append(
+						torch.nn.functional.softmax(policy_pred.detach(), dim=0).cpu().numpy()
+					)
+
 			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
 			self.tt.end_profile("Training loop")
 
@@ -152,24 +173,17 @@ class Train:
 				if self.gamma != 1:
 					self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
 
-			model_change = torch.sqrt((net.get_params()-params)**2).mean().cpu()
-			model_total_change = torch.sqrt((net.get_params()-orig_params)**2).mean().cpu()
-			params = net.get_params()
-			self.param_changes.append(float(model_change))
-			self.param_total_changes.append(model_total_change)
 
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
 
+			if self.with_analysis:
+				self.tt.profile("Analysis of rollout")
+				self.analysis.rollout(net, rollout, value_targets)
+				self.tt.end_profile("Analysis of rollout")
+
 			if rollout in self.evaluations:
 				net.eval()
-				self.tt.profile("Target value average")
-				targets = value_targets.cpu().numpy()
-				self.avg_value_targets.append(np.empty_like(self.depths, dtype=float))
-				for i, depth in enumerate(self.depths):
-					idcs = np.arange(self.rollout_games) * self.rollout_depth + depth
-					self.avg_value_targets[-1][i] = targets[idcs].mean()
-				self.tt.end_profile("Target value average")
 
 				self.agent.update_net(net)
 				self.tt.profile(f"Evaluating using agent {self.agent}")
@@ -214,16 +228,22 @@ class Train:
 
 	@no_grad
 	def ADI_traindata(self, net, rollout: int):
-		"""
+		""" Training data generation
+
 		Implements Autodidactic Iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
+		Loss weighting is dependant on `self.loss_weighting`.
 
-		Returns games * sequence_length number of observations divided in four arrays:
+		:param torch.nn.Model net: The network used for generating the training data. This should according to ADI be the network from the last rollout.
+		:param int rollout:  The current rollout number. Used in adaptive loss weighting.
 
-		torch.tensor: `states` contains the rubiks state for each data point
-		np.arrays: `policy_targets` and `value_targets` contains optimal value and policy targets for each training point
-		np.array: `loss_weights` contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
+		:return:  Games * sequence_length number of observations divided in four arrays
+			- states contains the rubiks state for each data point
+			- policy_targets and value_targets contains optimal value and policy targets for each training point
+			- loss_weights contains the weight for each training point (see weighted samples subsection of McAleer et al paper)
+
+		:rtype: (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor)
+
 		"""
-
 		net.eval()
 		self.tt.profile("Scrambling")
 		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
@@ -280,6 +300,10 @@ class Train:
 			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
 		loss_weights /= loss_weights.sum()
 
+		if self.with_analysis:
+			self.tt.profile("ADI analysis")
+			self.analysis.ADI(values)
+			self.tt.end_profile("ADI analysis")
 		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
 
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
@@ -324,35 +348,6 @@ class Train:
 
 		if show: plt.show()
 		plt.clf()
-
-	def plot_value_targets(self, loc: str, show=False):
-		self.log("Plotting average value targets")
-		plt.figure(figsize=(19.2, 10.8))
-		for target, rollout in zip(self.avg_value_targets, self.evaluations):
-			plt.plot(self.depths, target, label=f"Rollout {rollout}")
-		plt.legend(loc=1)
-		plt.xlabel("Scrambling depth")
-		plt.ylabel("Average target value")
-		path = os.path.join(loc, "avg_target_values.png")
-		plt.savefig(path)
-		if show: plt.show()
-		plt.clf()
-		self.log(f"Saved value target plot to {path}")
-
-	def plot_net_changes(self, loc: str, show=False):
-		self.log("Plotting changes to network parameters")
-		plt.figure(figsize=(19.2, 10.8))
-		plt.plot(self.train_rollouts, np.cumsum(self.param_changes), label="Cumulative change in network parameters")
-		plt.plot(self.train_rollouts, self.param_total_changes, linestyle="dashdot", label="Change in parameters since original network")
-		plt.legend(loc=2)
-		plt.xlabel(f"Rollout, each of {self.states_per_rollout} states")
-		plt.ylabel("Euclidian distance")
-		plt.grid(True)
-		path = os.path.join(loc, "parameter_changes.png")
-		plt.savefig(path)
-		if show: plt.show()
-		plt.clf()
-		self.log(f"Saved network change plot to {path}")
 
 	@staticmethod
 	def _get_batches(size: int, bsize: int):
