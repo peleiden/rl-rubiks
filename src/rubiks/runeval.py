@@ -134,14 +134,15 @@ class EvalJob:
 			# DeepSearchers might have to test multiple NN's
 			for folder in glob(f"{search_location}/*/")+[search_location]:
 				if not os.path.isfile(os.path.join(folder, 'model.pt')): continue
-
 				store_repr()
-				key = f'{searcher} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'
 				with open(f"{folder}/config.json") as f:
 					cfg = json.load(f)
-					self.reps[key] = cfg["is2024"]
-					set_is2024(cfg["is2024"])
+
 				searcher = searcher.from_saved(folder, **search_args)
+				key = f'{str(searcher)} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'
+
+				self.reps[key] = cfg["is2024"]
+				set_is2024(cfg["is2024"])
 				self.agents[key] = DeepAgent(searcher)
 				restore_repr()
 
