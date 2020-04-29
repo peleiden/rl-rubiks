@@ -186,3 +186,23 @@ Hjemmesiden skal være på engelsk.
 - Kunne være sjovt at tage videre
 - Debugging stadig påkrævet
 
+### Uge 12: 
+#### 28/04-2020
+
+Siden sidst har vi mest arbejdet med netværksarkitektur. 
+
+Residuelle struktur: 
+- Hold arkitekturen ens men gå fra ikke-res til res og se om der er en forskel overhovedet
+- Vi har ikke et dybt netværk, så det kan godt være, vi ikke får noget ud af res
+
+Konv netværk: 
+- Mikkel skeptisk over for struktur, fordi der ikke rigtig er nogen rækkefølge på dem? (fordi rækkefølgen er arbitrær)
+- Prøv stride på 2
+- Prøv at beregne monte carlo-støj
+
+Få styr på træningskurver og find ud af om det er vægtningen, der får dem til at se mærkelige ud
+
+Optimering på MCTS-parametre: 
+- Bør man for hver model lave en optimering eller kun for hovedmodellen? 
+- Vurder om vi bør optimere for hver model (dyrt). Måske vi bare skal optimere parametre på den bedste model vi har
+- Hvor meget får vi ud af at optimere på hyperparametrene? Hvis der er meget at hente, kan det måske godt betale sig
