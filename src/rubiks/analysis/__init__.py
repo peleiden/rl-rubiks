@@ -23,7 +23,7 @@ class TrainAnalysis:
 		self.games = games
 		self.depth = depth
 		self.depths = np.arange(1, depth)
-		extra_evals = min(evaluations[-1] if evaluations else 0, extra_evals) #Wont add evals in the future (or if no evals are needed)
+		extra_evals = min(evaluations[-1] if len(evaluations) else 0, extra_evals) #Wont add evals in the future (or if no evals are needed)
 		self.evaluations = np.unique( np.append(evaluations, range( extra_evals )) )
 
 		self.orig_params = None
