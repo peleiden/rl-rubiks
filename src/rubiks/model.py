@@ -255,12 +255,12 @@ class _CircularPad(nn.Module):
 	Circular padding is broken in convolutional modules in pytorch 1.4 (supposedly fixed 1.5). Therefore this manual implementation
 	See https://github.com/pytorch/pytorch/issues/20981 and https://github.com/kornia/kornia/pull/478
 	"""
-	def __init__(self, padding: int):
+	def __init__(self, padding: list):
 		super().__init__()
 		self.padding = padding
 
 	def forward(self, x):
-		return F.pad(x, [self.padding, self.padding], mode="circular")
+		return F.pad(x, self.padding, mode="circular")
 
 class ConvNet(Model):
 
@@ -275,10 +275,14 @@ class ConvNet(Model):
 
 		# Creates all convolutional layers
 		channels_list = [6, *self.config.conv_channels]
-		cat_input_size = channels_list[-1] * 8 + self.config.shared_sizes[-1]
-		conv_layers = []
-		for in_channels, out_channels in zip(channels_list[:-1], channels_list[1:]):
-			conv_layers.append(_CircularPad(1))
+		cat_input_size = channels_list[-1] * 4 + self.config.shared_sizes[-1]
+		# First convolutional layer has stride of two and special padding
+		conv_layers = [_CircularPad([0, 1]), nn.Conv1d(channels_list[0], channels_list[1], kernel_size=3, stride=2)]
+		if self.config.batchnorm:
+			conv_layers.append(nn.BatchNorm1d(channels_list[1]))
+		# Rest have stride of one and normal padding
+		for in_channels, out_channels in zip(channels_list[1:-1], channels_list[2:]):
+			conv_layers.append(_CircularPad([1, 1]))
 			conv_layers.append(nn.Conv1d(in_channels, out_channels, 3))
 			conv_layers.append(self.config.activation_function)
 			if self.config.batchnorm:
