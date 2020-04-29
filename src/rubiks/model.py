@@ -6,11 +6,11 @@ from typing import ClassVar
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks import gpu, get_is2024, set_is2024
+from src.rubiks import gpu
 from src.rubiks.utils.logger import  NullLogger
-
 
 
 @dataclass
@@ -250,6 +250,18 @@ class ResNet(Model):
 			self.shared_net.add_module(f'resblock{i}', resblock)
 
 
+class _CircularPad(nn.Module):
+	"""
+	Circular padding is broken in convolutional modules in pytorch 1.4 (supposedly fixed 1.5). Therefore this manual implementation
+	See https://github.com/pytorch/pytorch/issues/20981 and https://github.com/kornia/kornia/pull/478
+	"""
+	def __init__(self, padding: int):
+		super().__init__()
+		self.padding = padding
+
+	def forward(self, x):
+		return F.pad(x, [self.padding, self.padding], mode="circular")
+
 class ConvNet(Model):
 
 	shared_conv_net: nn.Sequential
@@ -266,7 +278,8 @@ class ConvNet(Model):
 		cat_input_size = channels_list[-1] * 8 + self.config.shared_sizes[-1]
 		conv_layers = []
 		for in_channels, out_channels in zip(channels_list[:-1], channels_list[1:]):
-			conv_layers.append(nn.Conv1d(in_channels, out_channels, 3, padding=2, padding_mode="circular"))
+			conv_layers.append(_CircularPad(1))
+			conv_layers.append(nn.Conv1d(in_channels, out_channels, 3))
 			conv_layers.append(self.config.activation_function)
 			# if self.config.batchnorm:  # TODO: Figure out size
 			# 	conv_layers.append(batchnorm)
