@@ -456,6 +456,10 @@ class AStar(DeepSearcher):
 		return f"A* Search"
 	
 	def __len__(self):
-		# TODO
-		raise NotImplementedError
+		node = list(self.closed)[-1]
+		count = 0
+		while True:
+			node = self.closed[node]['parent']
+			if node == None: return count
+			count += 1
 
