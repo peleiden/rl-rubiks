@@ -1,3 +1,4 @@
+import functools
 import torch
 
 cpu = torch.device("cpu")
@@ -26,7 +27,20 @@ def restore_repr():
 	global _is2024
 	_is2024 = _stored_repr
 
+def with_used_repr(fun):
+	# Method decorator. Runs method with representation set to self.is2024
+	functools.wraps(fun)
+	def wrapper(self, *args, **kwargs):
+		store_repr()
+		set_is2024(self.is2024)
+		res = fun(self, *args, **kwargs)
+		restore_repr()
+		return res
+	return wrapper
+
+
 def no_grad(fun):
+	functools.wraps(fun)
 	def wrapper(*args, **kwargs):
 		with torch.no_grad():
 			return fun(*args, **kwargs)

@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 
-from src.rubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS
 from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 

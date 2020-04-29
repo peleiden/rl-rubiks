@@ -11,7 +11,7 @@ from src.rubiks.utils.parse import Parser
 from src.rubiks.utils.ticktock import get_timestamp
 from src.rubiks.utils.logger import Logger
 
-from src.rubiks import cpu, gpu, get_is2024, set_is2024, store_repr, restore_repr
+from src.rubiks import gpu, get_is2024, with_used_repr
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.train import Train
 
@@ -90,6 +90,7 @@ options = {
 class TrainJob:
 	eval_games = 200  # Not given as arguments to __init__, as they should be accessible in runtime_estim
 	max_time = 0.01
+	is2024: bool
 
 	def __init__(self,
 			name: str,
@@ -161,6 +162,7 @@ class TrainJob:
 		if arch == "conv": assert not self.is2024
 		assert isinstance(self.model_cfg, ModelConfig)
 
+	@with_used_repr
 	def execute(self):
 
 		# Clears directory to avoid clutter and mixing of experiments
@@ -168,10 +170,7 @@ class TrainJob:
 		os.makedirs(self.location)
 
 		# Sets representation
-		store_repr()
-		set_is2024(self.is2024)
 		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
-		set_is2024(self.is2024)
 
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*self.evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
@@ -205,8 +204,6 @@ class TrainJob:
 		np.save(f"{datapath}/losses.npy", train.train_losses)
 		np.save(f"{datapath}/evaluation_rollouts.npy", train.evaluations)
 		np.save(f"{datapath}/evaluations.npy", train.eval_rewards)
-
-		restore_repr()
 
 		return train.train_rollouts, train.train_losses
 

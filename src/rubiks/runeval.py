@@ -5,7 +5,7 @@ from ast import literal_eval
 
 import numpy as np
 
-from src.rubiks import store_repr, set_is2024, restore_repr
+from src.rubiks import store_repr, set_is2024, restore_repr, with_used_repr
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.solving.agents import Agent, DeepAgent
 from src.rubiks.solving import search
@@ -77,6 +77,8 @@ options = {
 }
 
 class EvalJob:
+	is2024: bool
+
 	def __init__(self,
 			name: str,
 			# Set by parser, should correspond to options above
@@ -159,15 +161,17 @@ class EvalJob:
 		self.logger.log(f"Beginning evaluator {self.name}\nLocation {self.location}\nCommit: {get_commit()}")
 		agent_results = {}
 		for (name, agent), representation in zip(self.agents.items(), self.reps.values()):
-			store_repr()
-			set_is2024(representation)
-			self.logger.section(f'Evaluationg agent {name}')
-			res = self.evaluator.eval(agent)
-			np.save(f"{self.location}/{name}_results.npy", res)
-			agent_results[name] = res
-			restore_repr()
+			self.is2024 = representation
+			agent_results[name] = self._single_exec(name, agent)
 
 		self.evaluator.plot_this_eval(agent_results, self.location)
+
+	@with_used_repr
+	def _single_exec(self, name, agent):
+		self.logger.section(f'Evaluationg agent {name}')
+		res = self.evaluator.eval(agent)
+		np.save(f"{self.location}/{name}_results.npy", res)
+		return res
 
 
 if __name__ == "__main__":

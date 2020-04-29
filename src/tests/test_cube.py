@@ -1,6 +1,6 @@
 from src.tests import MainTest
 
-from src.rubiks import get_is2024, set_is2024
+from src.rubiks import get_is2024, set_is2024, with_used_repr
 from src.rubiks.cube.cube import Cube
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 
@@ -9,20 +9,22 @@ import numpy as np
 import torch
 
 class TestRubiksCube(MainTest):
+	is2024: bool
+
 	def test_init(self):
 		state = Cube.get_solved()
 		assert Cube.is_solved(state)
 		assert Cube.get_solved_instance().shape == (20,)
 
 	def test_cube(self):
-		set_is2024(True)
+		self.is2024 = True
 		self._rotation_tests()
 		self._multi_rotate_test()
-		set_is2024(False)
+		self.is2024 = False
 		self._rotation_tests()
 		self._multi_rotate_test()
-		set_is2024(True)
 
+	@with_used_repr
 	def _rotation_tests(self):
 		state = Cube.get_solved()
 		for action in Cube.action_space:
@@ -90,6 +92,7 @@ class TestRubiksCube(MainTest):
 			"      3 0 3            ",
 		])
 
+	@with_used_repr
 	def _multi_rotate_test(self):
 		states = np.array([Cube.get_solved()]*5)
 		for _ in range(10):
@@ -113,8 +116,8 @@ class TestRubiksCube(MainTest):
 
 	def test_iter_actions(self):
 		actions = np.array([
-			[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]*2,
-			[True, False, True, False, True, False, True, False, True, False, True, False]*2,
+			[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5] * 2,
+			[True, False, True, False, True, False, True, False, True, False, True, False] * 2,
 		], dtype=np.uint8)
 		assert np.all(actions==Cube.iter_actions(2))
 
@@ -136,15 +139,22 @@ class TestRubiksCube(MainTest):
 		target633 = np.array(target633)
 		assert (state == target633).all()
 
+	def test_correctness(self):
+		self.is2024 = False
+		self._get_correctness()
 
-
-
-	# def test_reset(self):
-	# 	r = Cube()
-	# 	state = get_assembled()
-	# 	np.random.seed(42)
-	# 	N = r.reset()
-	# 	assert not r.is_assembled()
-	# 	assert N >= r.scrambling_procedure['N_scrambles'][0]
-	# 	assert N < r.scrambling_procedure['N_scrambles'][1]
+	@with_used_repr
+	def _get_correctness(self):
+		state = Cube.get_solved()
+		state = Cube.rotate(state, 0, True)
+		state = Cube.rotate(state, 5, False)
+		correctness = torch.tensor([
+			[1, 1, 1, 1, -1, -1, -1, 1],
+			[-1, 1, 1, 1, 1, 1, -1, -1],
+			[-1, -1, -1, -1, -1, 1, 1, 1],
+			[-1, -1, -1, -1, -1, 1, 1, 1],
+			[-1, 1, 1, 1, 1, 1, -1, -1],
+			[1, 1, -1, -1, -1, 1, 1, 1],
+		])
+		assert torch.all(correctness == Cube.as_correct(torch.from_numpy(state).unsqueeze(0)))
 

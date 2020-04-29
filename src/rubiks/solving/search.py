@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import torch
 
-from src.rubiks import cpu, gpu, no_grad
+from src.rubiks import gpu, no_grad
 from src.rubiks.model import Model
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
