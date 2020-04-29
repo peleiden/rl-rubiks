@@ -444,7 +444,7 @@ class AStar(DeepSearcher):
 		return self.closed[node]['g_cost'] + 1
 
 	def get_h_cost(self, node: str):
-		node = np.fromstring(node, dtype=int)
+		node = np.fromstring(node, dtype=Cube.dtype)
 		if Cube.is_solved(node):
 			return 0
 		else:
