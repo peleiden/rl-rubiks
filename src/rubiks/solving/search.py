@@ -189,7 +189,7 @@ class MCTS(DeepSearcher):
 		p, v = self.net(oh)  # Policy and value
 		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
-		
+
 		paths = [deque([])]
 		leaves = [self.states[state.tostring()]]
 		while self.tt.tock() < time_limit:
@@ -388,7 +388,7 @@ class MCTS(DeepSearcher):
 
 	def __str__(self):
 		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
-	
+
 	def __len__(self):
 		return len(self.states)
 
@@ -453,8 +453,8 @@ class AStar(DeepSearcher):
 			return -float(v.cpu()) #alternativ idé: 1/float(v.cpu())
 
 	def __str__(self):
-		return f"A* Search"
-	
+		return f"Astar search"
+
 	def __len__(self):
 		node = list(self.closed)[-1]
 		count = 0
