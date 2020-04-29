@@ -228,10 +228,6 @@ class TrainJob:
 		return train.train_rollouts, train.train_losses
 
 
-def clear_topfolder(loc: str):
-	pass
-
-
 if __name__ == "__main__":
 	description = r"""
 
