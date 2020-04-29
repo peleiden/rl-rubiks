@@ -281,8 +281,8 @@ class ConvNet(Model):
 			conv_layers.append(_CircularPad(1))
 			conv_layers.append(nn.Conv1d(in_channels, out_channels, 3))
 			conv_layers.append(self.config.activation_function)
-			# if self.config.batchnorm:  # TODO: Figure out size
-			# 	conv_layers.append(batchnorm)
+			if self.config.batchnorm:
+				conv_layers.append(nn.BatchNorm1d(out_channels))
 		self.shared_conv_net = nn.Sequential(*conv_layers)
 
 		# Creates concatenation layers
