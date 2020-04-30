@@ -172,13 +172,12 @@ class Evaluator:
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		sss = np.array([self.sum_score(results) for results in eval_results.values()])
-		print(sss)
 		lower, higher = sss.min() - 3, sss.max() + 3
 		mus, stds = [ss.mean() for ss in sss], [ss.std() for ss in sss]
 		for i, (agent, results) in enumerate(eval_results.items()):
 			ss, mu, std = sss[i], mus[i], stds[i]
 			bins = np.arange(ss.min(), ss.max()+1)
-			ax.hist(ss, bins=bins, density=True, color=colours[i], align="left", label=f"{agent}. mu = {mu:.2f}")
+			ax.hist(ss, bins=bins, density=True, color=colours[i], align="left", alpha=0.5, label=f"{agent}. mu = {mu:.2f}")
 			x = np.linspace(lower, higher, 100)
 			y = normal_pdf(x, mu, std)
 			x = x[~np.isnan(y)]
