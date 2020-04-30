@@ -147,8 +147,7 @@ class TrainJob:
 		self.gamma = gamma
 		assert 0 < gamma <= 1
 		self.update_interval = update_interval
-		if self.update_interval == 0: self.update_interval = int(1e100)
-		assert isinstance(self.update_interval, int) and 0 < update_interval
+		assert isinstance(self.update_interval, int) and 0 <= self.update_interval
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
 
@@ -158,7 +157,6 @@ class TrainJob:
 
 		self.evaluator = Evaluator(n_games=self.eval_games, max_time=self.max_time, scrambling_depths=scrambling_depths, logger=self.logger)
 		self.evaluation_interval = evaluation_interval
-		if self.evaluation_interval == 0: self.evaluation_interval = int(1e100)
 		assert isinstance(self.evaluation_interval, int) and 0 <= self.evaluation_interval
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)

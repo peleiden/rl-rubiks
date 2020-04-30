@@ -18,7 +18,7 @@ if __name__ == "__main__":
 	job_settings = parser.parse(False)
 	for settings in job_settings:
 		job_rollouts = settings["rollouts"]
-		job_evaulation_interval = settings["evaluation_interval"]
+		job_evaluation_interval = settings["evaluation_interval"]
 		settings["rollouts"] = 5  # Five rollouts should be good enough to give a decent estimate
 		settings["evaluation_interval"] = 0
 		# Estimates training time
@@ -27,7 +27,8 @@ if __name__ == "__main__":
 		train.execute()
 		estimated_runtime += tt.tock() * job_rollouts / settings["rollouts"]
 		# Estimates evaluation time
-		estimated_runtime += np.ceil(job_rollouts/job_evaulation_interval) * TrainJob.eval_games * TrainJob.max_time
+		evaluations = job_rollouts / job_evaluation_interval if job_evaluation_interval else 0
+		estimated_runtime += np.ceil(evaluations) * TrainJob.eval_games * TrainJob.max_time
 
 		# Cleans up
 		shutil.rmtree(settings["location"])

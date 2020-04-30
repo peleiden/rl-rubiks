@@ -59,9 +59,9 @@ class Train:
 		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Used to limit vram usage
 
 		# Perform evaluation every evaluation_interval and after last rollout
-		self.evaluation_rollouts = np.array(list(range(0, self.rollouts, evaluation_interval)) + [self.rollouts-1])
+		self.evaluation_rollouts = np.array(list(range(0, self.rollouts, evaluation_interval)) + [self.rollouts-1])\
+			if evaluation_interval else np.array([])
 		self.agent = agent
-
 
 		self.alpha_update = alpha_update  # alpha <- alpha + alpha_update every update_interval rollouts (excl. rollout 0)
 		self.lr	= lr
@@ -71,13 +71,14 @@ class Train:
 		self.policy_criterion = policy_criterion(reduction='none')
 		self.value_criterion = value_criterion(reduction='none')
 
-
 		self.evaluator = evaluator
 		self.log = logger
 		self.log("\n".join([
 			"Created trainer",
+			f"Alpha update: {self.alpha_update:.2f}"
 			f"Learning rate and gamma: {self.lr} and {self.gamma}",
-			f"  Learning rate and alpha will update every {self.update_interval} rollouts during training: lr <- {self.gamma:.2f} * lr and alpha += {self.alpha_update:.2f}",
+			f"Learning rate and alpha will update every {self.update_interval} rollouts: lr <- {self.gamma:.2f} * lr and alpha += {self.alpha_update:.2f}"\
+				if self.update_interval else "Learning rate and alpha will not be updated during training",
 			f"Optimizer:      {self.optim}",
 			f"Policy and value criteria: {self.policy_criterion} and {self.value_criterion}",
 			f"Rollouts:       {self.rollouts}",
@@ -169,7 +170,7 @@ class Train:
 			self.tt.end_profile("Training loop")
 
 			# Updates learning rate and alpha
-			if rollout and rollout % self.update_interval == 0:
+			if rollout and self.update_interval and rollout % self.update_interval == 0:
 				if self.gamma != 1:
 					lr_scheduler.step()
 					lr = optimizer.param_groups[0]["lr"]
@@ -211,7 +212,8 @@ class Train:
 		adi_time = self.tt.profiles["ADI training data"].sum()
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * Cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
-		self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
+		if len(self.evaluation_rollouts):
+			self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
 		self.log("\n".join([
 			f"Total running time:            {self.tt.stringify_time(total_time, 's')}",
 			f"- Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
