@@ -78,6 +78,7 @@ class Evaluator:
 			if (res[i]!=-1).any():
 				self.log(f"\tMean turns to complete (ex. unfinished): {mean_turns:.2f}", with_timestamp=False)
 				self.log(f"\tMedian turns to complete (ex. unfinished): {median_turns:.2f}", with_timestamp=False)
+		self.log(f"Sum score: {self.sum_score(res).mean():.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
 		return res
@@ -171,12 +172,13 @@ class Evaluator:
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		sss = np.array([self.sum_score(results) for results in eval_results.values()])
-		lower, higher = sss.min() - (0.05 * (sss.max()-sss.min())), sss.max() + (0.05 * (sss.max()-sss.min()))
+		print(sss)
+		lower, higher = sss.min() - 3, sss.max() + 3
 		mus, stds = [ss.mean() for ss in sss], [ss.std() for ss in sss]
 		for i, (agent, results) in enumerate(eval_results.items()):
 			ss, mu, std = sss[i], mus[i], stds[i]
-			bins = int(np.sqrt(len(ss)))
-			ax.hist(ss, bins=bins, density=True, color=colours[i], label=f"{agent}. mu = {mu:.2f}")
+			bins = np.arange(ss.min(), ss.max()+1)
+			ax.hist(ss, bins=bins, density=True, color=colours[i], align="left", label=f"{agent}. mu = {mu:.2f}")
 			x = np.linspace(lower, higher, 100)
 			y = normal_pdf(x, mu, std)
 			x = x[~np.isnan(y)]
