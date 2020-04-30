@@ -2,6 +2,8 @@ import os
 import shutil
 from datetime import timedelta
 
+import numpy as np
+
 from src.rubiks.runtrain import TrainJob, options
 from src.rubiks.utils import seedsetter
 from src.rubiks.utils.logger import Logger
@@ -16,16 +18,16 @@ if __name__ == "__main__":
 	job_settings = parser.parse(False)
 	for settings in job_settings:
 		job_rollouts = settings["rollouts"]
-		job_evaulations = settings["evaluations"]
+		job_evaulation_interval = settings["evaluation_interval"]
 		settings["rollouts"] = 5  # Five rollouts should be good enough to give a decent estimate
-		settings["evaluations"] = 0
+		settings["evaluation_interval"] = 0
 		# Estimates training time
 		tt.tick()
 		train = TrainJob(**settings)
 		train.execute()
 		estimated_runtime += tt.tock() * job_rollouts / settings["rollouts"]
 		# Estimates evaluation time
-		estimated_runtime += job_evaulations * TrainJob.eval_games * TrainJob.max_time
+		estimated_runtime += np.ceil(job_rollouts/job_evaulation_interval) * TrainJob.eval_games * TrainJob.max_time
 
 		# Cleans up
 		shutil.rmtree(settings["location"])
