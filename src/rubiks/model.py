@@ -29,7 +29,7 @@ class ModelConfig:
 
 	_fc_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512]}
 	_res_arch: ClassVar[dict] = {"shared_sizes": [4096, 1024], "part_sizes": [512], "res_blocks": 4, "res_size": 1024,}
-	_conv_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [64, 128, 256], "cat_sizes": []}
+	_conv_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [32, 64, 128], "cat_sizes": [2048]}
 
 	is2024: bool = True
 
