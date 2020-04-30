@@ -1,8 +1,7 @@
 import os
-from os import cpu_count
 
-import torch.multiprocessing as mp
 import numpy as np
+import matplotlib.colors as mcolour
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 
@@ -117,8 +116,8 @@ class Evaluator:
 		ax.set_xlabel(f"Scrambling depth: Number of random rotations applied to cubes")
 		ax.locator_params(axis='x', integer=True, tight=True)
 
-		cmap = plt.get_cmap('gist_rainbow')
-		colours = [cmap(i) for i in np.linspace(0, 1, len(eval_results))]
+		tab_colours = list(mcolour.TABLEAU_COLORS)
+		colours = [tab_colours[i%len(tab_colours)] for i in range(len(eval_results))]
 
 		for i, (agent, results) in enumerate(eval_results.items()):
 			color = colours[i]
@@ -172,22 +171,27 @@ class Evaluator:
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		sss = np.array([self.sum_score(results) for results in eval_results.values()])
-		lower, higher = sss.min() - 3, sss.max() + 3
 		mus, stds = [ss.mean() for ss in sss], [ss.std() for ss in sss]
-		for i, (agent, results) in enumerate(eval_results.items()):
-			ss, mu, std = sss[i], mus[i], stds[i]
-			bins = np.arange(ss.min(), ss.max()+1)
-			ax.hist(ss, bins=bins, density=True, color=colours[i], align="left", alpha=0.5, label=f"{agent}. mu = {mu:.2f}")
+		lower, higher = sss.min() - 2, sss.max() + 2
+		bins = np.arange(lower, higher+1)
+		ax.hist(x		= sss.T,
+				bins	= bins,
+				density	= True,
+				color	= colours,
+				align	= "left",
+				label	= [f"{agent}. mu = {mus[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
+		for i in range(len(eval_results)):
 			x = np.linspace(lower, higher, 100)
-			y = normal_pdf(x, mu, std)
+			y = normal_pdf(x, mus[i], stds[i])
 			x = x[~np.isnan(y)]
 			y = y[~np.isnan(y)]
 			plt.plot(x, y, color="black")
 		ax.set_xlim([lower, higher])
+		ax.set_xticks(bins)
 		ax.set_title("Sum score distributions")
 		ax.set_xlabel("Sum score")
 		ax.set_ylabel("Share of single game evaluations")
-		ax.legend()
+		ax.legend(loc=1)
 		path = os.path.join(save_dir, "eval_sum_scores.png")
 		plt.savefig(path)
 		save_paths.append(path)
