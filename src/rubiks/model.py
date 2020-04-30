@@ -275,9 +275,9 @@ class ConvNet(Model):
 
 		# Creates all convolutional layers
 		channels_list = [6, *self.config.conv_channels]
-		cat_input_size = channels_list[-1] * 4 + self.config.shared_sizes[-1]
+		cat_input_size = channels_list[-1] * 8 + self.config.shared_sizes[-1]
 		# First convolutional layer has stride of two and special padding
-		conv_layers = [_CircularPad([0, 1]), nn.Conv1d(channels_list[0], channels_list[1], kernel_size=3, stride=1)]
+		conv_layers = [_CircularPad([1, 1]), nn.Conv1d(channels_list[0], channels_list[1], kernel_size=3, stride=1)]
 		if self.config.batchnorm:
 			conv_layers.append(nn.BatchNorm1d(channels_list[1]))
 		# Rest have stride of one and normal padding
