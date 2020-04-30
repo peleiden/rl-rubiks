@@ -33,9 +33,6 @@ class TrainAnalysis:
 		# substates = Cube.sequence_scrambler(1, 2)
 		# self.substate_values = list()
 
-		# TODO:Should we also save means of substate values? Does this add anythin
-		# to the mean we already have (avg_value_targets) ?
-		# self.substate_means = list()
 		self.substate_val_stds = list()
 
 		self.avg_value_targets = list()
@@ -86,7 +83,6 @@ class TrainAnalysis:
 			net.train()
 	def ADI(self, values: torch.Tensor):
 		"""Saves statistics after a run of ADI. """
-		#TODO: Should the mean also be saved? See init
 		self.substate_val_stds.append(
 			float(values.std(dim=1).mean())
 		)
@@ -100,17 +96,21 @@ class TrainAnalysis:
 
 		colour = "red"
 		entropy_ax.set_ylabel(f"Rollout mean Shannon entropy", color=colour)
-		entropy_ax.plot(self.policy_entropies, linestyle="dashdot", label="Entropy of training policy output for a cube", color=colour)
+		entropy_ax.plot(self.policy_entropies, linestyle="dashdot", label="Entropy of training policy output for cubes", color=colour)
 		entropy_ax.tick_params(axis='y', labelcolor = colour)
+		h1, l1 = entropy_ax.get_legend_handles_labels()
 
 		colour = 'blue'
 		std_ax = entropy_ax.twinx()
 		std_ax.set_ylabel(f"Rollout mean std.", color=colour)
-		std_ax.plot(self.substate_val_stds, linestyle="dashdot", color=colour, label="Std. for ADI substates for a cube")
+		std_ax.plot(self.substate_val_stds, linestyle="dashdot", color=colour, label="Std. for ADI substates for cubes")
 		std_ax.tick_params(axis='y', labelcolor=colour)
 
+		h2, l2 = std_ax.get_legend_handles_labels()
+
+		entropy_ax.legend(h1+h2, l1+l2)
+
 		fig.tight_layout()
-		plt.legend()
 		plt.title(f"Analysis of substate distributions over time")
 		plt.grid(True)
 
@@ -125,6 +125,7 @@ class TrainAnalysis:
 		# TODO: Visualize value of substates (over time?)
 		# Plot? Something cool? Graphviz?
 		# pass
+
 
 	def plot_value_targets(self, loc: str, show=False):
 		self.log("Plotting average value targets")
