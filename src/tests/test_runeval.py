@@ -9,6 +9,7 @@ class TestRuneval(MainTest):
 		run_path = os.path.join( os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'rubiks', 'runeval.py' )
 		location = 'local_tests/eval'
 
+		#TODO: Add test with deepsearcher
 		run_settings = {'location': location, 'searcher': 'BFS', 'games': 2, 'max_time': 1, 'scrambling': '2 4',
 				'mcts_c': 0.6123, 'mcts_nu':.005, 'mcts_graph_search': False, 'policy_sample': True}
 		args = [sys.executable, run_path]

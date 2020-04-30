@@ -6,24 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 
-from src.rubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS
 from src.rubiks.utils.logger import NullLogger, Logger
 from src.rubiks.utils.ticktock import TickTock
 
 from src.rubiks.cube.cube import Cube
 from src.rubiks.solving.agents import Agent
-
-# Multiprocessing is silly, so all functions have to be top-level
-# This also means all info has to be parsed in with a single argument
-# https://stackoverflow.com/questions/3288595/multiprocessing-how-to-use-pool-map-on-a-function-defined-in-a-class
-def _eval_game(cfg: (Agent, int, int)):
-	agent, max_time, depth = cfg
-	turns_to_complete = -1  # -1 for unfinished
-	state, _, _ = Cube.scramble(depth, True)
-	solution_found, n_actions = agent.generate_action_queue(state, max_time)
-	if solution_found:
-		turns_to_complete = n_actions
-	return turns_to_complete
 
 
 class Evaluator:
@@ -47,9 +34,22 @@ class Evaluator:
 			f"Scrambling depths: {scrambling_depths}",
 		]))
 
-	def eval(self, agent: Agent, max_threads=None):
+	def approximate_time(self):
+		return self.max_time * self.n_games * len(self.scrambling_depths)
+
+	def _eval_game(self, agent: Agent, depth: int):
+		turns_to_complete = -1  # -1 for unfinished
+		state, _, _ = Cube.scramble(depth, True)
+		solution_found, n_actions = agent.generate_action_queue(state, self.max_time)
+		if solution_found:
+			turns_to_complete = n_actions
+		return turns_to_complete
+
+	def eval(self, agent: Agent):
 		"""
 		Evaluates an agent
+		Returns results which is an a len(self.scrambling_depths) x self.n_games matrix
+		Each entry contains the number of steps needed to solve the scrambled cube or -1 if not solved
 		"""
 		self.log.section(f"Evaluation of {agent}")
 		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <~ {self.approximate_time()/60:.2f} min")
@@ -60,34 +60,41 @@ class Evaluator:
 			for _ in range(self.n_games):
 				cfgs.append((agent, self.max_time, d))
 
-		max_threads = max_threads or cpu_count()
-		threads = min(max_threads, cpu_count()) if agent.allow_mt() else 1
-		if agent.allow_mt():
-			self.log(f"Evaluating {agent} on {threads} threads")
-			with mp.Pool(threads) as p:
-				res = p.map(_eval_game, cfgs)
-		else:
-			res = []
-			for i, cfg in enumerate(cfgs):
-				self.tt.profile(f"Evaluation of {agent}. Depth {cfg[2]}")
-				res.append(_eval_game(cfg))
-				self.log.verbose(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}. Explored states: {len(agent)}")
-				self.tt.end_profile(f"Evaluation of {agent}. Depth {cfg[2]}")
+		res = []
+		for i, cfg in enumerate(cfgs):
+			self.tt.profile(f"Evaluation of {agent}. Depth {cfg[2]}")
+			res.append(self._eval_game(agent, cfg[2]))
+			self.log.verbose(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}. Explored states: {len(agent)}")
+			self.tt.end_profile(f"Evaluation of {agent}. Depth {cfg[2]}")
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
 
 		self.log(f"Evaluation results")
 		for i, d in enumerate(self.scrambling_depths):
+			share_completed = np.count_nonzero(res[i]!=-1)*100/len(res[i])
+			mean_turns = res[i][res[i]!=-1].mean()
+			median_turns = np.median(res[i][res[i]!=-1])
 			self.log(f"Scrambling depth {d}", with_timestamp=False)
-			self.log(f"\tShare completed: {np.count_nonzero(res[i]!=-1)*100/len(res[i]):.2f} %", with_timestamp=False)
+			self.log(f"\tShare completed: {share_completed:.2f} %", with_timestamp=False)
 			if (res[i]!=-1).any():
-				self.log(f"\tMean turns to complete (ex. unfinished): {res[i][res[i]!=-1].mean():.2f}", with_timestamp=False)
-				self.log(f"\tMedian turns to complete (ex. unfinished): {np.median(res[i][res[i]!=-1]):.2f}", with_timestamp=False)
+				self.log(f"\tMean turns to complete (ex. unfinished): {mean_turns:.2f}", with_timestamp=False)
+				self.log(f"\tMedian turns to complete (ex. unfinished): {median_turns:.2f}", with_timestamp=False)
+		self.log(f"Sum score: {self.sum_score(res).mean():.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
 		return res
 
-	def approximate_time(self):
-		return self.max_time*self.n_games*len(self.scrambling_depths)
+	def sum_score(self, res: np.ndarray) -> np.ndarray:
+		"""
+		Computes sum score game wise, that is it returns an array of length self.n_games
+		It assumes that all srambling depths lower that self.scrambling_depths[0] are always solved
+		and that all depths above self.scrambling_depths[-1] are never solved
+		Overall sum_score is the mean of the returned array
+		:param res: Numpy array of evaluation results as returned by self.eval
+		:return: Numpy array of length self.n_games
+		"""
+		solved = res != -1
+		lower_depths = self.scrambling_depths[0] - 1
+		return solved.sum(axis=0) + lower_depths
 
 	def plot_this_eval(self, eval_results: dict, save_dir: str,  **kwargs):
 		self.log("Creating plot of evaluation")
@@ -99,8 +106,7 @@ class Evaluator:
 		save_paths = self.plot_an_eval(eval_results, save_dir, settings, **kwargs)
 		self.log(f"Saved evaluation plots to {save_paths}")
 
-	@staticmethod
-	def plot_an_eval(eval_results: dict, save_dir: str,  eval_settings: dict, show: bool=False, title: str=''):
+	def plot_an_eval(self, eval_results: dict, save_dir: str,  eval_settings: dict, show: bool=False, title: str=''):
 		"""
 		{agent: results from self.eval}
 		"""
@@ -112,16 +118,16 @@ class Evaluator:
 		ax.locator_params(axis='x', integer=True, tight=True)
 
 		cmap = plt.get_cmap('gist_rainbow')
-		colors = [cmap(i) for i in np.linspace(0, 1, len(eval_results))]
+		colours = [cmap(i) for i in np.linspace(0, 1, len(eval_results))]
 
 		for i, (agent, results) in enumerate(eval_results.items()):
-			color = colors[i]
+			color = colours[i]
 			win_percentages = (results != -1).mean(axis=1) * 100
 
 			ax.plot(eval_settings['scrambling_depths'], win_percentages, linestyle='dashdot', color=color)
 			ax.scatter(eval_settings['scrambling_depths'], win_percentages, color=color, label=f"Win % of {agent}")
 		ax.legend()
-		ax.set_ylim([-.05, 1.05])
+		ax.set_ylim([-5, 105])
 		ax.grid(True)
 		ax.set_title(title if title else f"Cubes solved in {eval_settings['max_time']:.2f} seconds")
 		fig.tight_layout()
@@ -153,11 +159,36 @@ class Evaluator:
 			if len(depths): ax.boxplot(results, labels=depths)
 			ax.grid(True)
 
-
 		fig.tight_layout()
-
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_sollengths.png")
+		plt.savefig(path)
+		save_paths.append(path)
+
+		if show: plt.show()
+		plt.clf()
+
+		# Histograms of sum scores
+		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
+		fig, ax = plt.subplots(figsize=(19.2, 10.8))
+		sss = np.array([self.sum_score(results) for results in eval_results.values()])
+		lower, higher = sss.min() - 3, sss.max() + 3
+		mus, stds = [ss.mean() for ss in sss], [ss.std() for ss in sss]
+		for i, (agent, results) in enumerate(eval_results.items()):
+			ss, mu, std = sss[i], mus[i], stds[i]
+			bins = np.arange(ss.min(), ss.max()+1)
+			ax.hist(ss, bins=bins, density=True, color=colours[i], align="left", alpha=0.5, label=f"{agent}. mu = {mu:.2f}")
+			x = np.linspace(lower, higher, 100)
+			y = normal_pdf(x, mu, std)
+			x = x[~np.isnan(y)]
+			y = y[~np.isnan(y)]
+			plt.plot(x, y, color="black")
+		ax.set_xlim([lower, higher])
+		ax.set_title("Sum score distributions")
+		ax.set_xlabel("Sum score")
+		ax.set_ylabel("Share of single game evaluations")
+		ax.legend()
+		path = os.path.join(save_dir, "eval_sum_scores.png")
 		plt.savefig(path)
 		save_paths.append(path)
 

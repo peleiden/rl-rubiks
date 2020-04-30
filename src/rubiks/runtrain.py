@@ -11,7 +11,7 @@ from src.rubiks.utils.parse import Parser
 from src.rubiks.utils.ticktock import get_timestamp
 from src.rubiks.utils.logger import Logger
 
-from src.rubiks import cpu, gpu, get_is2024, set_is2024, store_repr, restore_repr
+from src.rubiks import gpu, get_is2024, with_used_repr
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.train import Train
 
@@ -61,11 +61,6 @@ options = {
 		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr lr_reductions times during training',
 		'type':	    float,
 	},
-	'lr_reductions': {
-		'default':	100,
-		'help':		'Number of times the learning rate is reduced during training. Reductions are evenly spaces',
-		'type':		int,
-	},
 	'optim_fn': {
 		'default':  'RMSprop',
 		'help':	    'Name of optimization function corresponding to class in torch.optim',
@@ -88,11 +83,21 @@ options = {
 		'type':		str,
 		'choices':	['fc', 'res', 'conv'],
 	},
+	'analysis': {
+		'default': False,
+		'help':	   'If true, analysis of model changes, value and loss behaviour is done in each rollout and ADI pass',
+		'type':	    literal_eval,
+		'choices':  [True, False],
+	},
 }
 
 
 
 class TrainJob:
+	eval_games = 200  # Not given as arguments to __init__, as they should be accessible in runtime_estim
+	max_time = 0.01
+	is2024: bool
+
 	def __init__(self,
 			name: str,
 			# Set by parser, should correspond to values in `options`  above and defaults can be controlled there
@@ -104,17 +109,16 @@ class TrainJob:
 			batch_size: int,
 			lr: float,
 			gamma: float,
-			lr_reductions: int,
 			optim_fn: str,
 			evaluations: int,
 			is2024: bool,
 			arch: str,
+			analysis: bool,
+
 
 			# Currently not set by argparser/configparser
-
+			lr_reductions: int = 100,
 			agent = DeepAgent(PolicySearch(None, True)),
-			eval_games: int = 200,
-			max_time: float = .01,
 			scrambling_depths: tuple = (8,),
 
 			verbose: bool = True,
@@ -147,17 +151,30 @@ class TrainJob:
 		self.logger = Logger(f"{self.location}/train.log", name, verbose) #Already creates logger at init to test whether path works
 		self.logger.log(f"Initialized {self.name}")
 
-		self.evaluator = Evaluator(n_games=eval_games, max_time=max_time, scrambling_depths=scrambling_depths, logger=self.logger)
+		self.evaluator = Evaluator(n_games=self.eval_games, max_time=self.max_time, scrambling_depths=scrambling_depths, logger=self.logger)
 		self.evaluations = evaluations
-		assert isinstance(self.evaluations, int) and 0 <= self.evaluations <= self.rollouts
+		assert isinstance(self.evaluations, int) and 0 <= self.evaluations
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
-		self.model_cfg = ModelConfig(architecture=arch)
+		self.model_cfg = ModelConfig(architecture=arch, is2024=is2024)
+
+		self.analysis = analysis
+		assert isinstance(self.analysis, bool)
+
+		###################
+		# Temporary change of residual architecture to check for difference
+		if arch == 'res':
+			self.model_cfg.part_sizes = [512]
+			self.model_cfg.res_size = 1000
+			self.model_cfg.res_blocks = 2
+			self.model_cfg.shared_sizes = [1000]
+		##################
 		assert arch in ["fc", "res", "conv"]
-		if arch == "conv": assert not get_is2024()
+		if arch == "conv": assert not self.is2024
 		assert isinstance(self.model_cfg, ModelConfig)
 
+	@with_used_repr
 	def execute(self):
 
 		# Clears directory to avoid clutter and mixing of experiments
@@ -165,10 +182,7 @@ class TrainJob:
 		os.makedirs(self.location)
 
 		# Sets representation
-		store_repr()
-		set_is2024(self.is2024)
 		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
-		set_is2024(self.is2024)
 
 		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*self.evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
@@ -184,6 +198,7 @@ class TrainJob:
 				logger				= self.logger,
 				evaluations			= self.evaluations,
 				evaluator			= self.evaluator,
+				with_analysis			= self.analysis
 		)
 
 		net = Model.create(self.model_cfg, self.logger).to(gpu)
@@ -192,18 +207,23 @@ class TrainJob:
 		min_net.save(self.location, True)
 
 		train.plot_training(self.location)
-		train.plot_value_targets(self.location)
-		train.plot_net_changes(self.location)
 		datapath = os.path.join(self.location, "train-data")
 		os.mkdir(datapath)
+
+		if self.analysis:
+			train.analysis.plot_substate_distributions(self.location)
+			train.analysis.plot_value_targets(self.location)
+			train.analysis.plot_net_changes(self.location)
+			np.save(f"{datapath}/avg_target_values.npy", train.analysis.avg_value_targets)
+			np.save(f"{datapath}/policy_entropies.npy", train.analysis.policy_entropies)
+			np.save(f"{datapath}/substate_val_stds.npy", train.analysis.substate_val_stds)
+
 		np.save(f"{datapath}/rollouts.npy", train.train_rollouts)
 		np.save(f"{datapath}/policy_losses.npy", train.policy_losses)
 		np.save(f"{datapath}/value_losses.npy", train.value_losses)
 		np.save(f"{datapath}/losses.npy", train.train_losses)
 		np.save(f"{datapath}/evaluation_rollouts.npy", train.evaluations)
 		np.save(f"{datapath}/evaluations.npy", train.eval_rewards)
-
-		restore_repr()
 
 		return train.train_rollouts, train.train_losses
 
@@ -219,14 +239,17 @@ ___________________________________________________________________
  \_\_\_\/\/	| |\ \| |____ | |\ \| |_| | |_/ /_| |_| |\  \/\__/ /
   \_\_\_\/	\_| \_\_____/ \_| \_|\___/\____/ \___/\_| \_/\____/
 __________________________________________________________________
+
 Start one or more Reinforcement Learning training session(s)
 on the Rubik's Cube using config or CLI arguments.
- """
+"""
 	# SET SEED
 	seedsetter()
 
 	parser = Parser(options, description=description, name='train')
 	jobs = [TrainJob(**settings) for settings in  parser.parse()]
+	rmtree(parser.save_location, ignore_errors=True)
+	os.mkdir(parser.save_location)
 	for job in jobs:
 		job.execute()
 

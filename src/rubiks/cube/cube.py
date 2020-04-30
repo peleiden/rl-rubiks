@@ -25,16 +25,6 @@ class Cube:
 	# If the six sides are represented by an array, the order should be F, B, T, D, L, R
 	# For niceness
 	F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
-	# Corresponding colours
-	colours = ["red", "orange", "white", "yellow", "green", "blue"]
-	rgba = [
-		(1, 0, 0, 1),
-		(1, .6, 0, 1),
-		(1, 1, 1, 1),
-		(1, 1, 0, 1),
-		(0, 1, 0, 1),
-		(0, 0, 1, 1),
-	]
 
 	dtype = np.int8  # Data type used for internal representation
 	_solved2024 = _get_2024solved(dtype)
@@ -73,10 +63,10 @@ class Cube:
 		state = cls.get_solved()
 		for face, d in zip(faces, dirs):
 			state = cls.rotate(state, face, d)
-		
+
 		if force_not_solved and cls.is_solved(state):
 			return cls.scramble(n, True)
-		
+
 		return state, faces, dirs
 
 	@classmethod
@@ -94,7 +84,7 @@ class Cube:
 		current_states = np.array([cls.get_solved_instance()]*games)
 		for d in range(depth):
 			states.append(current_states)
-			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 1, games)
+			faces, dirs = np.random.randint(0, 6, games), np.random.randint(0, 2, games)
 			current_states = cls.multi_rotate(current_states, faces, dirs)
 		states = np.vstack(np.transpose(states, (1, 0, *np.arange(2, len(cls.shape())+2))))
 		oh_states = cls.as_oh(states)
@@ -102,7 +92,7 @@ class Cube:
 
 	@classmethod
 	def get_solved_instance(cls):
-		# Careful - this method returns the instance - not a copy - so the output is readonly
+		# Careful, Ned, careful now - this method returns the instance - not a copy - so the output is readonly
 		# If speed is not critical, use get_solved()
 		return cls._solved2024 if get_is2024() else cls._solved686
 
@@ -123,6 +113,11 @@ class Cube:
 		# Takes in n states and returns an n x 480 one-hot tensor
 		method = _Cube2024.as_oh if get_is2024() else _Cube686.as_oh
 		return method(states)
+
+	@classmethod
+	def as_correct(cls, t: torch.tensor) -> torch.tensor:
+		assert not get_is2024()
+		return _Cube686.as_correct(t)
 
 	@staticmethod
 	def get_oh_shape():
@@ -161,7 +156,7 @@ class _Cube2024(Cube):
 
 	map_pos, map_neg = get_tensor_map(Cube.dtype)
 	corner_633map, side_633map = get_633maps(Cube.F, Cube.B, Cube.T, Cube.D, Cube.L, Cube.R)
-	
+
 	@classmethod
 	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool):
 		"""
@@ -183,7 +178,7 @@ class _Cube2024(Cube):
 		altered_states[:, :8] += maps[idcs8, 0, altered_states[:, :8].ravel()].reshape((-1, 8))
 		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
 		return altered_states
-	
+
 	@classmethod
 	def as_oh(cls, states: np.ndarray):
 		# Takes in n states and returns an n x 480 one-hot tensor
@@ -197,7 +192,7 @@ class _Cube2024(Cube):
 			all_idcs = np.repeat(np.arange(len(states)), 20)
 			oh[all_idcs, idcs.ravel()] = 1
 		return oh
-	
+
 	@classmethod
 	def as633(cls, state: np.ndarray):
 		"""
@@ -230,7 +225,7 @@ class _Cube2024(Cube):
 class _Cube686(Cube):
 
 	# The i'th index contain the neighbors of the i'th side in positive direction
-	neighbours = np.array([
+	neighbors = np.array([
 		[4, 3, 5, 2],  # Front
 		[3, 4, 2, 5],  # Back
 		[0, 5, 1, 4],  # Top
@@ -238,16 +233,25 @@ class _Cube686(Cube):
 		[2, 1, 3, 0],  # Left
 		[1, 2, 0, 3],  # Right
 	])
-	adjacents = np.array([  # TODO
+	adjacents_classic = np.array([
 		[6, 7, 0],
 		[2, 3, 4],
 		[4, 5, 6],
 		[0, 1, 2],
 	])
+	adjacents = np.array([6, 7, 0, 2, 3, 4, 4, 5, 6, 0, 1, 2])
+	rolled_adjecents = np.roll(adjacents, 3)
+	n3_03 = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
+	n3_n13 = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1, 2, 2, 2])
+	roll_left = np.array([2, 3, 4, 5, 6, 7, 0, 1])
+	roll_right = np.array([6, 7, 0, 1, 2, 3, 4, 5])
+
 	# Maps an 8 long vector starting at (0, 0) in 3x3 onto a 9 long vector which can be reshaped to 3x3
 	map633 = np.array([0, 3, 6, 7, 8, 5, 2, 1])
 	# Number of times the 8 long vector has to be shifted to the left to start at (0, 0) in 3x3
 	shifts = np.array([0, 6, 6, 4, 2, 4])
+
+	solved_cuda = torch.from_numpy(_get_686solved(Cube.dtype)).to(gpu)
 
 	@staticmethod
 	def _shift_left(a: np.ndarray, num_elems: int):
@@ -264,15 +268,16 @@ class _Cube686(Cube):
 		"""
 
 		altered_state = state.copy()
-		altered_state[face] = cls._shift_right(state[face], 2) if pos_rev else cls._shift_left(state[face], 2)
-		ini_state = state[cls.neighbours[face]]
+		ini_state = state[cls.neighbors[face]]
 
 		if pos_rev:
-			for i in range(4):
-				altered_state[cls.neighbours[face, i], cls.adjacents[i]] = ini_state[i-1, cls.adjacents[i-1]]
+			altered_state[face] = state[face, cls.roll_right]
+			as_idcs0 = cls.neighbors[[face]*12, cls.n3_03]
+			altered_state[as_idcs0, cls.adjacents] = ini_state[cls.n3_n13, cls.rolled_adjecents]
 		else:
-			for i in range(4):
-				altered_state[cls.neighbours[face, i-1], cls.adjacents[i-1]] = ini_state[i, cls.adjacents[i]]
+			altered_state[face] = state[face, cls.roll_left]
+			as_idcs0 = cls.neighbors[[face]*12, cls.n3_n13]
+			altered_state[as_idcs0, cls.rolled_adjecents] = ini_state[cls.n3_03, cls.adjacents]
 
 		return altered_state
 
@@ -281,24 +286,24 @@ class _Cube686(Cube):
 		return np.array([cls.rotate(state, face, pos_rev) for state, face, pos_rev in zip(states, faces, pos_revs)], dtype=cls.dtype)
 
 	@classmethod
-	def as_oh(cls, states: np.ndarray):
+	def as_oh(cls, states: np.ndarray) -> torch.tensor:
 		# This representation is already one-hot encoded, so only ravelling is done
 		if len(states.shape) == 3:
 			states = np.expand_dims(states, 0)
-		states = torch.from_numpy(states.reshape(len(states), 288)).float()
+		states = torch.from_numpy(states.reshape(len(states), 288)).to(gpu).float()
 		return states
 
 	@classmethod
-	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
-		# Performs pad wrap of size one on each side
-		assert pad_size >= 1
-		oh = oh.reshape(-1, 6, 8, 6)
-		solved = (oh[:] == cls.get_solved_instance()).all(dim=3)
-		padded = torch.ones(len(oh), 6, 8+pad_size*2, 8)
-		padded[..., pad_size:8+pad_size] = solved
-		padded[..., :pad_size] = solved[..., -pad_size]
-		padded[..., -pad_size:] = solved[..., pad_size]
-		return padded
+	def as_correct(cls, t: torch.tensor) -> torch.tensor:
+		"""
+		oh is a one-hot encoded tensor of shape n x 288 as produced by _Cube686.as_oh
+		This methods creates a correctness representation of the tensor of shape n x 6 x 8
+		"""
+		# TODO: Write tests for this method
+		oh = t.reshape(len(t), 6, 8, 6)
+		correct_repr = torch.all(oh[:] == cls.solved_cuda, dim=3).long()
+		correct_repr[correct_repr==0] = -1
+		return correct_repr.float()
 
 	@classmethod
 	def as633(cls, state: np.ndarray):
@@ -307,52 +312,4 @@ class _Cube686(Cube):
 		for i in range(6):
 			state69[i, cls.map633] = cls._shift_left(state68[i], cls.shifts[i])
 		return state69.reshape((6, 3, 3))
-
-
-if __name__ == "__main__":
-	set_is2024(False)
-	states = np.array([Cube.get_solved()]*2, dtype=Cube.dtype)
-	for _ in range(5):
-		faces, dirs = np.random.randint(0, 6, 2), np.random.randint(0, 1, 2)
-		states_classic = np.array([Cube.rotate(state, face, d) for state, face, d in zip(states, faces, dirs)], dtype=Cube.dtype)
-		states = Cube.multi_rotate(states, faces, dirs)
-		assert (states_classic == states).all()
-	
-	# set_repr(False)
-	# state = Cube.get_solved()
-	# print(Cube.as633(state))
-	# print(Cube.stringify(state))
-	# print()
-	# state = Cube.rotate(state, 0, True)
-	# state68 = np.where(state == 1)[2].reshape((6, 8))
-	# print(state68)
-	# print(Cube.stringify(state))
-	# print()
-	# state = Cube.rotate(state, 0, False)
-	# print(Cube.as633(state))
-	# print()
-	
-	
-	# Benchmarking example
-	# from src.rubiks.utils.benchmark import Benchmark
-	# def test_scramble(games):
-	# 	# Function is weird, as it is designed to work for both single and multithreaded benchmarks
-	# 	if hasattr(games, "__iter__"):
-	# 		for _ in games:
-	# 			Cube.as_oh(Cube.scramble(n)[0])
-	# 	else:
-	# 		Cube.as_oh(Cube.scramble(n)[0])
-	#
-	# n = int(1e5)
-	# nt = range(1, 7)
-	# games = [None] * 24
-	#
-	# title = f"Scramble bench: {len(games)} cubes each with {n} scrambles"
-	# bm = Benchmark(test_scramble, "local_benchmarks/scramble_2024", title)
-	# bm.singlethreaded("Using 20 x 24 representation", games)
-	# threads, times = bm.multithreaded(nt, games, "Using 20 x 24 representation")
-	# bm.plot_mt_results(threads, times, f"{title} using 20 x 24")
-
-	
-	
 

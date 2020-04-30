@@ -1,15 +1,16 @@
 import json
 import os
+from copy import deepcopy
+from dataclasses import dataclass
+from typing import ClassVar
+
 import torch
 import torch.nn as nn
-from copy import deepcopy
+import torch.nn.functional as F
 
 from src.rubiks.cube.cube import Cube
-from src.rubiks import cpu, gpu, get_is2024
-from src.rubiks.utils.logger import Logger, NullLogger
-
-from dataclasses import dataclass, field
-from typing import ClassVar
+from src.rubiks import gpu
+from src.rubiks.utils.logger import  NullLogger
 
 
 @dataclass
@@ -18,25 +19,38 @@ class ModelConfig:
 	batchnorm: bool = True
 	architecture: str = 'fc'  # Options: 'fc', 'res', 'convo'
 
-	# Hidden layer sizes in  shared network and in the two part networks given as tuples. If None: The value is controlled by architecture (often wanted)
-	shared_sizes: tuple = None
-	part_sizes: tuple = None
-	conv_channels: tuple = None
-	intermediate_sizes: tuple = None
+	# Hidden layer sizes in shared network and in the two part networks given as lists. If None: The value is controlled by architecture (often wanted)
+	shared_sizes: list = None
+	part_sizes: list = None
+	conv_channels: list = None
+	cat_sizes: list = None
+	res_blocks: int = None
+	res_size: int = None
 
-	_fc_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,)}
-	_res_arch: ClassVar[dict] = {"shared_sizes": (5000, 1000), "part_sizes": (100,)}
-	_conv_arch: ClassVar[dict] = {"shared_sizes": (4096, 2048), "part_sizes": (512,), "conv_channels": (4, 4), "intermediate_sizes": (1024,)}
+	_fc_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512]}
+	_res_arch: ClassVar[dict] = {"shared_sizes": [4096, 1024], "part_sizes": [512], "res_blocks": 4, "res_size": 1024,}
+	_conv_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [64, 128, 256], "cat_sizes": []}
+
+	is2024: bool = True
 
 	def __post_init__(self):
+		# General standard values
 		if self.shared_sizes is None:
 			self.shared_sizes = self._get_arch()["shared_sizes"]
 		if self.part_sizes is None:
 			self.part_sizes = self._get_arch()["part_sizes"]
+
+		# CNN standard values
 		if self.conv_channels is None and self.architecture == "conv":
 			self.conv_channels = self._get_arch()["conv_channels"]
-		if self.intermediate_sizes is None and self.activation_function == "conv":
-			self.intermediate_sizes = self._get_arch()["intermediate_sizes"]
+		if self.cat_sizes is None and self.architecture == "conv":
+			self.cat_sizes = self._get_arch()["cat_sizes"]
+
+		# ResNet standard values
+		if self.res_blocks is None and self.architecture == "res":
+			self.res_blocks = self._get_arch()["res_blocks"]
+		if self.res_size is None and self.architecture == "res":
+			self.res_size = self._get_arch()["res_size"]
 
 	def _get_arch(self):
 		return getattr(self, f"_{self.architecture}_arch")
@@ -67,7 +81,10 @@ class ModelConfig:
 
 
 class Model(nn.Module):
-
+	"""
+	A fully connected, feed forward Neural Network.
+	Also the instantiator class of other network architectures through `create`.
+	"""
 	shared_net: nn.Sequential
 	policy_net: nn.Sequential
 	value_net: nn.Sequential
@@ -82,15 +99,29 @@ class Model(nn.Module):
 
 	@staticmethod
 	def create(config: ModelConfig, logger=NullLogger()):
-		# As only subclasses of this classes are ever instantiated, __init__ is never called directly
-		# Instead, instantiation should happen through this method
-		if config.architecture == "fc":
-			return FFNet(config, logger)
-		elif config.architecture == "res":
-			return ResNet(config, logger)
-		elif config.architecture == "conv":
-			return ConvNet(config, logger)
+		"""
+		Allows this class to be used to instantiate other Network architectures based on the content
+		of the configuartion file.
+		"""
+		if config.architecture == "fc": return Model(config, logger)
+		if config.architecture == "res": return ResNet(config, logger)
+		if config.architecture == "conv": return ConvNet(config, logger)
+
 		raise KeyError(f"Network architecture should be 'fc', 'res', or 'conv', but '{config.architecture}' was given")
+
+	def _construct_net(self, pv_input_size: int=None):
+		"""
+		Constructs a feed forward fully connected DNN.
+		"""
+		pv_input_size =  self.config.shared_sizes[-1] if pv_input_size is None else pv_input_size
+
+		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
+		policy_thiccness = [pv_input_size, *self.config.part_sizes, Cube.action_dim]
+		value_thiccness = [pv_input_size, *self.config.part_sizes, 1]
+
+		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
+		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
+		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness, True))
 
 	def forward(self, x, policy=True, value=True):
 		assert policy or value
@@ -103,6 +134,21 @@ class Model(nn.Module):
 			value = self.value_net(x)
 			return_values.append(value)
 		return return_values if len(return_values) > 1 else return_values[0]
+
+	def _create_fc_layers(self, thiccness: list, final: bool):
+		"""
+		Helper function to return fully connected feed forward layers given a list of layer sizes and
+		a final output size.
+		"""
+		layers = []
+		for i in range(len(thiccness)-1):
+			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
+			if not (final and i == len(thiccness) - 2):
+				layers.append(self.config.activation_function)
+				if self.config.batchnorm:
+					layers.append(nn.BatchNorm1d(thiccness[i+1]))
+
+		return layers
 
 	def clone(self):
 		new_state_dict = {}
@@ -131,16 +177,16 @@ class Model(nn.Module):
 		torch.save(self.state_dict(), model_path)
 		conf_path = os.path.join(save_dir, "config.json")
 		with open(conf_path, "w", encoding="utf-8") as conf:
-			json.dump(self.config.as_json_dict(), conf)
+			json.dump(self.config.as_json_dict(), conf, indent=4)
 		self.log(f"Saved model to {model_path} and configuration to {conf_path}")
 
 	@staticmethod
-	def load(load_dir: str, logger=NullLogger()):
+	def load(load_dir: str, logger=NullLogger(), load_min=False):
 		"""
 		Load a model from a configuration directory
 		"""
 
-		model_path = os.path.join(load_dir, "model.pt")
+		model_path = os.path.join(load_dir, "model.pt" if not load_min else "model-min.pt")
 		conf_path = os.path.join(load_dir, "config.json")
 		with open(conf_path, encoding="utf-8") as conf:
 			state_dict = torch.load(model_path, map_location=gpu)
@@ -158,49 +204,122 @@ class Model(nn.Module):
 		return model
 
 
-class FFNet(Model):
+class NonConvResBlock(nn.Module):
+	"""
+	A residual block of two linear layers with the same size.
+	"""
+	def __init__(self, layer_size: int, activation: nn.Module, with_batchnorm: bool):
+		super().__init__()
+		self.layer1, self.layer2 = nn.Linear(layer_size, layer_size), nn.Linear(layer_size, layer_size)
+		self.activate = activation
+		self.with_batchnorm = with_batchnorm
+		if self.with_batchnorm:
+			# Uses two batchnorms as PyTorch trains some running momentum parameters for each bnorm
+			self.batchnorm1 = nn.BatchNorm1d(layer_size)
+			self.batchnorm2 = nn.BatchNorm1d(layer_size)
 
-	def _construct_net(self):
-		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
-		policy_thiccness = [shared_thiccness[-1], *self.config.part_sizes, Cube.action_dim]
-		value_thiccness = [shared_thiccness[-1], *self.config.part_sizes, 1]
-		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
-		self.policy_net = nn.Sequential(*self._create_fc_layers(policy_thiccness, True))
-		self.value_net = nn.Sequential(*self._create_fc_layers(value_thiccness, True))
-
-	def _create_fc_layers(self, thiccness: list, final: bool):
-		layers = []
-		for i in range(len(thiccness)-1):
-			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
-			if not (final and i == len(thiccness) - 2):
-				layers.append(self.config.activation_function)
-				if self.config.batchnorm:
-					layers.append(nn.BatchNorm1d(thiccness[i+1]))
-
-		return layers
+	def forward(self, x):
+		residual = x
+		# Layer 1
+		x = self.layer1(x)
+		if self.with_batchnorm: x = self.batchnorm1(x)
+		x = self.activate(x)
+		# Layer 2
+		x = self.layer2(x)
+		if self.with_batchnorm: x = self.batchnorm2(x)
+		# Residual added
+		x += residual
+		x = self.activate(x)
+		return x
 
 class ResNet(Model):
-
+	"""
+	A Linear Residual Neural Network.
+	"""
+	#				    /-> policy fc layer(s)
+	#  x-> fc layers -> residual blocks
+	#				    \-> value fc layer(s)
 	def _construct_net(self):
-		raise NotImplementedError
+		# Resblock class is very simple currently (does not change size), so its input must match the res_size
+		assert self.config.shared_sizes[-1] == self.config.res_size or (not self.config.shared_sizes and self.config.res_size == Cube.get_oh_shape())
 
-class ConvNet(FFNet):
-	# Inherits from FFNet, as this class is essentially as superset of FFNet
+		# Uses FF constructor to set up feed forward nets. Resblocks are added only to shared net
+		super()._construct_net( pv_input_size = self.config.res_size )
+		for i in range(self.config.res_blocks):
+			resblock = NonConvResBlock(self.config.res_size, self.config.activation_function, self.config.batchnorm)
+			self.shared_net.add_module(f'resblock{i}', resblock)
+
+
+class _CircularPad(nn.Module):
+	"""
+	Circular padding is broken in convolutional modules in pytorch 1.4 (supposedly fixed 1.5). Therefore this manual implementation
+	See https://github.com/pytorch/pytorch/issues/20981 and https://github.com/kornia/kornia/pull/478
+	"""
+	def __init__(self, padding: list):
+		super().__init__()
+		self.padding = padding
+
+	def forward(self, x):
+		return F.pad(x, self.padding, mode="circular")
+
+class ConvNet(Model):
 
 	shared_conv_net: nn.Sequential
+	cat_net: nn.Sequential
+
+	# x -> conv layers                 policy layers
+	#                   > cat layer <
+	# x -> fc layers                   value layers
 
 	def _construct_net(self):
-		super()._construct_net()
-		conv_layers = []
-		conv_layers = [nn.Conv1d(1, self.config.conv_channels[0], 1)]
-		for channels in self.config.conv_channels[1:]:
+
+		# Creates all convolutional layers
+		channels_list = [6, *self.config.conv_channels]
+		cat_input_size = channels_list[-1] * 8 + self.config.shared_sizes[-1]
+		# First convolutional layer has stride of two and special padding
+		conv_layers = [_CircularPad([1, 1]), nn.Conv1d(channels_list[0], channels_list[1], kernel_size=3, stride=1)]
+		if self.config.batchnorm:
+			conv_layers.append(nn.BatchNorm1d(channels_list[1]))
+		# Rest have stride of one and normal padding
+		for in_channels, out_channels in zip(channels_list[1:-1], channels_list[2:]):
+			conv_layers.append(_CircularPad([1, 1]))
+			conv_layers.append(nn.Conv1d(in_channels, out_channels, 3))
 			conv_layers.append(self.config.activation_function)
-			# conv_layers.append(nn.BatchNorm1d())  # TODO: Calculate number of features
-			conv_layers.append(nn.Conv1d())
+			if self.config.batchnorm:
+				conv_layers.append(nn.BatchNorm1d(out_channels))
+		self.shared_conv_net = nn.Sequential(*conv_layers)
+
+		# Creates concatenation layers
+		# Its input size is the raveled conv size + fc output size
+		# Its output size is fc output size, as this is also the input size for the policy and value nets
+		cat_layers = []
+		cat_sizes = [cat_input_size] + self.config.cat_sizes
+		for in_size, out_size in zip(cat_sizes[:-1], cat_sizes[1:]):
+			cat_layers.append(nn.Linear(in_size, out_size))
+			cat_layers.append(self.config.activation_function)
+			if self.config.batchnorm:
+				cat_layers.append(nn.BatchNorm1d(out_size))
+		self.cat_net = nn.Sequential(*cat_layers)
+
+		# Constructs the rest of the network
+		super()._construct_net(cat_sizes[-1])
 
 	def forward(self, x, policy=True, value=True):
 		assert policy or value
-		padded_x = Cube.pad(x, len(self.config.conv_channels))
-		raise NotImplementedError
 
+		# Shared part of network
+		fc_out = self.shared_net(x)
+		conv_out = self.shared_conv_net(Cube.as_correct(x)).view(len(x), -1)
+		x = torch.cat([fc_out, conv_out], dim=1)
+		x = self.cat_net(x)
+
+		# Policy and value parts
+		return_values = []
+		if policy:
+			policy = self.policy_net(x)
+			return_values.append(policy)
+		if value:
+			value = self.value_net(x)
+			return_values.append(value)
+		return return_values if len(return_values) > 1 else return_values[0]
 

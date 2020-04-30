@@ -42,3 +42,7 @@ for help on options. This also works with configuration files; an example of whi
 ```
 python src/rubiks/runeval.py --config data/configs/eval_ex.ini
 ```
+
+## Experiments
+
+Informal overview of experiments <a href="https://docs.google.com/document/d/11RW35kaqo7_1dTyI9hc72tIbGdYEPxpnW15EcO1B0Y0/edit?usp=sharing">here</a>.

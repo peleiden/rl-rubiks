@@ -1,9 +1,11 @@
 import os
+import json
 from glob import glob as glob #glob
 from ast import literal_eval
 
 import numpy as np
 
+from src.rubiks import store_repr, set_is2024, restore_repr, with_used_repr
 from src.rubiks.solving.evaluation import Evaluator
 from src.rubiks.solving.agents import Agent, DeepAgent
 from src.rubiks.solving import search
@@ -25,7 +27,7 @@ options = {
 		'default':  'MCTS',
 		'help':	    'Name of searcher for agent corresponding to searcher class in src.rubiks.solving.search',
 		'type':	    str,
-		'choices':  ['MCTS', 'PolicySearch','BFS', 'RandomDFS',],
+		'choices':  ['MCTS', 'PolicySearch','BFS', 'RandomDFS', 'AStar',],
 	},
 	'games': {
 		'default':  10,
@@ -45,14 +47,20 @@ options = {
 		'type':	    lambda args: [int(args.split()[0]), int(args.split()[1])],
 	},
 	'mcts_c': {
-		'default':	0.6897,
+		'default':	0.6,
 		'help':		'Exploration parameter c for MCTS',
 		'type':		float,
 	},
 	'mcts_nu': {
-		'default':	.0062,
+		'default':	.005,
 		'help':		'Virtual loss nu for MCTS',
 		'type':		float,
+	},
+	'mcts_complete_graph': {
+		'default':	False,
+		'help':		'Whether or not to ensure that the graph is complete when expanding',
+		'type':		literal_eval,
+		'choices':	[False, True],
 	},
 	'mcts_graph_search': {
 		'default':	True,
@@ -69,6 +77,8 @@ options = {
 }
 
 class EvalJob:
+	is2024: bool
+
 	def __init__(self,
 			name: str,
 			# Set by parser, should correspond to options above
@@ -79,13 +89,14 @@ class EvalJob:
 			scrambling: str,
 			mcts_c: float,
 			mcts_nu: float,
+			mcts_complete_graph: bool,
 			mcts_graph_search: bool,
 			policy_sample: bool,
 
 			# Currently not set by parser
-			mcts_workers: int = 100,
+			mcts_workers: int = 10,
 			verbose: bool = True,
-			in_subfolder: bool = False, #Should be true if there are multiple experiments
+			in_subfolder: bool = False, # Should be true if there are multiple experiments
 		):
 		self.name = name
 		self.location = location
@@ -104,23 +115,37 @@ class EvalJob:
 		assert issubclass(searcher, search.Searcher)
 
 		if issubclass(searcher, search.DeepSearcher):
-			self.agents, search_args = {}, {}
+			self.agents, self.reps, search_args = {}, {}, {}
 
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
-				assert all([mcts_c >= 0, mcts_nu >= 0, isinstance(mcts_graph_search, bool), isinstance(mcts_workers, int), mcts_workers > 0])
-				search_args = {'c': mcts_c, 'nu': mcts_nu, 'search_graph': mcts_graph_search, 'workers': mcts_workers}
+				assert mcts_c >= 0 and mcts_nu >= 0\
+					and isinstance(mcts_complete_graph, bool) and isinstance(mcts_graph_search, bool)\
+					and isinstance(mcts_workers, int) and mcts_workers > 0
+				search_args = {'c': mcts_c, 'nu': mcts_nu, 'complete_graph': mcts_complete_graph, 'search_graph': mcts_graph_search, 'workers': mcts_workers}
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}
+			elif searcher == search.AStar:
+				search_args = {} # Non-parametric method goes brrrr
 			else: raise Exception(f"Kwargs have not been prepared for the DeepSearcher {searcher}")
 
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
-			#DeepSearchers might have to test multiple NN's
+			# DeepSearchers might have to test multiple NN's
 			for folder in glob(f"{search_location}/*/")+[search_location]:
 				if not os.path.isfile(os.path.join(folder, 'model.pt')): continue
+				store_repr()
+				with open(f"{folder}/config.json") as f:
+					cfg = json.load(f)
+
+				set_is2024(cfg["is2024"])
 				searcher = searcher.from_saved(folder, **search_args)
-				self.agents[f'{searcher} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'] = DeepAgent(searcher)
+				key = f'{str(searcher)} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'
+
+				self.reps[key] = cfg["is2024"]
+				self.agents[key] = DeepAgent(searcher)
+				restore_repr()
+
 			if not self.agents:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
 			self.logger.log(f"Loaded model from {search_location}")
@@ -128,6 +153,7 @@ class EvalJob:
 		else:
 			searcher = searcher()
 			self.agents = {searcher: Agent(searcher)}
+			self.reps = {searcher: True}
 
 		self.logger.log(f"Initialized {self.name} with agents {' '.join(str(agent) for agent in self.agents)}")
 		self.logger.log(f"TIME ESTIMATE: {len(self.agents)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
@@ -135,15 +161,18 @@ class EvalJob:
 	def execute(self):
 		self.logger.log(f"Beginning evaluator {self.name}\nLocation {self.location}\nCommit: {get_commit()}")
 		agent_results = {}
-		for name, agent in self.agents.items():
-			self.logger.section(f'Evaluationg agent {name}')
-			res = self.evaluator.eval(agent)
-			np.save(f"{self.location}/{name}_results.npy", res)
-			agent_results[name] = res
+		for (name, agent), representation in zip(self.agents.items(), self.reps.values()):
+			self.is2024 = representation
+			agent_results[name] = self._single_exec(name, agent)
 
 		self.evaluator.plot_this_eval(agent_results, self.location)
 
-
+	@with_used_repr
+	def _single_exec(self, name, agent):
+		self.logger.section(f'Evaluationg agent {name}')
+		res = self.evaluator.eval(agent)
+		np.save(f"{self.location}/{name}_results.npy", res)
+		return res
 
 
 if __name__ == "__main__":

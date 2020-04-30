@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import torch
 
-from src.rubiks import cpu, gpu, no_grad
+from src.rubiks import gpu, no_grad
 from src.rubiks.model import Model
 from src.rubiks.cube.cube import Cube
 from src.rubiks.utils.ticktock import TickTock
@@ -40,7 +40,6 @@ class Node:
 
 
 class Searcher:
-	with_mt = False
 	eps = np.finfo("float").eps
 	_explored_states = 0
 
@@ -100,7 +99,6 @@ class DeepSearcher(Searcher):
 
 
 class RandomDFS(Searcher):
-	with_mt = True  # TODO: Implement multithreading natively in search method and set to False
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		action = np.random.randint(Cube.action_dim)
 		state = Cube.rotate(state, *Cube.action_space[action])
@@ -146,7 +144,6 @@ class BFS(Searcher):
 
 
 class PolicySearch(DeepSearcher):
-	with_mt = not torch.cuda.is_available()
 
 	def __init__(self, net: Model, sample_policy=False):
 		super().__init__(net)
@@ -167,12 +164,14 @@ class PolicySearch(DeepSearcher):
 	def __str__(self):
 		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
 
+
 class MCTS(DeepSearcher):
-	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers=10):
+	def __init__(self, net: Model, c: float, nu: float, complete_graph: bool, search_graph: bool, workers=10):
 		super().__init__(net)
 		# Hyperparameters: c controls exploration and nu controls virtual loss updation us
 		self.c = c
 		self.nu = nu
+		self.complete_graph = complete_graph
 		self.search_graph = search_graph
 		self.workers = workers
 
@@ -190,7 +189,7 @@ class MCTS(DeepSearcher):
 		p, v = self.net(oh)  # Policy and value
 		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
 		del p, v
-		
+
 		paths = [deque([])]
 		leaves = [self.states[state.tostring()]]
 		while self.tt.tock() < time_limit:
@@ -236,7 +235,7 @@ class MCTS(DeepSearcher):
 		"""
 		state_str = state.tostring()
 		new_states = Cube.multi_rotate(
-			np.tile(state, (Cube.action_dim, 1)),
+			np.tile(state, (Cube.action_dim, *[1]*len(Cube.get_solved_instance().shape))),
 			*Cube.iter_actions()
 		)
 		new_states_strs = [x.tostring() for x in new_states]
@@ -298,6 +297,9 @@ class MCTS(DeepSearcher):
 				# Also, it is not a major problem, as the edges will be updated when new_leaf is expanded, so the problem only exists on the edge of the graph
 				# TODO: Test performance difference after implementing this
 				# TODO: Save dumb nodes when expanding. This should allow graph completeness without massive overhead
+				if self.complete_graph:
+					self._update_neighbors(state)
+
 			else:
 				leaf.neighs[action_idx] = self.states[state_str]
 				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf
@@ -379,14 +381,14 @@ class MCTS(DeepSearcher):
 		self.states = dict()
 
 	@classmethod
-	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool, workers: int):
+	def from_saved(cls, loc: str, c: float, nu: float, complete_graph: bool, search_graph: bool, workers: int):
 		net = Model.load(loc)
 		net.to(gpu)
-		return cls(net, c, nu, search_graph, workers)
+		return cls(net, c=c, nu=nu, complete_graph=complete_graph, search_graph=search_graph, workers=workers)
 
 	def __str__(self):
 		return f"Monte Carlo Tree Search {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
-	
+
 	def __len__(self):
 		return len(self.states)
 
@@ -442,7 +444,7 @@ class AStar(DeepSearcher):
 		return self.closed[node]['g_cost'] + 1
 
 	def get_h_cost(self, node: str):
-		node = np.fromstring(node, dtype=int)
+		node = np.fromstring(node, dtype=Cube.dtype)
 		if Cube.is_solved(node):
 			return 0
 		else:
@@ -451,9 +453,13 @@ class AStar(DeepSearcher):
 			return -float(v.cpu()) #alternativ idé: 1/float(v.cpu())
 
 	def __str__(self):
-		return f"A* Search"
-	
+		return f"Astar search"
+
 	def __len__(self):
-		# TODO
-		raise NotImplementedError
+		node = list(self.closed)[-1]
+		count = 0
+		while True:
+			node = self.closed[node]['parent']
+			if node == None: return count
+			count += 1
 

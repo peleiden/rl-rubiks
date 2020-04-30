@@ -17,6 +17,7 @@ def seedsetter():
 	random.seed(0)
 
 def get_commit():
-	repo = git.Repo(".")
-	return str(repo.head.commit) if has_git else "Unknown (install GitPython to get this)"
-
+	if has_git:
+		repo = git.Repo(".")
+		return str(repo.head.commit)
+	return "Unknown (install GitPython to get this)"

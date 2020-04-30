@@ -1,5 +1,5 @@
 src/configs/local.ini
-
+*@neomake*
 
 *markdown*
 *.vscode
