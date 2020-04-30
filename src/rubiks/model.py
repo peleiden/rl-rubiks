@@ -29,7 +29,7 @@ class ModelConfig:
 
 	_fc_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512]}
 	_res_arch: ClassVar[dict] = {"shared_sizes": [4096, 1024], "part_sizes": [512], "res_blocks": 4, "res_size": 1024,}
-	_conv_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [12, 24], "cat_sizes": [1024]}
+	_conv_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [64, 128, 256], "cat_sizes": []}
 
 	is2024: bool = True
 
@@ -277,13 +277,13 @@ class ConvNet(Model):
 		channels_list = [6, *self.config.conv_channels]
 		cat_input_size = channels_list[-1] * 4 + self.config.shared_sizes[-1]
 		# First convolutional layer has stride of two and special padding
-		conv_layers = [_CircularPad([2, 3]), nn.Conv1d(channels_list[0], channels_list[1], kernel_size=7, stride=2)]
+		conv_layers = [_CircularPad([0, 1]), nn.Conv1d(channels_list[0], channels_list[1], kernel_size=3, stride=1)]
 		if self.config.batchnorm:
 			conv_layers.append(nn.BatchNorm1d(channels_list[1]))
 		# Rest have stride of one and normal padding
 		for in_channels, out_channels in zip(channels_list[1:-1], channels_list[2:]):
-			conv_layers.append(_CircularPad([3, 3]))
-			conv_layers.append(nn.Conv1d(in_channels, out_channels, 7))
+			conv_layers.append(_CircularPad([1, 1]))
+			conv_layers.append(nn.Conv1d(in_channels, out_channels, 3))
 			conv_layers.append(self.config.activation_function)
 			if self.config.batchnorm:
 				conv_layers.append(nn.BatchNorm1d(out_channels))
