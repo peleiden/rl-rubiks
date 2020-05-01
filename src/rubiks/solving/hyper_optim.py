@@ -1,3 +1,5 @@
+import os
+from glob import glob as glob # glob
 from dataclasses import dataclass, field
 from typing import Callable, List
 import argparse
@@ -6,10 +8,11 @@ import json # For print
 import numpy as np
 from bayes_opt import BayesianOptimization, UtilityFunction
 
-from src.rubiks.solving.evaluation import Evaluator, train_folders
-from src.rubiks.solving.agents import DeepAgent
-from rubiks.solving.search import MCTS
-from src.rubiks.solving.utils.logger import Logger, NullLogger
+from src.rubiks.solving.evaluation import Evaluator
+from src.rubiks.solving.agents import DeepAgent, Agent
+from src.rubiks.utils.logger import Logger, NullLogger
+from src.rubiks.solving.search import Searcher, MCTS
+from src.rubiks.model import Model
 
 class Optimizer:
 	def __init__(self,
@@ -25,18 +28,39 @@ class Optimizer:
 		self.optimal = None
 		self.highscore = None
 
+		# For evaluation use
+		self.evaluator = None
+		self.searcher_class = None
+		self.persistent_searcher_params = None
+		self.agent_class = None
+
 		self.score_history = list()
 		self.parameter_history = list()
 
 		self.logger=logger
-		self.logger.log(f"Optimizer {self} created parameters:\n{'\n'.join(self.parameters)}\n")
+		self.logger.log(f"Optimizer {self} created parameters: {self._format_params(self.parameters)}")
 
 	def optimize(self, iterations: int):
 		raise NotImplementedError("To be implemented in child class")
 
+	def objective_from_evaluator(self, evaluator: Evaluator, searcher_class, persistent_searcher_params: dict, agent_class = DeepAgent):
+		self.evaluator = evaluator
+		self.searcher_class = searcher_class
+		self.agent_class = agent_class
+		self.persistent_searcher_params = persistent_searcher_params
+
+		def target_function(self, searcher_params):
+			searcher = self.seacher_class(**self.persistent_searcher_params, **seacher_params)
+			agent = self.agent_class(searcher)
+			res = self.evaluator.eval(agent)
+			return (res != -1).mean()
+
+		self.target_function = target_function
+
 	def plot_optimization(self):
 		raise NotImplementedError
 
+	@staticmethod
 	def _format_params(params: str):
 		return json.dumps(params, indent=4, sort_keys=True)
 
@@ -79,7 +103,7 @@ class BayesianOptimizer(Optimizer):
 			self.logger("Optimization {i}: Chosen parameters:\t: {self._format_params(next_params)}")
 
 			score = self.target_function(**next_params)
-			self.scores.append(score)
+			self.score_history.append(score)
 			self.logger("Optimization {i}: Score: {score}")
 
 			self.optimizer.register(params=next_params, target=score)
@@ -91,26 +115,40 @@ class BayesianOptimizer(Optimizer):
 		self.logger("Optimization done. Best parameters: {self.optimal} with score {self.highscore}")
 
 		return self.optimal
+	def __str__(self):
+		return f"BayesianOptimizer()"
 
 def MCTS_optimize():
-	#Lot of overhead just for niceness to be ready to use latest model
+	#Lot of overhead just default argument niceness: latest model is latest
+	from src.rubiks.runeval import train_folders
 	model_path = ''
 	if train_folders:
-		for folder in [train_folders[-1]] + glob(f"{train_folder[-1]}/*/"):
-				if os.isfile(os.path.join(folder, 'model.pt'):
-					model_path  = os.path.join(folder, 'model.pt'
+		for folder in [train_folders[-1]] + glob(f"{train_folders[-1]}/*/"):
+				if os.path.isfile(os.path.join(folder, 'model.pt')):
+					model_path  = os.path.join(folder)
 					break
 	parser = argparse.ArgumentParser(description='Optimize Monte Carlo Tree Search for one model')
-	parser.add_argument('--location', description='Location for model.pt. Results will also be saved here',
+	parser.add_argument('--location', help='Location for model.pt. Results will also be saved here',
 		type=str, default=model_path)
-	parser.add_argument('--iterations', description='Number of iterations of Bayesian Optimization',
+	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
 		type=int, default=25)
 	args = parser.parse_args()
 
+	params = {
+		'c': (0.2, 0.8),
+		'nu': (0, 0.01),
+	}
+	persistent_params = {
+		'net' : Model.load(args.location),
+		'complete_graph': False,
+		'search_graph': False,
+	}
+	logger = Logger(os.path.join(args.location, 'optimizer.log'), 'Optimization')
+
 	evaluator = Evaluator(n_games=20, max_time=1, scrambling_depths=range(12, 20))
-
-
-	BayesianOptimizer =
+	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
+	optimizer.objective_from_evaluator(evaluator, MCTS, persistent_params, persistent_searcher_params=persistent_params)
+	optimizer.optimize(parser.iterations)
 
 if __name__ == '__main__':
 	MCTS_optimize()
