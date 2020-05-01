@@ -80,7 +80,7 @@ hvor \(\mathbf z=(z_0, ..., z_i, ..., z_{11})\) er output fra politiknetværket.
 Det neurale netværk er implementeret i \texttt{src/rubiks/model.py}
 
 \subsection*{Læring af værdi og politik: Autodidaktisk iteration}
-At opnå et politik/værdi-netværk med gode approksimationer, kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
+For at opnå et politik/værdi-netværk med gode approksimationer kræves et eksplorativt læringsparadime hvorigennem netværket opnår nok kendskab til tilstandsrummet \(S\) til at kunne finde generelle strategier. 
 På trods af problemets determinisme og Markov-egenskab er der dog en stor udfordring i udforskningen af disse tilstande.
 Som beskrevet i afsnit \ref{sec:grouptheory}, gør de mange mulige permutationer, at tilstandsrummet når en størrelse på \(|S|\approx 4,3\ctp {19}\), hvilket gør, at enhver systematisk løsning af maksimeringsproblemet \ref{eq:maximization} kun kan kun kan tilskrive optimal værdi og politik til en forsvindende lille andel af tilstandsrummet.
 Der er derfor behov for et læringsprocedure, der kan observere approksimativ optimal politik og værdi til tilstande på kort tid samt vælge at udforske tilstande, der giver et brugbart billede af tilstandsrummet.
@@ -112,20 +112,21 @@ y_{v_i}=
 \end{cases}
 \end{equation}
 I træningen blev der spillet \(L=10000\) spil i autodidaktisk iteration. Dybden \(K\) blev undersøgt i eksperimenter.
+
 \subsection*{Opdatering af model}
+Ovenfor blev en procedure til at generere \(N\) datapunkter, der hver indeholder en tilstand \(\mathbf s_i\), tilsigtede observationer af værdi og politik \(\left({y_{v}}_i, {y_{\bm \pi }}_i \right)\) samt antallet af tilfældige træk taget for at nå frem til tilstanden, betegnet dybden \(D(\mathbf s_i)\).
+Disse blev  brugt til at opdatere modellen i et Supervised Learning-paradigme, hvor værdinetværket løser et regressionsproblem med \({y_{v}}_i\) som mål og politiknetværket løser et klassifikationsproblem med \({y_{\bm \pi }}_i\) som mål. 
 
-Ovenfor blev en procedure til at generere \(N\) datapunkter, der hver indeholder en tilstand \(\mathbf s_i\), tilsigtede observationer af værdi og politik \(\left({y_{v}}_i, {y_{\bm \pi }}_i \right)\) samt antallet af tilfældige træk taget for at nå frem til tilstanden \(D(\mathbf s_i)\). Disse blev  brugt til at opdatere modellen i et Supervised Learning-paradigme, hvor værdinetværket løser et regressionsproblem med \({y_{v}}_i\) som mål og politiknetværket løser et klassifikationsproblem med \({y_{\bm \pi }}_i\) som mål. 
-
-Som kost-funktion på netværkets forudsigelse af værdi og politik
+Som fejlfunktion på netværkets forudsigelse af værdi og politik
 \(\left(v(\mathbf s_i), \bm \pi (\mathbf s_i)\right)\)
 blev følgende funktion brugt:
 \begin{equation}\label{eq:loss}
 	\mathcal L(x_i) =
 	\underbrace{\vphantom{\sum_{i}}
-		\frac {1} {D(\mathbf s _i)}
+		v_i
 	}
 	_{\mathclap{
-		\text{Antal træk}
+		\text{Vægt}
 		}	
  }
 	 \bigg(
@@ -149,24 +150,53 @@ blev følgende funktion brugt:
 	\bigg)
 	\text{, hvor } j = {y_{\bm \pi }}_i
 \end{equation}
-Kosten til hvert datapunkt består altså en sum af kvadreret afvigelse for regressionsproblemet på værdien og 12-klasse krydsentropikost (eng: \textit{Cross Entropy Cost}) for klassifikationsproblemet på politikken.
-Denne sum blev dog vægtet med \(\nicefrac 1 {D(\mathbf s _i)}\), som giver højere betydning til tilstande, som blev genereret få træk væk fra måltilstanden og lavere vægt til tilstande langt fra målstadiet.
-Dette er indført af \cite{HumansBeGone} for konvergensstabilitet ved at vægte tilstande, hvor udfaldsrummet er mindre komplekst.
-
-Til at minimere denne kostfunktion, blev der brugt minibatchlæring på det dybe neurale netværk med batches på størrelse 50. Optimeringen foregik med algoritmen RMSProp, der tilpasser læringsraten ved at dividere den med et rullende gennemsnit af gradientmagnituden \cite{RMSProp}. Til optimeringen blev brugt \texttt{pyTorch} hvis indbyggede \texttt{autograd}-modul foretog denne gradientbaserede parameteropdatering.
+Fejlen til hvert datapunkt består altså af en sum af kvadreret afvigelse for regressionsproblemet på værdien og 12-klasse krydsentropifejl (eng: \textit{Cross Entropy Cost}) for klassifikationsproblemet på politikken.
+Summen vægtes med \(v_i\), som er beregnet ud fra antallet af træk fra den løste tilstand, $ D(\mathbf s_i) $.
+Vægtningen er indført af \cite{HumansBeGone}, hvor vægten er beregnet ved den inverse dybde, $ v_i=1/D(\mathbf s_i) $.
+Det giver konvergensstabilitet ved at vægte tilstande, hvor udfaldsrummet er mindre komplekst.
+Her har vi udvidet vægtningsfunktionalitet for at undersøge forskellige vægtningers effekt på læringen.
+Vi arbejder med en kombination af den reciprokke dybdevægtning og en vægtning, hvor alle tilstande er lige.
+Ved generering af $ n $ træningstilstande dannes to vægtvektorer med længden $ n $, $ \mathbf v^d=[v_1^d, v_2^d, \ldots, v_n^d] $ og $ \mathbf v^u=[v_1^u, v_2^u, \ldots, v_n^u] $ ud fra reglerne $v_i^d = \frac{1}{D(\mathbf s_i)} \andim v_i^u = 1$
+Vektorerne normaliseres, og et vægtet gennemsnit beregnes ved hjælp af en vægtfaktor $ alpha $.
+Herved samles de i en samlet vægtvektor $ \mathbf v=[v_1, v_2, \ldots, v_n] $.
+Normaliseringen sikrer, at der ikke er et uhensigtsmæssigt bias mod den ene af vægtvektorerne.
+\begin{equation*}
+	\mathbf v=(1-\alpha)\frac{\mathbf v^d}{\sum_{i=1}^n v_i^d} + \alpha \frac{\mathbf v^u}{n}
+\end{equation*}
+$ \mathbf v $ vil være en enhedsvektor, hvilket giver den fordelagtive egenskab, at summen af alle $ \mathcal L(x_i) $ altid vil være tilnærmelsesvist konstant over $ n $ (se bilag \ref{app:vsum} for et bevis herpå).
+Ved $ \alpha=0 $ fås den vægtning, som er indført af \cite{HumansBeGone}, og ved $ \alpha=1 $ fås en ens vægtning for alle tilstande.
+Vi initialiserer $ \alpha $ til 0 og øger den derefter med en konstant $ \alpha_u $, hver gang der er trænet i et givent antal udrulninger.
+Dog lader vi ikke $ \alpha $ overstige 1.
+\\
+\\
+For at minimere fejlfunktionen blev der brugt minibatchlæring på det dybe neurale netværk med batches på størrelse 50.
+Optimeringen foregik med algoritmen RMSProp, der tilpasser læringsraten ved at dividere den med et rullende gennemsnit af gradientmagnituden \cite{RMSProp}.
+Til optimeringen blev brugt \texttt{pyTorch} hvis indbyggede \texttt{autograd}-modul foretog denne gradientbaserede parameteropdatering.
 
 Træningen af det dybe neurale netværk foregik ved at udføre autodidaktisk iteration til at generere de \(N\) træningseksempler efterfulgt af træning på dette datasæt. 
-En sådan træning kaldes en \textit{udrulning} af netværket og der blev gennemført 5000 udrulninger.
+En sådan træning kaldes en \textit{udrulning} af netværket, og der blev gennemført 5000 udrulninger.
+
 \section{Løsningsalgoritme og Monte Carlo Træsøgning}
-Efter at have trænet det neurale netværk anvendtes Monte Carlo Træsøgning (MCTS) for at kunne løse en terning fra en \emph{scrambled} tilstand $s_0$. MCTS er en heuristisk søgealgoritme. Som det ligger i navnet, bygger MCTS et træ af tilstande, hvor roden er $s_0$ og dens børneknuder er de resulterende tilstande efter hver af de 12 mulige handlinger. MCTS er en effektiv søgealgoritme, fordi den sørger for at ekspandere den mest lovende bladknude først. 
+Efter at have trænet det neurale netværk anvendtes Monte Carlo Træsøgning (MCTS) for at kunne løse en terning fra en \emph{scrambled} tilstand $s_0$.
+MCTS er en heuristisk søgealgoritme.
+Som det ligger i navnet, bygger MCTS et træ af tilstande, hvor roden er $s_0$ og dens børneknuder er de resulterende tilstande efter hver af de 12 mulige handlinger.
+MCTS er en effektiv søgealgoritme, fordi den sørger for at ekspandere den mest lovende bladknude først. 
 
-En måde at vælge en knude at ekspandere er ved brug af den øvre konfidensgrænse en øvre konfidensgrænse (\emph{upper confidence bound}, UCB), introduceret af \cite{Kocsis06banditbased}. For hver bladknude t beregnes UCB
+En måde at vælge en knude at ekspandere er ved brug af den øvre konfidensgrænse en øvre konfidensgrænse (\emph{upper confidence bound}, UCB), introduceret af \cite{Kocsis06banditbased}.
+For hver bladknude t beregnes UCB
 $$UCB(t)=\frac{r_t}{n_t}+\sqrt{\frac{2\ln n_s}{n_t}}$$
-og bladknuden med den højeste UCB vælges til at blive ekspanderet. $s$ er forælderknuden til $t$, og $\frac{r_t}{n_t}$ er belønningen for $t$. $n_t$ og $n_s$ er hvor mange gange henholdsvis $t$ og $s$ er blevet spillet. Første led af formlen korresponderer med udnyttelse, da den vil være høj for træk, der leder til den løste tilstand. Andet led korresponderer med udforskning, da den vil være høj for træk, der kun er blevet simuleret få gange. 
+og bladknuden med den højeste UCB vælges til at blive ekspanderet.
+$s$ er forælderknuden til $t$, og $\frac{r_t}{n_t}$ er belønningen for $t$.
+$n_t$ og $n_s$ er hvor mange gange henholdsvis $t$ og $s$ er blevet spillet.
+Første led af formlen korresponderer med udnyttelse, da den vil være høj for træk, der leder til den løste tilstand.
+Andet led korresponderer med udforskning, da den vil være høj for træk, der kun er blevet simuleret få gange. 
 
-Efter at have valgt en bladknude, genereres en barneknude til denne. Derefter genereres en række tilfældige træk, der enten resulterer i, at terningen løses, eller at den ikke løses (\emph{rollout}). Resultatet af \emph{rollout}'en tilbagepropageres ved at opdatere informationen i knuderne på stien fra barneknuden tilbage til $s_0$. 
+Efter at have valgt en bladknude, genereres en barneknude til denne.
+Derefter genereres en række tilfældige træk, der enten resulterer i, at terningen løses, eller at den ikke løses (\emph{rollout}).
+Resultatet af \emph{rollout}'en tilbagepropageres ved at opdatere informationen i knuderne på stien fra barneknuden tilbage til $s_0$. 
 
-Der findes også andre, mere specialiserede, politikker for at udvælge en bladknude. I \cite{HumansBeGone} og \cite{mcaleer2018solving} vælges en handling a til tiden t fra tilstand s ud fra politikken
+Der findes også andre, mere specialiserede, politikker for at udvælge en bladknude.
+I \cite{HumansBeGone} og \cite{mcaleer2018solving} vælges en handling a til tiden t fra tilstand s ud fra politikken
 $$A_t=\text{argmax}_a\frac{cP_{st}(a)\sqrt{\sum_{a'}N_{st}(a')}}{1+N_{st}(a)} + W_{st}(a) - L_{st}(a)$$
 hvor $N_s(a)$ er antallet af gange a er blevet taget fra s, $W_s(a)$ er den maksimale værdi af a fra s, $L_s(a)$ er det nuværende virtuelle tab for a fra s, $P_s(a)$ er en prior-sandsynlighed af a fra s og c er en udforsknings-hyperparameter. 
   
@@ -176,8 +206,11 @@ Der blev trænet to forskellige agenter. Én, hvor dybden af tilfældige træk i
 
 For hver af disse agenter blev gennemført to evalueringseksperimenter:
 \begin{itemize}
-	\item \textbf{Terningedybde}: Afsøgningstiden med MCTS blev holdt konstant på 10 minutter og for hver dybde \(d\in \{1,2,...,20\}\) blev der spillet 100 spil, som hver blev generet ved \(d\) tilfældige træk. Der blev så gemt andelen af spil, der blev løst på denne tid samt længden af løsningerne.
-	\item \textbf{Afsøgningstid}: Antallet af tilfældige træk blev holdt konstant \(d=10\) og for hver tidsgrænse \(t\in \{2\unit{min}, 4\unit{min}, ..., 10\unit{min}\}\) blev der spillet 100 spil, hvor MCTS blev afbrudt efter \(t\) og andelen af løste spil og længden af løsningerne blev gemt.
+	\item \textbf{Terningedybde}:
+	Afsøgningstiden med MCTS blev holdt konstant på 10 minutter og for hver dybde \(d\in \{1,2,...,20\}\) blev der spillet 100 spil, som hver blev generet ved \(d\) tilfældige træk.
+	Der blev så gemt andelen af spil, der blev løst på denne tid samt længden af løsningerne.
+	\item \textbf{Afsøgningstid}:
+	Antallet af tilfældige træk blev holdt konstant \(d=10\) og for hver tidsgrænse \(t\in \{2\unit{min}, 4\unit{min}, ..., 10\unit{min}\}\) blev der spillet 100 spil, hvor MCTS blev afbrudt efter \(t\) og andelen af løste spil og længden af løsningerne blev gemt.
 \end{itemize}
 
 
