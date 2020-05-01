@@ -175,9 +175,12 @@ class Train:
 					lr_scheduler.step()
 					lr = optimizer.param_groups[0]["lr"]
 					self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
-				if (alpha + self.alpha_update <= 1 or np.isclose(alpha + self.alpha_update, 1)) and self.alpha_update != 0:
+				if (alpha + self.alpha_update <= 1 or np.isclose(alpha + self.alpha_update, 1)) and self.alpha_update:
 					alpha += self.alpha_update
 					self.log(f"Updated alpha from {alpha-self.alpha_update:.2f} to {alpha:.2f}")
+				elif alpha < 1 and alpha + self.alpha_update > 1 and self.alpha_update:
+					self.log(f"Updated alpha from {alpha:.2f} to 1")
+					alpha = 1
 
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
