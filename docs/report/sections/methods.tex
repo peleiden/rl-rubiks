@@ -3,7 +3,8 @@
 \begin{document}
 \chapter{Metode}\label{chp:methods}
 \lhead{Metode}
-\textit{Al kode er tilgængelig på} \url{https://github.com/sorenmulli/rl-rubiks}\\
+\textit{Al kode er tilgængelig på} \url{https://github.com/sorenmulli/rl-rubiks}
+\\
 De implementerede dybe Reinformcent Learning-modeller  er alle implementationer af DeepCube fra \cite{HumansBeGone} med nogle undtagelser, der beskrives i de følgende afsnit.
 Løsningsmodellen består af et neuralt netværk, der trænes med en Reinforcement Learning-procedure kaldet autodidaktisk iteration til at vurdere værdien af og den optimale handling til enhver tilstand for Rubiks terning.
 Dette netværk bliver så brugt som heuristisk for en Monte Carlo træsøgning som løsningsstrategi til terningen.
@@ -26,15 +27,24 @@ Med miljøet fastlagt er det nu muligt at påbegynde træningen af en agent, der
 \section{Den lærende agent}\label{sec:learnADI}
 Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da det formaliseres som at følge Reinforcement Learning-opsætningen ved at have følgende aspekter:
 \begin{itemize}
-	\item \textit{Agent}: Løsningsmodellen -- som her kaldes DeepCube, selvom den også afprøves med ændringer i forhold til DeepCube i \cite{HumansBeGone} -- har rollen som lærende agent, der interagerer med miljøet. Den består af det dybe neurale netværk (DNN) samt træafsøgningen og beskrives i løbet af dette kapitel. Agenten er model-baseret, da den har en indre repræsentation af Rubiks terning for at træ-afsøge tilstande.  \\
+	\item \textit{Agent}:
+	Løsningsmodellen -- som her kaldes DeepCube, selvom den også afprøves med ændringer i forhold til DeepCube i \cite{HumansBeGone} -- har rollen som lærende agent, der interagerer med miljøet.
+	Den består af det dybe neurale netværk (DNN) samt træafsøgningen og beskrives i løbet af dette kapitel.
+	Agenten er model-baseret, da den har en indre repræsentation af Rubiks terning for at træ-afsøge tilstande.\\
 	Agenten er implementeret i  \texttt{src/rubiks/post\_train/agents.py}.
-	\item \textit{Miljø}: Rubiks terning, der modtaget handlinger \(a\) og returnerer tilstand \(\mathbf s\). Miljøet er en fuldt-observerbar, deterministisk Markov beslutningsproces, da al information om ny tilstand \(\mathbf s_{k+1}\) kun er afhængig af foregående tilstand og foregående handling \(a_k\):
+	\item \textit{Miljø}:
+	Rubiks terning, der modtaget handlinger \(a\) og returnerer tilstand \(\mathbf s\).
+	Miljøet er en fuldt-observerbar, deterministisk Markovbeslutningsproces, da al information om ny tilstand \(\mathbf s_{k+1}\) kun er afhængig af foregående tilstand og foregående handling \(a_k\):
 	\[
 		\mathbf s _ {k+1} = \mathbf f(\mathbf s _k, a_k)
 	\] 
-	og da agentens observation indeholder al information om tilstanden. Miljøet har én afsluttende tilstand \(\mathbf s_T\). Miljøet er  beskrevet i afsnit \ref{sec:environment} og implementeret i \texttt{src/rubiks/cube.py} 
-	\item  \textit{Handlinger}: Handlingsrummet \(A\) bestående af de tolv handlinger beskrevet i afsnit \ref{sec:environment} er uafhængigt af tilstanden og tidsskridtet.
-	\item \textit{Belønning}: Belønningsfunktionen \( R(\mathbf s_k)\) er kun afhængig af tilstanden \(\mathbf s\) og returnerer skalarbelønningen på følgende måde:
+	og da agentens observation indeholder al information om tilstanden.
+	Miljøet har én afsluttende tilstand \(\mathbf s_T\).
+	Miljøet er  beskrevet i afsnit \ref{sec:environment} og implementeret i \texttt{src/rubiks/cube.py}.
+	\item  \textit{Handlinger}:
+	Handlingsrummet \(A\) bestående af de tolv handlinger beskrevet i afsnit \ref{sec:environment} er uafhængigt af tilstanden og tidsskridtet.
+	\item \textit{Belønning}:
+	Belønningsfunktionen \( R(\mathbf s_k)\) er kun afhængig af tilstanden \(\mathbf s\) og returnerer skalarbelønningen på følgende måde:
 	\[
 		R (\mathbf s_k) = 
 		\begin{cases}
@@ -49,17 +59,22 @@ Opgaven med at udvikle løsningsmodellen er et veldefineret læringsproblem, da 
 	\pi^* = \argmaxi_{\pi}\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big),
 	v^* = \maxi_\pi\sum_{k=0}^{N-1} R\big(f(\mathbf{s_k},\pi(\mathbf s_k))\big)
 \end{equation}
-hvor \(	N = \operatorname{min}\{k_T, k_{\text{max}}-1\}\), \(k_T\) er tidsskridtet, når agenten løser terningen og \(k_{\text{max}}\) er en grænse på antal skridt,  som defineres i eksperimentet. 
+hvor \(	N = \operatorname{min}\{k_T, k_{\text{max}}-1\}\), \(k_T\) er tidsskridtet, når agenten løser terningen og \(k_{\text{max}}\) er en grænse på antal skridt, som defineres i eksperimentet. 
 
-Til at bestemme \(\widetilde {\pi ^*} \approx 	\pi^*\) blev to sammenhængende afbildninger implementeret i DeepCube. Den ene komponent er en lært afbildning, der direkte approksimerer \(\widetilde {\pi ^*}\) ved at afbillede fra tilstanden \(\mathbf s_k\) til en diskret sandsynlighedsfordeling, der approksimativt tilskriver hver mulig handling en sandsynlighed for at denne er den optimale. Denne funktion kaldes \textit{politik-netværket} og repræsenteres fremover med symbolet \(\bm \pi\):
+Til at bestemme \(\widetilde {\pi ^*} \approx \pi^*\) blev to sammenhængende afbildninger implementeret i DeepCube.
+Den ene komponent er en lært afbildning, der direkte approksimerer \(\widetilde {\pi ^*}\) ved at afbillede fra tilstanden \(\mathbf s_k\) til en diskret sandsynlighedsfordeling, der approksimativt tilskriver hver mulig handling en sandsynlighed for at denne er den optimale.
+Denne funktion kaldes \textit{politik-netværket} og repræsenteres fremover med symbolet \(\bm \pi\):
 \[
 \pi(\mathbf s_k)_i \approx \mathbb P (\pi^*(\mathbf s_k)_i = i ),\quad i \in \{0,1, ..., 11\}
 \]
-Desuden læres en funktion, der approksimerer \textit{værdien} til hver tilstand forstået som den akkumulerede belønning der fås ved at følge politikken \(\pi\) herfra. Denne kaldes \textit{værdi-netværket} og repræsenteres som \(v\):
+Desuden læres en funktion, der approksimerer \textit{værdien} til hver tilstand forstået som den akkumulerede belønning der fås ved at følge politikken \(\pi\) herfra.
+Denne kaldes \textit{værdi-netværket} og repræsenteres som \(v\):
 \[
 v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j))\big)
 \]
-\paragraph{Dybt neuralt netværk} Disse to afbildninger, \(\bm \pi, v\) læres altså i løbet af træningsprocessen og har centrale roller som dybde- og breddestyrende heuristikker i  løsningsalgoritmen. For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt. Da disse afbildninger begge skal approksimere værdier relateret til  \eqref{eq:maximization}, blev de udtrykt i det samme neurale netværk, der defor blev konstrueret med en todelt outputstruktur. 
+\paragraph{Dybt neuralt netværk} Disse to afbildninger, \(\bm \pi, v\), læres altså i løbet af træningsprocessen og har centrale roller som dybde- og breddestyrende heuristikker i  løsningsalgoritmen.
+For at repræsentere disse approksimationer blev et dybt neuralt netværk (DNN) brugt.
+Da disse afbildninger begge skal approksimere værdier relateret til  \eqref{eq:maximization}, blev de udtrykt i det samme neurale netværk, der defor blev konstrueret med en todelt outputstruktur. 
 
 
 \begin{figure}[H]
@@ -68,7 +83,13 @@ v(\mathbf s_k| \pi) \approx \sum_{j=k}^{N-1} R\big(f(\mathbf s_j,\pi(\mathbf s_j
 \caption{Illustration af det todelte neurale netværk brugt i \textit{DeepCube}, hvor to skjulte lag skal resultere i hierakisk vidensopbygning brugbart for at repræsenterer løsningsstrategier.}
 \label{fig:DNN}
 \end{figure}
-\noindent Netværket består af lineære lag med bias.  Arkitekturen, som er illustreret på figur \ref{fig:DNN}, består af et 480-dimensionelt inputlag efterfulgt af to fuldt-forbundne skjulte lag på hhv. 4096 og 2048 neuroner. Derefter opdeles netværket i værdi-netværket og politiknetværket, begge med et skjult lag på 512 neuroner. Værdinetværket returnerer en skalarværdi \(v(\mathbf s_k)\) og politiknetværket returnerer den tolvdimensionelle vektor \(\bm \pi (\mathbf s_k)\). Denne struktur medfører ca. 25 millioner parametre i det dybe neurale netværk. Mellem hvert lag blev den elementvise ikkelineære aktiveringsfunktion \textit{Eksponentiel lineær enhed} (eng: \textit{Exponential Linear Unit}, ELU) placeret, som i nogle læringsproblemer er vist at accelerere læringen bl.a. ved at have en normaliserende effekt på aktiveringerne \cite{ELU} 
+\noindent
+Netværket består af lineære lag med bias.
+Arkitekturen, som er illustreret på figur \ref{fig:DNN}, består af et 480-dimensionelt inputlag efterfulgt af to fuldt-forbundne skjulte lag på hhv. 4096 og 2048 neuroner.
+Derefter opdeles netværket i værdi-netværket og politiknetværket, begge med et skjult lag på 512 neuroner.
+Værdinetværket returnerer en skalarværdi \(v(\mathbf s_k)\) og politiknetværket returnerer den tolvdimensionelle vektor \(\bm \pi (\mathbf s_k)\).
+Denne struktur medfører ca. 25 millioner parametre i det dybe neurale netværk.
+Mellem hvert lag blev den elementvise ikkelineære aktiveringsfunktion \textit{Eksponentiel lineær enhed} (eng: \textit{Exponential Linear Unit}, ELU) placeret, som i nogle læringsproblemer er vist at accelerere læringen bl.a. ved at have en normaliserende effekt på aktiveringerne \cite{ELU} 
 \[
 \operatorname{ELU}(x) = \maxi\{0, x\} + \operatorname{min}\{0, \eul{x} -1\}
 \]
