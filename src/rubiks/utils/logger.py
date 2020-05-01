@@ -7,7 +7,7 @@ class Unverbose:
 
 	def __enter__(self):
 		self.allow_verbose = False
-	
+
 	def __exit__(self, type, value, tb):
 		self.allow_verbose = True
 
@@ -22,16 +22,16 @@ class Logger:
 
 		self.fpath = fpath
 		self._verbose = verbose
-	
+
 		with open(self.fpath, "w+", encoding="utf-8") as logfile:
 			logfile.write("")
-		
+
 		self.log(title + "\n")
-	
+
 	def __call__(self, *tolog, with_timestamp=True):
 
 		self.log(*tolog, with_timestamp=with_timestamp)
-	
+
 	def log(self, *tolog, with_timestamp=True):
 
 		time = get_timestamp()
@@ -50,20 +50,20 @@ class Logger:
 			tolog = "\n".join(x.rstrip() for x in logs)
 			logfile.write(tolog+"\n")
 			print(tolog)
-	
+
 	def verbose(self, *tolog, with_timestamp=True):
 		if self._verbose and unverbose.allow_verbose:
 			self(*tolog, with_timestamp=with_timestamp)
-	
+
 	def is_verbose(self):
 		return self._verbose and unverbose.allow_verbose
-	
+
 	def section(self, title=""):
 		self.log()
 		self.log(title)
 
 class NullLogger(Logger):
-	
+
 	_verbose = False
 
 	def __init__(self, *args, **kwargs):

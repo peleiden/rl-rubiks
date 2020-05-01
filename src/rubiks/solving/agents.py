@@ -18,18 +18,18 @@ class Agent:
 
 	def action(self) -> (int, bool):
 		return Cube.action_space[self._searcher.action_queue.popleft()]
-	
+
 	def actions(self) -> (int, bool):
 		while self._searcher.action_queue:
 			yield self.action()
 
 	def __str__(self):
 		return str(self._searcher)
-	
+
 	def __len__(self):
 		# Returns number of explored states
 		return len(self._searcher)
-		
+
 
 class DeepAgent(Agent):
 	def __init__(self, searcher: DeepSearcher):
