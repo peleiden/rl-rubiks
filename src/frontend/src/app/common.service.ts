@@ -25,7 +25,7 @@ export class CommonService {
 
   state: cube;
   state20: cube20;
-  actions = ["F", "f", "B", "b", "T", "t", "D", "d", "L", "l", "R", "r"];
+  actions = ["f", "F", "b", "B", "t", "T", "d", "D", "l", "L", "r", "R"];
 
   constructor(private httpService: HttpService) { }
 
