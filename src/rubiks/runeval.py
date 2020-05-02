@@ -66,7 +66,7 @@ options = {
 		'default':	True,
 		'help':		'Whether or not graph search should be applied to MCTS to find the shortest path',
 		'type':		literal_eval,
-		'choices':	[True, False]
+		'choices':	[True, False],
 	},
 	'mcts_workers': {
 		'default':	10,
@@ -77,7 +77,7 @@ options = {
 		'default':	True,
 		'help':		'Whether or not there should be sampled when using the PolicySearch agent',
 		'type':		literal_eval,
-		'choices':	[True, False]
+		'choices':	[True, False],
 	},
 }
 
@@ -96,7 +96,7 @@ class EvalJob:
 			mcts_nu: float,
 			mcts_complete_graph: bool,
 			mcts_graph_search: bool,
-			mcts_workers: int = 10,
+			mcts_workers: int,
 			policy_sample: bool,
 
 			# Currently not set by parser
