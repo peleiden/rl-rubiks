@@ -40,16 +40,15 @@ options = {
 		'help':	    'Number of scramblings applied to each game in ADI',
 		"type":	    int,
 	},
-	'loss_weighting': {
-		'default':  'weighted',
-		'help':	    'Weighting method applied to scrambling depths',
-		'type':	    str,
-		'choices':  ['weighted', 'none', 'adaptive'],
-	},
 	'batch_size': {
 		'default':  50,
 		'help':	    'Number of training examples to be used in each parameter update',
 		'type':	    int
+	},
+	'alpha_update': {
+		'default':  0,
+		'help':	    'alpha is set to alpha + alpha_update 100 times during training, though never more than 1. 0 for weighted and 1 for unweighted',
+		'type':	    float,
 	},
 	'lr': {
 		'default':  1e-5,
@@ -58,17 +57,22 @@ options = {
 	},
 	'gamma': {
 		'default':  1,
-		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr lr_reductions times during training',
+		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr 100 times during training',
 		'type':	    float,
+	},
+	'update_interval': {
+		'default':	50,
+		'help':		'How often alpha and lr are updated. First update is performed when rollout == update_interval. Set to 0 for never',
+		'type':		int,
 	},
 	'optim_fn': {
 		'default':  'RMSprop',
 		'help':	    'Name of optimization function corresponding to class in torch.optim',
 		'type':	    str,
 	},
-	'evaluations': {
-		'default':  200,
-		'help':	    'Number of evaluations during training',
+	'evaluation_interval': {
+		'default':  100,
+		'help':	    'An evaluation is performed every evaluation_interval rollouts. Set to 0 for never',
 		'type':	    int,
 	},
 	'is2024': {
@@ -99,30 +103,30 @@ class TrainJob:
 	is2024: bool
 
 	def __init__(self,
-			name: str,
-			# Set by parser, should correspond to values in `options`  above and defaults can be controlled there
-			location: str,
-			rollouts: int,
-			rollout_games: int,
-			rollout_depth: int,
-			loss_weighting: str,
-			batch_size: int,
-			lr: float,
-			gamma: float,
-			optim_fn: str,
-			evaluations: int,
-			is2024: bool,
-			arch: str,
-			analysis: bool,
-
-
-			# Currently not set by argparser/configparser
-			lr_reductions: int = 100,
-			agent = DeepAgent(PolicySearch(None, True)),
-			scrambling_depths: tuple = (8,),
-
-			verbose: bool = True,
-		):
+				 name: str,
+				 # Set by parser, should correspond to values in `options`  above and defaults can be controlled there
+				 location: str,
+				 rollouts: int,
+				 rollout_games: int,
+				 rollout_depth: int,
+				 batch_size: int,
+				 alpha_update: float,
+				 lr: float,
+				 gamma: float,
+				 update_interval: int,
+				 optim_fn: str,
+				 evaluation_interval: int,
+				 is2024: bool,
+				 arch: str,
+				 analysis: bool,
+	
+	
+				 # Currently not set by argparser/configparser
+				 agent = DeepAgent(PolicySearch(None, True)),
+				 scrambling_depths: tuple = (8,),
+	
+				 verbose: bool = True,
+				 ):
 
 		self.name = name
 		assert isinstance(self.name, str)
@@ -133,17 +137,17 @@ class TrainJob:
 		assert self.rollout_games > 0
 		self.rollout_depth = rollout_depth
 		assert rollout_depth > 0
-
-		self.loss_weighting = loss_weighting
-		assert loss_weighting in ["adaptive", "weighted", "none"]
 		self.batch_size = batch_size
 		assert 0 < self.batch_size <= self.rollout_games * self.rollout_depth
+
+		self.alpha_update = alpha_update
+		assert 0 <= alpha_update <= 1
 		self.lr = lr
 		assert float(lr) and lr <= 1
 		self.gamma = gamma
 		assert 0 < gamma <= 1
-		self.lr_reductions = lr_reductions
-		assert 0 <= lr_reductions
+		self.update_interval = update_interval
+		assert isinstance(self.update_interval, int) and 0 <= self.update_interval
 		self.optim_fn = getattr(torch.optim, optim_fn)
 		assert issubclass(self.optim_fn, torch.optim.Optimizer)
 
@@ -152,8 +156,8 @@ class TrainJob:
 		self.logger.log(f"Initialized {self.name}")
 
 		self.evaluator = Evaluator(n_games=self.eval_games, max_time=self.max_time, scrambling_depths=scrambling_depths, logger=self.logger)
-		self.evaluations = evaluations
-		assert isinstance(self.evaluations, int) and 0 <= self.evaluations
+		self.evaluation_interval = evaluation_interval
+		assert isinstance(self.evaluation_interval, int) and 0 <= self.evaluation_interval
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
@@ -184,22 +188,22 @@ class TrainJob:
 		# Sets representation
 		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
 
-		self.logger(f"Rough upper bound on total evaluation time during training: {self.evaluations*self.evaluator.approximate_time()/60:.2f} min")
 		train = Train(self.rollouts,
-				batch_size			= self.batch_size,
-				rollout_games		= self.rollout_games,
-				rollout_depth		= self.rollout_depth,
-				loss_weighting		= self.loss_weighting,
-				optim_fn			= self.optim_fn,
-				lr					= self.lr,
-				gamma				= self.gamma,
-				lr_reductions		= self.lr_reductions,
-				agent				= self.agent,
-				logger				= self.logger,
-				evaluations			= self.evaluations,
-				evaluator			= self.evaluator,
-				with_analysis			= self.analysis
-		)
+					  batch_size			= self.batch_size,
+					  rollout_games			= self.rollout_games,
+					  rollout_depth			= self.rollout_depth,
+					  optim_fn				= self.optim_fn,
+					  alpha_update			= self.alpha_update,
+					  lr					= self.lr,
+					  gamma					= self.gamma,
+					  update_interval		= self.update_interval,
+					  agent					= self.agent,
+					  logger				= self.logger,
+					  evaluation_interval	= self.evaluation_interval,
+					  evaluator				= self.evaluator,
+					  with_analysis			= self.analysis,
+				  )
+		self.logger(f"Rough upper bound on total evaluation time during training: {len(train.evaluation_rollouts)*self.evaluator.approximate_time()/60:.2f} min")
 
 		net = Model.create(self.model_cfg, self.logger).to(gpu)
 		net, min_net = train.train(net)
@@ -222,7 +226,7 @@ class TrainJob:
 		np.save(f"{datapath}/policy_losses.npy", train.policy_losses)
 		np.save(f"{datapath}/value_losses.npy", train.value_losses)
 		np.save(f"{datapath}/losses.npy", train.train_losses)
-		np.save(f"{datapath}/evaluation_rollouts.npy", train.evaluations)
+		np.save(f"{datapath}/evaluation_rollouts.npy", train.evaluation_rollouts)
 		np.save(f"{datapath}/evaluations.npy", train.eval_rewards)
 
 		return train.train_rollouts, train.train_losses

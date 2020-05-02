@@ -26,69 +26,71 @@ class Train:
 	policy_losses: np.ndarray
 	train_losses: np.ndarray
 	eval_rewards = list()
+	avg_value_targets = list()
 
 	def __init__(self,
-			rollouts: int,
-			batch_size: int, # Required to be > 1 when training with batchnorm
-			rollout_games: int,
-			rollout_depth: int,
-			loss_weighting: str,
-			optim_fn,
-			lr: float,
-			gamma: float,
-			lr_reductions: int,
-			agent: DeepAgent,
-			evaluator: Evaluator,
-			evaluations: int,
-			with_analysis: bool,
-			policy_criterion	= torch.nn.CrossEntropyLoss,
-			value_criterion		= torch.nn.MSELoss,
-			logger: Logger		= NullLogger(),
-		):
+				 rollouts: int,
+				 batch_size: int,  # Required to be > 1 when training with batchnorm
+				 rollout_games: int,
+				 rollout_depth: int,
+				 optim_fn,
+				 alpha_update: float,
+				 lr: float,
+				 gamma: float,
+				 update_interval: int,
+				 agent: DeepAgent,
+				 evaluator: Evaluator,
+				 evaluation_interval: int,
+				 with_analysis: bool,
+				 policy_criterion	= torch.nn.CrossEntropyLoss,
+				 value_criterion	= torch.nn.MSELoss,
+				 logger: Logger		= NullLogger(),
+				 ):
 		"""Sets up evaluation array, instantiates critera and stores and documents settings
 
 
 		:param bool with_analysis: If true, a number of statistics relating to loss behaviour and model output are stored.
-		""" #TODO: Document params
+		"""  # TODO: Document params
 		self.rollouts = rollouts
 		self.train_rollouts = np.arange(self.rollouts)
 		self.batch_size = self.states_per_rollout if not batch_size else batch_size
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
-		self.loss_weighting = loss_weighting
-		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Reduces vram usage
+		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Used to limit vram usage
 
-		self.evaluations = np.unique(np.linspace(0, self.rollouts-1, evaluations, dtype=int)) if evaluations else np.array([], dtype=int)
-		self.evaluations.sort()
+		# Perform evaluation every evaluation_interval and after last rollout
+		self.evaluation_rollouts = np.array(list(range(0, self.rollouts, evaluation_interval)) + [self.rollouts-1])\
+			if evaluation_interval else np.array([])
 		self.agent = agent
 
-
+		self.alpha_update = alpha_update  # alpha <- alpha + alpha_update every update_interval rollouts (excl. rollout 0)
 		self.lr	= lr
-		self.gamma = gamma
-		self.lr_reductions = lr_reductions
+		self.gamma = gamma  # lr <- lr * gamma every update_interval rollouts (excl. rollout 0)
+		self.update_interval = update_interval  # How often alpha and lr are updated
 		self.optim = optim_fn
 		self.policy_criterion = policy_criterion(reduction='none')
 		self.value_criterion = value_criterion(reduction='none')
-
 
 		self.evaluator = evaluator
 		self.log = logger
 		self.log("\n".join([
 			"Created trainer",
+			f"Alpha update: {self.alpha_update:.2f}"
 			f"Learning rate and gamma: {self.lr} and {self.gamma}",
-			f"  Learning rate will update {self.lr_reductions} times during training: lr <- gamma * lr",
+			f"Learning rate and alpha will update every {self.update_interval} rollouts: lr <- {self.gamma:.2f} * lr and alpha += {self.alpha_update:.2f}"\
+				if self.update_interval else "Learning rate and alpha will not be updated during training",
 			f"Optimizer:      {self.optim}",
 			f"Policy and value criteria: {self.policy_criterion} and {self.value_criterion}",
 			f"Rollouts:       {self.rollouts}",
 			f"Batch size:     {self.batch_size}",
 			f"Rollout games:  {self.rollout_games}",
 			f"Rollout depth:  {self.rollout_depth}",
-			f"Loss weighting: {self.loss_weighting}",
+			f"alpha update:   {self.alpha_update}",
 		]))
 
 		self.with_analysis = with_analysis
 		if self.with_analysis:
-			self.analysis = TrainAnalysis(self.evaluations, self.rollout_games, self.rollout_depth, extra_evals=50, logger=self.log) #Logger should not be set in standard use
+			self.analysis = TrainAnalysis(self.evaluation_rollouts, self.rollout_games, self.rollout_depth, extra_evals=50, logger=self.log) #Logger should not be set in standard use
 
 		self.tt = TickTock()
 
@@ -107,18 +109,19 @@ class Train:
 
 		self.tt.reset()
 		self.tt.tick()
-		self.states_per_rollout = (self.rollout_depth) * self.rollout_games
+		self.states_per_rollout = self.rollout_depth * self.rollout_games
 		self.log(f"Beginning training. Optimization is performed in batches of {self.batch_size}")
 		self.log("\n".join([
 			f"Rollouts: {self.rollouts}",
 			f"Each consisting of {self.rollout_games} games with a depth of {self.rollout_depth}",
-			f"Evaluations: {len(self.evaluations)}",
+			f"Evaluations: {len(self.evaluation_rollouts)}",
 		]))
 		best_solve = 0
 		min_net = net.clone()
 		self.agent.update_net(net)
 		if self.with_analysis: self.analysis.orig_params = net.get_params()
 
+		alpha = 1 if self.alpha_update == 1 else 0
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, self.gamma)
 		self.policy_losses, self.value_losses, self.train_losses, self.eval_rewards, self.avg_value_targets = np.zeros(self.rollouts),\
@@ -130,7 +133,7 @@ class Train:
 			reset_cuda()
 
 			self.tt.profile("ADI training data")
-			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, rollout)
+			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, alpha)
 			self.tt.profile("To cuda")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
 																		 value_targets.to(gpu),\
@@ -166,13 +169,18 @@ class Train:
 			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
 			self.tt.end_profile("Training loop")
 
-			# Updates learning rate
-			if rollout in np.linspace(0, self.rollouts, self.lr_reductions, dtype=int)[1:-1]:
-				lr_scheduler.step()
-				lr = optimizer.param_groups[0]["lr"]
+			# Updates learning rate and alpha
+			if rollout and self.update_interval and rollout % self.update_interval == 0:
 				if self.gamma != 1:
+					lr_scheduler.step()
+					lr = optimizer.param_groups[0]["lr"]
 					self.log(f"Updated learning rate from {lr/self.gamma:.2e} to {lr:.2e}")
-
+				if (alpha + self.alpha_update <= 1 or np.isclose(alpha + self.alpha_update, 1)) and self.alpha_update:
+					alpha += self.alpha_update
+					self.log(f"Updated alpha from {alpha-self.alpha_update:.2f} to {alpha:.2f}")
+				elif alpha < 1 and alpha + self.alpha_update > 1 and self.alpha_update:
+					self.log(f"Updated alpha from {alpha:.2f} to 1")
+					alpha = 1
 
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
@@ -182,7 +190,7 @@ class Train:
 				self.analysis.rollout(net, rollout, value_targets)
 				self.tt.end_profile("Analysis of rollout")
 
-			if rollout in self.evaluations:
+			if rollout in self.evaluation_rollouts:
 				net.eval()
 
 				self.agent.update_net(net)
@@ -202,12 +210,13 @@ class Train:
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
-		eval_time = self.tt.profiles[f'Evaluating using agent {self.agent}'].sum() if len(self.evaluations) else 0
+		eval_time = self.tt.profiles[f'Evaluating using agent {self.agent}'].sum() if len(self.evaluation_rollouts) else 0
 		train_time = self.tt.profiles["Training loop"].sum()
 		adi_time = self.tt.profiles["ADI training data"].sum()
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * Cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
-		self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
+		if len(self.evaluation_rollouts):
+			self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
 		self.log("\n".join([
 			f"Total running time:            {self.tt.stringify_time(total_time, 's')}",
 			f"- Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
@@ -227,7 +236,7 @@ class Train:
 		return slices
 
 	@no_grad
-	def ADI_traindata(self, net, rollout: int):
+	def ADI_traindata(self, net, alpha: float):
 		""" Training data generation
 
 		Implements Autodidactic Iteration as per McAleer, Agostinelli, Shmakov and Baldi, "Solving the Rubik's Cube Without Human Knowledge" section 4.1
@@ -274,7 +283,7 @@ class Train:
 				value_parts = [net(substates_oh[slice_], policy=False, value=True).squeeze() for slice_ in self._get_adi_ff_slices()]
 				values = torch.cat(value_parts).cpu()
 				break
-			except RuntimeError as e:  # Usually caused by running out of vram
+			except RuntimeError as e:  # Usually caused by running out of vram. If not, the error is still raised, else batch size is reduced
 				if "alloc" not in str(e):
 					raise e
 				self.log.verbose(f"Intercepted RuntimeError {e}\nIncreasing number of ADI feed forward batches from {self.adi_ff_batches} to {self.adi_ff_batches*2}")
@@ -289,16 +298,10 @@ class Train:
 		value_targets[solved_scrambled_states] = 0
 		self.tt.end_profile("Calculating targets")
 
-		if self.loss_weighting == "adaptive":
-			weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
-			unweighted = np.ones_like(weighted)
-			alpha = rollout / self.rollouts
-			loss_weights = (1-alpha) * weighted + alpha * unweighted
-		elif self.loss_weighting == "weighted":
-			loss_weights = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
-		else:
-			loss_weights = np.ones(self.rollout_games*self.rollout_depth)
-		loss_weights /= loss_weights.sum()
+		weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
+		unweighted = np.ones_like(weighted)
+		weighted, unweighted = weighted / weighted.sum(), unweighted / len(unweighted)
+		loss_weights = (1-alpha) * weighted + alpha * unweighted
 
 		if self.with_analysis:
 			self.tt.profile("ADI analysis")
@@ -317,19 +320,19 @@ class Train:
 		loss_ax.set_ylim(ylim*np.max(self.train_losses))
 
 		colour = "red"
-		loss_ax.set_ylabel(f"Cross Entropy + MSE loss ({self.loss_weighting})", color = colour)
+		loss_ax.set_ylabel(f"Cross Entropy + MSE loss (alpha update: {self.alpha_update:.2f})", color = colour)
 		loss_ax.plot(self.train_rollouts, self.train_losses, label="Training loss", color=colour)
 		loss_ax.plot(self.train_rollouts, self.policy_losses, linestyle="dashdot", label="Policy loss", color="orange")
 		loss_ax.plot(self.train_rollouts, self.value_losses, linestyle="dotted", label="Value loss", color="green")
 		loss_ax.tick_params(axis='y', labelcolor = colour)
 		h1, l1 = loss_ax.get_legend_handles_labels()
 
-		if len(self.evaluations):
+		if len(self.evaluation_rollouts):
 			color = 'blue'
 			reward_ax = loss_ax.twinx()
 			reward_ax.set_ylim(ylim)
 			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
-			reward_ax.plot(self.evaluations, self.eval_rewards, "-o", color=color, label="Fraction of cubes solved")
+			reward_ax.plot(self.evaluation_rollouts, self.eval_rewards, "-o", color=color, label="Fraction of cubes solved")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 			h2, l2 = reward_ax.get_legend_handles_labels()
 			h1 += h2

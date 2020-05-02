@@ -5,5 +5,25 @@
 
 
 \appendix
+\chapter{Beviser}
+\section{Sum af linearkombinationer af vektorer med længde 1}
+\begin{theorem}\label{app:vsum}
+	Lad $ \mathbf u, \mathbf v\in\RR^n $ være to vektorer, der begge summer til 1.
+	Da gælder for alle $ a+b=1, a, b\in\RR $, at
+	\begin{equation*}
+		\sum_{i=1}^n(a\mathbf u+b\mathbf v)=1
+	\end{equation*}
+\end{theorem}
+\begin{proof}
+	Konvergente summer er lineære.
+	Det gælder derfor, at
+	\begin{equation*}
+		\sum_{i=1}^n(a\mathbf u+b\mathbf v)
+		=a\sum_{i=1}^n \mathbf u+b\sum_{i=1}^n \mathbf v
+	\end{equation*}
+	Pr. antagelserne er begge summer 1.
+	Det efterlader $ a+b $, der pr. definition er 1.
+\end{proof}
+
 
 \end{document}
