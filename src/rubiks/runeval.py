@@ -68,6 +68,11 @@ options = {
 		'type':		literal_eval,
 		'choices':	[True, False]
 	},
+	'mcts_workers': {
+		'default':	10,
+		'help':		'Number of sequential workers in MCTS',
+		'type':		int,
+	},
 	'policy_sample': {
 		'default':	True,
 		'help':		'Whether or not there should be sampled when using the PolicySearch agent',
@@ -91,10 +96,10 @@ class EvalJob:
 			mcts_nu: float,
 			mcts_complete_graph: bool,
 			mcts_graph_search: bool,
+			mcts_workers: int = 10,
 			policy_sample: bool,
 
 			# Currently not set by parser
-			mcts_workers: int = 10,
 			verbose: bool = True,
 			in_subfolder: bool = False, # Should be true if there are multiple experiments
 		):
