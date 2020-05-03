@@ -3,7 +3,7 @@ import numpy as np
 from src.rubiks import gpu, set_is2024
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
-from src.rubiks.solving.search import MCTS
+from src.rubiks.solving.search import MCTS, AStar
 from src.rubiks.utils import seedsetter
 from src.tests import MainTest
 
@@ -47,4 +47,11 @@ class TestMCTS(MainTest):
 			# Tests P
 			assert np.isclose(state.P.sum(), 1)
 
+class TestAStar(MainTest):
 
+	def test_neighbors(self):
+		net = Model.create(ModelConfig()).to(gpu).eval()
+		state, _, _ = Cube.scramble(50)
+		searcher = AStar(net)
+		neighbors = searcher.get_neighbors(state)
+		assert len(neighbors) == 12
