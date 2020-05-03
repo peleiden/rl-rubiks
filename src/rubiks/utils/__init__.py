@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 import random
+from datetime import datetime
+
 try:
 	import git
 	has_git = True
@@ -18,6 +20,16 @@ def seedsetter():
 
 def get_commit():
 	if has_git:
-		repo = git.Repo(".")
+		repo = git.Repo(".")  # TODO: Search upwards in directories
 		return str(repo.head.commit)
 	return "Unknown (install GitPython to get this)"
+
+
+
+def get_timestamp(for_file=False):
+	# Returns a timestamp
+	# File name friendly format if for_file
+	if for_file:
+		return "-".join(str(datetime.now()).split(".")[0].split(":")).replace(" ", "_")
+	else:
+		return str(datetime.now())

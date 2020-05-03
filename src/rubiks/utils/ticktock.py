@@ -1,18 +1,8 @@
-from datetime import datetime
 from time import perf_counter
-import numpy as np
-
-def get_timestamp(for_file=False):
-	# Returns a timestamp
-	# File name friendly format if for_file
-	if for_file:
-		return "-".join(str(datetime.now()).split(".")[0].split(":")).replace(" ", "_")
-	else:
-		return str(datetime.now())
 
 class Profile:
 
-	_start: float
+	start: float
 
 	def __init__(self, depth: int):
 		self.hits = []
