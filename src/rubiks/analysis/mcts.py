@@ -74,8 +74,10 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 			except KeyError:
 				pass
 		log(f"Solved {np.mean(sols)*100:.2f} % of configurations")
-	expand /= n * time_limits
-	explore /= n * time_limits
+	expand /= n
+	explore /= n
+	expand, explore = expand / (expand + explore), explore / (expand + explore)
+	
 	plt.figure(figsize=(15, 10))
 	plt.plot(time_limits, expand*100, "o-", label="Time spent expanding")
 	plt.plot(time_limits, explore*100, "o-", label="Time spent exploring")
@@ -85,7 +87,7 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 	# plt.semilogx()
 	plt.grid(True)
 	plt.savefig(f"data/local_analyses/mcts_time_w={workers}.png")
-	plt.show()
+	# plt.show()
 	plt.clf()
 
 if __name__ == "__main__":
@@ -100,8 +102,8 @@ if __name__ == "__main__":
 	# analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
 	# analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
 	n = 50
-	analyse_time_distribution(20, 0.5, 0.001, 10)
-	analyse_time_distribution(20, 0.5, 0.001, 100)
+	analyse_time_distribution(25, 0.5, 0.001, 10)
+	analyse_time_distribution(25, 0.5, 0.001, 100)
 
 
 
