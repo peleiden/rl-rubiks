@@ -57,7 +57,7 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	plt.clf()
 
 def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
-	time_limits = np.logspace(*np.log10([.1, 36]), 20)
+	time_limits = np.linspace(1, 36, 10)
 	expand = np.zeros_like(time_limits)
 	explore = np.zeros_like(time_limits)
 	searcher = MCTS(net, c=c, nu=nu, workers=workers, complete_graph=False, search_graph=False)
@@ -73,18 +73,18 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 				explore[i] += sum(searcher.tt.profiles["Exploring next node"].hits)
 			except KeyError:
 				pass
-		log(f"Found solutions in {np.mean(sols)*100:.2f} % of cases")
-	expand /= n
-	explore /= n
-	plt.plot(time_limits, expand, "o-", label="Time spent expanding")
-	plt.plot(time_limits, explore, "o-", label="Time spent exploring")
+		log(f"Solved {np.mean(sols)*100:.2f} % of configurations")
+	expand /= n * time_limits
+	explore /= n * time_limits
+	plt.figure(figsize=(15, 10))
+	plt.plot(time_limits, expand*100, "o-", label="Time spent expanding")
+	plt.plot(time_limits, explore*100, "o-", label="Time spent exploring")
 	plt.legend(loc=2)
 	plt.xlabel("Time limit [s]")
-	plt.ylabel(f"Mean time spent over {n} runs")
-	plt.semilogx()
-	plt.semilogy()
+	plt.ylabel(f"Mean time spent over {n} runs [%]")
+	# plt.semilogx()
 	plt.grid(True)
-	plt.savefig(f"data/local_analyses/mcts_time.png")
+	plt.savefig(f"data/local_analyses/mcts_time_w={workers}.png")
 	plt.show()
 	plt.clf()
 
@@ -99,8 +99,9 @@ if __name__ == "__main__":
 	# analyze_var(var="depth", values=np.arange(1, 21, 1), other_vars=get_other_vars("depth"))
 	# analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
 	# analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
-	n = 30
-	analyse_time_distribution(18, 0.5, 0.001, 10)
+	n = 50
+	analyse_time_distribution(20, 0.5, 0.001, 10)
+	analyse_time_distribution(20, 0.5, 0.001, 100)
 
 
 
