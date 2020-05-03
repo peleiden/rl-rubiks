@@ -17,7 +17,7 @@ net = Model.load("data/local_good_net").eval().to(gpu)
 
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float):
 	state, f, d = Cube.scramble(depth, True)
-	searcher = MCTS(net, c, nu, False, workers)
+	searcher = MCTS(net, c, nu, False, False, workers)
 	is_solved = searcher.search(state, time_limit)
 	assert is_solved == (Cube.get_solved().tostring() in searcher.states)
 	return is_solved, len(searcher.states)
@@ -56,6 +56,38 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	# plt.show()
 	plt.clf()
 
+def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
+	time_limits = np.logspace(*np.log10([.1, 36]), 20)
+	expand = np.zeros_like(time_limits)
+	explore = np.zeros_like(time_limits)
+	searcher = MCTS(net, c=c, nu=nu, workers=workers, complete_graph=False, search_graph=False)
+	log.section(f"Analyzing time distribution at depth {depth}\nExpected max time <~ {TickTock.stringify_time(sum(time_limits*n), 'm')}")
+	for i, tl in enumerate(time_limits):
+		log(f"Analyzing with time limit of {tl:.2f} s")
+		sols = np.zeros(n)
+		for j in range(n):
+			state, f, d = Cube.scramble(depth, True)
+			sols[j] = searcher.search(state, time_limit=tl)
+			expand[i] += sum(searcher.tt.profiles["Expanding leaves"].hits)
+			try:
+				explore[i] += sum(searcher.tt.profiles["Exploring next node"].hits)
+			except KeyError:
+				pass
+		log(f"Found solutions in {np.mean(sols)*100:.2f} % of cases")
+	expand /= n
+	explore /= n
+	plt.plot(time_limits, expand, "o-", label="Time spent expanding")
+	plt.plot(time_limits, explore, "o-", label="Time spent exploring")
+	plt.legend(loc=2)
+	plt.xlabel("Time limit [s]")
+	plt.ylabel(f"Mean time spent over {n} runs")
+	plt.semilogx()
+	plt.semilogy()
+	plt.grid(True)
+	plt.savefig(f"data/local_analyses/mcts_time.png")
+	plt.show()
+	plt.clf()
+
 if __name__ == "__main__":
 	# set_repr(False)
 	time_limit = .2
@@ -63,10 +95,12 @@ if __name__ == "__main__":
 	default_vars = { "depth": 8, "c": 1, "nu": 0.01, "workers": 10 }
 	get_other_vars = lambda excl: {kw: v for kw, v in default_vars.items() if kw != excl}
 	# seedsetter()
-	analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
+	# analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
 	# analyze_var(var="depth", values=np.arange(1, 21, 1), other_vars=get_other_vars("depth"))
-	analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
-	analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
+	# analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
+	# analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
+	n = 30
+	analyse_time_distribution(18, 0.5, 0.001, 10)
 
 
 
