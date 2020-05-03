@@ -149,9 +149,9 @@ def MCTS_optimize():
 		'complete_graph': False,
 		'search_graph': False,
 	}
+
 	logger = Logger(os.path.join(args.location, 'optimizer.log'), 'Optimization')
-
-
+	logger.log(f"MCTS optimization. Loaded network from {model_path}.")
 	evaluator = Evaluator(n_games=20, max_time=1, scrambling_depths=range(12, 20))
 	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
 	optimizer.objective_from_evaluator(evaluator, MCTS, persistent_params, param_prepper=prepper)

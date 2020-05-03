@@ -1,6 +1,6 @@
 import os
 
-from src.rubiks.utils.ticktock import get_timestamp
+from src.rubiks.utils import get_timestamp
 
 class Unverbose:
 	allow_verbose = True

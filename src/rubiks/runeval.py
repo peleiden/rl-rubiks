@@ -74,7 +74,7 @@ options = {
 		'type':		int,
 	},
 	'policy_sample': {
-		'default':	True,
+		'default':	False,
 		'help':		'Whether or not there should be sampled when using the PolicySearch agent',
 		'type':		literal_eval,
 		'choices':	[True, False],

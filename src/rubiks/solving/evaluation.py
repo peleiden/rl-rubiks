@@ -58,7 +58,8 @@ class Evaluator:
 		for i, d in enumerate(self.scrambling_depths):
 			for _ in range(self.n_games):
 				cfgs.append((agent, self.max_time, d))
-
+		depths = np.repeat(self.scrambling_depths, self.n_games)
+		assert np.all(depths==np.array([x[2] for x in cfgs]))  # TODO: Remove after confidence
 		res = []
 		for i, cfg in enumerate(cfgs):
 			self.tt.profile(f"Evaluation of {agent}. Depth {cfg[2]}")
