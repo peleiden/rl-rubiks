@@ -411,11 +411,14 @@ class AStar(DeepSearcher):
 
 		oh = Cube.as_oh(state)
 		p, v = self.net(oh)  # Policy and value
-		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': -float(v.cpu()), 'parent': None}
+		self.open[state.tostring()] = {'g_cost': 0.001, 'h_cost': -float(v.cpu()), 'parent': 'Beginning'} #FIXME: 1/h
 		del p, v
 
 		# explore leaves
 		while self.tt.tock() < time_limit:
+			if len(self.open) == 0: # FIXME: bug
+				print('AStar open was empty.')
+				return False
 			# choose current node as the node in open with the lowest f cost
 			idx = np.argmin([self.open[node]['g_cost'] + self.open[node]['h_cost'] for node in self.open])
 			current = list(self.open)[idx]
@@ -450,16 +453,16 @@ class AStar(DeepSearcher):
 		else:
 			oh = Cube.as_oh(node)
 			p, v = self.net(oh)
-			return -float(v.cpu()) #alternativ idé: 1/float(v.cpu())
+			return -float(v.cpu())
 
 	def __str__(self):
 		return f"Astar search"
 
 	def __len__(self):
-		node = list(self.closed)[-1]
+		node = list(self.closed)[-1] # FIXME: korrekt? 
 		count = 0
 		while True:
 			node = self.closed[node]['parent']
-			if node == None: return count
+			if node == 'Beginning': return count
 			count += 1
 
