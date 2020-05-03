@@ -84,6 +84,7 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 	plt.legend(loc=2)
 	plt.xlabel("Time limit [s]")
 	plt.ylabel(f"Mean time spent over {n} runs [%]")
+	plt.ylim([-0.05, 1.05])
 	# plt.semilogx()
 	plt.grid(True)
 	plt.savefig(f"data/local_analyses/mcts_time_w={workers}.png")
