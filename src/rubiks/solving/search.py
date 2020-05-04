@@ -411,7 +411,7 @@ class AStar(DeepSearcher):
 
 		oh = Cube.as_oh(state)
 		p, v = self.net(oh)  # Policy and value
-		self.open[state.tostring()] = {'g_cost': 0.001, 'h_cost': -float(v.cpu()), 'parent': 'Beginning'} #FIXME: 1/h
+		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': -float(v.cpu()), 'parent': 'Starting node'}
 		del p, v
 
 		# explore leaves
@@ -456,13 +456,13 @@ class AStar(DeepSearcher):
 			return -float(v.cpu())
 
 	def __str__(self):
-		return f"Astar search"
+		return f"AStar search"
 
-	def __len__(self):
-		node = list(self.closed)[-1] # FIXME: korrekt? 
+	def __len__(self): 
+		node = list(self.closed)[-1]  
 		count = 0
 		while True:
 			node = self.closed[node]['parent']
-			if node == 'Beginning': return count
+			if node == 'Starting node': return count
 			count += 1
 
