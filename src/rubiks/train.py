@@ -259,7 +259,11 @@ class Train:
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
-		solved_scrambled_states = (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
+		solved_scrambled_states = Cube.multi_is_solved(states)
+		solved_scrambled_states_new = np.zeros(len(states), dtype=bool)
+		solved_scrambled_states_new[np.arange(0, len(states), self.rollout_depth)] = True
+		assert np.all(solved_scrambled_states_new==solved_scrambled_states)  # TODO: Remove after confidence
+
 
 		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
@@ -271,7 +275,7 @@ class Train:
 
 		# Get rewards. 1 for solved states else -1
 		self.tt.profile("Reward")
-		solved_substates = (substates == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
+		solved_substates = Cube.multi_is_solved(substates)
 		rewards = torch.ones(*solved_substates.shape)
 		rewards[~solved_substates] = -1
 		self.tt.end_profile("Reward")
