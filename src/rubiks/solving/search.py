@@ -251,9 +251,8 @@ class MCTS(DeepSearcher):
 		Returns the index of the leaf and the action to solve it
 		Both are -1 if no solution is found
 		"""
-		print(f"EXPANDING LEAVES: {leaves_idcs}")
 		# Ensure space in stacks
-		# TODO: Test that this is sufficient
+		# TODO: Test that this is suf)ficient
 		if len(self.indices) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
 			self.increase_stack_size()
 		
@@ -268,9 +267,9 @@ class MCTS(DeepSearcher):
 		solved_new_states_idcs = np.where(solved_new_states)[0]
 		if solved_new_states_idcs.size:
 			i = solved_new_states_idcs[0]
-			leaf_idx, action_idx = leaves_idcs[i // Cube.action_dim], leaves_idcs[i % Cube.action_dim]
+			leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
 			self.indices[new_states[i].tostring()] = len(self.indices) + 1
-			self._update_neighbors(leaf_idx)
+			self._update_neighbors(leaves_idcs[leaf_idx])
 			return leaf_idx, action_idx
 		self.tt.end_profile("Checking for solved state")
 		new_states_strs = [state.tostring() for state in new_states]
@@ -291,21 +290,22 @@ class MCTS(DeepSearcher):
 
 		# Updates all values for new states
 		# TODO: Build in tests to make sure no values are overwritten
-		new_states_idcs = np.array([len(self.indices)+i+1 for i, u in enumerate(unexplored_new_states) if u], dtype=int)
-		self.indices.update({s: len(self.indices)+i+1 for i, (s, u) in enumerate(zip(new_states_strs, unexplored_new_states)) if u})
+		new_states_idcs = np.arange(len(self.indices)+1, len(self.indices)+unexplored_new_states.sum()+1)
+		unexplored_new_states_strs = [s for s, u in zip(new_states_strs, unexplored_new_states) if u]
+		self.indices.update({ s: i for i, s in zip(new_states_idcs, unexplored_new_states_strs) })
 		self.states[new_states_idcs] = new_states[unexplored_new_states]
 		self.P[new_states_idcs] = p[unexplored_new_states]
 		self.V[new_states_idcs] = v[unexplored_new_states]
 		self.leaves[leaves_idcs] = False
 		self.neighbors[repeated_states[unexplored_new_states], actions_taken[unexplored_new_states]] = new_states_idcs
-		self.neighbors[new_states_idcs, Cube.rev_actions(actions_taken[unexplored_new_states])] = leaves_idcs
+		self.neighbors[new_states_idcs, Cube.rev_actions(actions_taken[unexplored_new_states])] = repeated_states[unexplored_new_states]
 
 		# Updates neighbors for already seen states
 		# TODO: Build in tests to make sure no values are overwritten
 		old_states_idcs = np.array([self.indices[s] for s, e in zip(new_states_strs, explored_new_states) if e], dtype=int)
 		self.neighbors[repeated_states[explored_new_states], actions_taken[explored_new_states]] = old_states_idcs
-		self.neighbors[old_states_idcs, Cube.rev_actions(actions_taken[explored_new_states])] = leaves_idcs
-		self.leaves[self.neighbors[old_states_idcs].all(axis=1)] = False
+		self.neighbors[old_states_idcs, Cube.rev_actions(actions_taken[explored_new_states])] = repeated_states[explored_new_states]
+		self.leaves[old_states_idcs[self.neighbors[old_states_idcs].all(axis=1)]] = False
 		self.tt.end_profile("Generate new states")
 
 		self.tt.profile("Update W")
@@ -325,9 +325,9 @@ class MCTS(DeepSearcher):
 		"""
 		self.tt.profile("Update neighbors")
 		state = self.states[state_idx]
-		substates = Cube.multi_rotate(np.repeat(state, Cube.action_dim, axis=0), *Cube.iter_actions())
+		substates = Cube.multi_rotate(np.repeat([state], Cube.action_dim, axis=0), *Cube.iter_actions())
 		actions_taken = np.array([i for i, s in enumerate(substates) if s.tostring() in self.indices], dtype=int)
-		substate_idcs = np.array([self.indices[i] for i in actions_taken])
+		substate_idcs = np.array([self.indices[s.tostring()] for s in substates[actions_taken]])
 		self.neighbors[[state_idx]*len(actions_taken), actions_taken] = substate_idcs
 		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = state_idx
 		self.leaves[[state_idx, *substate_idcs]] = self.neighbors[[state_idx, *substate_idcs]].all(axis=1)
@@ -344,15 +344,17 @@ class MCTS(DeepSearcher):
 		self.tt.profile("Exploring next node")
 		while self.tt.tock() < time_limit and states_idcs.size:
 			sqrtN = np.sqrt(self.N[states_idcs].sum(axis=1))
-			actions = np.empty(workers, dtype=int)
+			actions = np.empty(len(states_idcs), dtype=int)
 			# States from which an action is taken for the first time
 			no_prev_action = sqrtN < self.eps
 			actions[no_prev_action] = np.random.randint(0, 12, no_prev_action.sum())
 			# States from which an action has been taken previously
-			prev_action_idcs = states_idcs[~no_prev_action]
-			U = self.c * self.P[prev_action_idcs] * sqrtN / (1 + self.N[prev_action_idcs])
-			Q = self.W[prev_action_idcs] - self.L[prev_action_idcs]
-			actions[~no_prev_action] = (U - Q).argmax(axis=1)
+			prev_action = ~no_prev_action
+			prev_action_idcs = states_idcs[prev_action]
+			if any(prev_action_idcs):
+				U = (self.c * self.P[prev_action_idcs].T * sqrtN[prev_action] / (1 + self.N[prev_action_idcs].T)).T
+				Q = self.W[prev_action_idcs] - self.L[prev_action_idcs]
+				actions[~no_prev_action] = (U - Q).argmax(axis=1)
 			# Updates
 			self.N[states_idcs, actions] += 1  # TODO: Bug in these two lines: Multiples are only counted once, though this may actually be advantageous
 			self.L[states_idcs, actions] += self.nu
