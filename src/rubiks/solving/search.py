@@ -166,7 +166,7 @@ class PolicySearch(DeepSearcher):
 		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
 
 
-class MCTSTODO(DeepSearcher):
+class MCTS(DeepSearcher):
 
 	_expand_nodes = 1000  # Expands stack by 1000, then 2000, then 4000 and etc. each expansion
 	n_states = 0
@@ -219,6 +219,7 @@ class MCTSTODO(DeepSearcher):
 		self.tt.tick()
 
 		self.indices[state.tostring()] = 1
+		self.states[1] = state
 		if Cube.is_solved(state): return True
 		oh = Cube.as_oh(state)
 		p, v = self.net(oh)
@@ -250,6 +251,7 @@ class MCTSTODO(DeepSearcher):
 		Returns the index of the leaf and the action to solve it
 		Both are -1 if no solution is found
 		"""
+		print(f"EXPANDING LEAVES: {leaves_idcs}")
 		# Ensure space in stacks
 		# TODO: Test that this is sufficient
 		if len(self.indices) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
@@ -282,8 +284,8 @@ class MCTSTODO(DeepSearcher):
 		self.tt.end_profile("Feedforward")
 
 		self.tt.profile("Generate new states")
-		unexplored_new_states = np.array([s in self.indices for s in new_states_strs])
-		explored_new_states = ~unexplored_new_states
+		explored_new_states = np.array([s in self.indices for s in new_states_strs])
+		unexplored_new_states = ~explored_new_states
 		repeated_states = np.repeat(leaves_idcs, Cube.action_dim)
 		actions_taken = np.tile(np.arange(Cube.action_dim), len(leaves_idcs))
 
@@ -293,14 +295,14 @@ class MCTSTODO(DeepSearcher):
 		self.indices.update({s: len(self.indices)+i+1 for i, (s, u) in enumerate(zip(new_states_strs, unexplored_new_states)) if u})
 		self.states[new_states_idcs] = new_states[unexplored_new_states]
 		self.P[new_states_idcs] = p[unexplored_new_states]
-		self.V[new_states_idcs] = p[unexplored_new_states]
+		self.V[new_states_idcs] = v[unexplored_new_states]
 		self.leaves[leaves_idcs] = False
 		self.neighbors[repeated_states[unexplored_new_states], actions_taken[unexplored_new_states]] = new_states_idcs
 		self.neighbors[new_states_idcs, Cube.rev_actions(actions_taken[unexplored_new_states])] = leaves_idcs
 
 		# Updates neighbors for already seen states
 		# TODO: Build in tests to make sure no values are overwritten
-		old_states_idcs = np.array([self.indices[s] for s, e in zip(new_states_strs, explored_new_states) if e])
+		old_states_idcs = np.array([self.indices[s] for s, e in zip(new_states_strs, explored_new_states) if e], dtype=int)
 		self.neighbors[repeated_states[explored_new_states], actions_taken[explored_new_states]] = old_states_idcs
 		self.neighbors[old_states_idcs, Cube.rev_actions(actions_taken[explored_new_states])] = leaves_idcs
 		self.leaves[self.neighbors[old_states_idcs].all(axis=1)] = False
@@ -314,7 +316,22 @@ class MCTSTODO(DeepSearcher):
 		self.tt.end_profile("Update W")
 
 		return -1, -1
-		
+
+	def _update_neighbors(self, state_idx: int):
+		"""
+		# Expands around state. If a new state is already in the tree, neighbor relations are updated
+		# Assumes that state is already in the tree
+		# Used for node expansion
+		"""
+		self.tt.profile("Update neighbors")
+		state = self.states[state_idx]
+		substates = Cube.multi_rotate(np.repeat(state, Cube.action_dim, axis=0), *Cube.iter_actions())
+		actions_taken = np.array([i for i, s in enumerate(substates) if s.tostring() in self.indices], dtype=int)
+		substate_idcs = np.array([self.indices[i] for i in actions_taken])
+		self.neighbors[[state_idx]*len(actions_taken), actions_taken] = substate_idcs
+		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = state_idx
+		self.leaves[[state_idx, *substate_idcs]] = self.neighbors[[state_idx, *substate_idcs]].all(axis=1)
+		self.tt.end_profile("Update neighbors")
 
 	def find_leaves(self, time_limit: float, workers: int) -> (list, np.ndarray):
 		"""
@@ -350,8 +367,20 @@ class MCTSTODO(DeepSearcher):
 		# TODO
 		pass
 
+	@classmethod
+	def from_saved(cls, loc: str, c: float, nu: float, complete_graph: bool, search_graph: bool, workers: int):
+		net = Model.load(loc)
+		net.to(gpu)
+		return cls(net, c=c, nu=nu, complete_graph=complete_graph, search_graph=search_graph, workers=workers)
 
-class MCTS(DeepSearcher):
+	def __str__(self):
+		return f"MCTS {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
+
+	def __len__(self):
+		return len(self.states)
+
+
+class MCTS2(DeepSearcher):
 	def __init__(self, net: Model, c: float, nu: float, complete_graph: bool, search_graph: bool, workers=10):
 		super().__init__(net)
 		# Hyperparameters: c controls exploration and nu controls virtual loss updation us
