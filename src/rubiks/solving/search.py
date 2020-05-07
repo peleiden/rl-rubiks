@@ -7,6 +7,7 @@ import torch
 from src.rubiks import gpu, no_grad
 from src.rubiks.model import Model
 from src.rubiks.cube.cube import Cube
+from src.rubiks.utils import seedsetter
 from src.rubiks.utils.ticktock import TickTock
 
 
@@ -251,62 +252,128 @@ class MCTS(DeepSearcher):
 		Returns the index of the leaf and the action to solve it
 		Both are -1 if no solution is found
 		"""
+		print("\n--EXPANDING LEAVES--")
 		# Ensure space in stacks
-		# TODO: Test that this is suf)ficient
+		# TODO: Test that this is sufficient
 		if len(self.indices) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
+			print("INCREASING STACK SIZE")
 			self.increase_stack_size()
 		
 		# Explore new states
+		print("LEAVES_IDCS", leaves_idcs)
 		self.tt.profile("Getting new states")
 		states = self.states[leaves_idcs]
-		new_states = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
+		substates = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
+
+		# Bookkeeping
+		substates_strs = np.array([state.tostring() for state in substates])  # TODO: Check if it can be stored in array
+		for i, s in enumerate(substates):  # TODO: Keep these assertions until forever
+			assert substates_strs[i] == s.tostring()
+		assert all([state.tostring() == substates_strs[i] for i, state in enumerate(substates)])
+		explored_new_states = np.array([s in self.indices for s in substates_strs], dtype=bool)  # Boolean array - whether substate is explored or not
+		unexplored_new_states = ~explored_new_states  # Whether substate has not been seen before
+		uniques = ~np.array([s in np.delete(substates_strs, i) for i, s in enumerate(substates_strs)], dtype=bool)  # Haha O(n**2) goes brrrr
+		for u, s in zip(uniques, substates_strs):  # TODO: Remove after confidence
+			if u:
+				assert sum(substates_strs==s) == 1
+			else:
+				assert sum(substates_strs==s) > 1
+		unique_explored = explored_new_states & uniques
+		unique_unexplored = unexplored_new_states & uniques
+		# Only get indices for new states that are not duplicates
+		new_states_idcs = len(self.indices) + np.cumsum(unique_unexplored)
+		# Update self.indices with new states that are not duplicates
+		self.indices.update({ s: i for i, s in zip(new_states_idcs[uniques], substates_strs[unique_unexplored]) })
+		assert sorted(self.indices.values())[0] == 1
+		assert np.all(np.diff(sorted((self.indices.values())))==1)
+		assert np.all(np.diff(new_states_idcs[unique_unexplored])==1)
+		self.states[new_states_idcs[unique_unexplored]] = substates[unique_unexplored]
+		for kw, v in self.indices.items():
+			try:
+				assert self.states[v].tostring() == kw
+			except AssertionError as e:
+				print(self.states[v].tostring())
+				print(kw)
+				raise e
+		assert sorted(self.indices.values()) == list(range(1, len(self.indices)+1))
 		self.tt.end_profile("Getting new states")
 
+		# Update neighbors
+		actions_taken = np.tile(np.arange(Cube.action_dim), len(leaves_idcs))
+		repeated_leaves_idcs = np.repeat(leaves_idcs, Cube.action_dim)
+		# Update neighbors of old states
+		print(len(self.indices))
+		assert not any(0 == new_states_idcs)
+		assert not any(0 == repeated_leaves_idcs)
+		assert all(n in self.indices.values() for n in new_states_idcs[unexplored_new_states])
+		assert all(n in self.indices.values() for n in repeated_leaves_idcs[unexplored_new_states])
+		assert all(self.states[n].tostring() in self.indices for n in new_states_idcs[unexplored_new_states])
+		assert all(self.states[n].tostring() in self.indices for n in repeated_leaves_idcs[unexplored_new_states])
+		print("ACTIONS", actions_taken)
+		print("NEW_STATES_IDCS", new_states_idcs)
+		assert len(repeated_leaves_idcs) == len(leaves_idcs) * Cube.action_dim
+		# Update neighbors of old states
+		self.neighbors[repeated_leaves_idcs[unexplored_new_states], actions_taken[unexplored_new_states]] = new_states_idcs[unexplored_new_states]
+		# Update neighbors of new states
+		self.neighbors[new_states_idcs[unique_unexplored], Cube.rev_actions(actions_taken[unique_unexplored])] = repeated_leaves_idcs[unique_unexplored]
+		print(self.neighbors[:len(self.indices)+1])
+		for i, neighs in enumerate(self.neighbors):  # TODO: Move to test. Checks that all neighbors are correct
+			if i not in self.indices.values(): continue
+			assert all(neighs<=len(self.indices))
+			state = self.states[i]
+			for j, n in enumerate(neighs):
+				if n:
+					neighbor_state = Cube.rotate(state, *Cube.action_space[j])
+					n_str = neighbor_state.tostring()
+					if n_str not in self.indices:
+						print("i", i, "j", j, "n", n)
+						print(neighbor_state)
+						print((self.states==neighbor_state).all(axis=1).sum())
+					if self.indices[n_str] != n:
+						print(self.indices[n_str])
+						print(n)
+						raise AssertionError
+
+		# All states and relations between them have been updated
+		# Duplicates are therefore now removed
+		actions_taken = actions_taken[unique_unexplored]
+		repeated_leaves_idcs = repeated_leaves_idcs[unique_unexplored]
+		new_states_idcs = new_states_idcs[unique_unexplored]
+		old_states_idcs = np.array([self.indices[key] for key in substates_strs[unique_explored]], dtype=int)
+		substates = substates[unique_unexplored]  # TODO: Be careful about singletons / empty arrays here
+		old_states = substates[unique_explored]
+		assert np.all(substates==self.states[new_states_idcs])
+		assert np.all(old_states==self.states[old_states_idcs])
+
+
 		self.tt.profile("Checking for solved state")
-		solved_new_states = Cube.multi_is_solved(new_states)
+		solved_new_states = Cube.multi_is_solved(substates)
 		solved_new_states_idcs = np.where(solved_new_states)[0]
 		if solved_new_states_idcs.size:
 			i = solved_new_states_idcs[0]
-			leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
-			self.indices[new_states[i].tostring()] = len(self.indices) + 1
+			leaf_idx, action_idx = actions_taken[i], repeated_leaves_idcs[i]
 			self._update_neighbors(leaves_idcs[leaf_idx])
 			return leaf_idx, action_idx
 		self.tt.end_profile("Checking for solved state")
-		new_states_strs = [state.tostring() for state in new_states]
 
 		self.tt.profile("One-hot encoding")
-		new_states_oh = Cube.as_oh(new_states)
+		new_states_oh = Cube.as_oh(substates)
+		print(new_states_oh.shape)
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
 		p, v = self.net(new_states_oh)
 		p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()  # TODO: Possible bug where v will by squeezed too much if it is 1x1
 		self.tt.end_profile("Feedforward")
 
-		self.tt.profile("Generate new states")
-		explored_new_states = np.array([s in self.indices for s in new_states_strs])
-		unexplored_new_states = ~explored_new_states
-		repeated_states = np.repeat(leaves_idcs, Cube.action_dim)
-		actions_taken = np.tile(np.arange(Cube.action_dim), len(leaves_idcs))
-
+		self.tt.profile("Update p, v, and leaves")
 		# Updates all values for new states
-		# TODO: Build in tests to make sure no values are overwritten
-		new_states_idcs = np.arange(len(self.indices)+1, len(self.indices)+unexplored_new_states.sum()+1)
-		unexplored_new_states_strs = [s for s, u in zip(new_states_strs, unexplored_new_states) if u]
-		self.indices.update({ s: i for i, s in zip(new_states_idcs, unexplored_new_states_strs) })
-		self.states[new_states_idcs] = new_states[unexplored_new_states]
-		self.P[new_states_idcs] = p[unexplored_new_states]
-		self.V[new_states_idcs] = v[unexplored_new_states]
-		self.leaves[leaves_idcs] = False
-		self.neighbors[repeated_states[unexplored_new_states], actions_taken[unexplored_new_states]] = new_states_idcs
-		self.neighbors[new_states_idcs, Cube.rev_actions(actions_taken[unexplored_new_states])] = repeated_states[unexplored_new_states]
+		self.P[new_states_idcs] = p
+		self.V[new_states_idcs] = v
 
-		# Updates neighbors for already seen states
-		# TODO: Build in tests to make sure no values are overwritten
-		old_states_idcs = np.array([self.indices[s] for s, e in zip(new_states_strs, explored_new_states) if e], dtype=int)
-		self.neighbors[repeated_states[explored_new_states], actions_taken[explored_new_states]] = old_states_idcs
-		self.neighbors[old_states_idcs, Cube.rev_actions(actions_taken[explored_new_states])] = repeated_states[explored_new_states]
+		# Updates leaves
+		self.leaves[leaves_idcs] = False
 		self.leaves[old_states_idcs[self.neighbors[old_states_idcs].all(axis=1)]] = False
-		self.tt.end_profile("Generate new states")
+		self.tt.end_profile("Update p, v, and leaves")
 
 		self.tt.profile("Update W")
 		neighbor_idcs = self.neighbors[leaves_idcs]
@@ -341,27 +408,41 @@ class MCTS(DeepSearcher):
 		paths = [deque() for _ in range(workers)]
 		states_idcs = np.ones(workers, dtype=int)
 		leaves_idcs = []
+		print("\n--FINDING LEAVES--")
 		self.tt.profile("Exploring next node")
 		while self.tt.tock() < time_limit and states_idcs.size:
+			# print("--ITERATION--", states_idcs)
 			sqrtN = np.sqrt(self.N[states_idcs].sum(axis=1))
+			# print("N", sqrtN**2)
 			actions = np.empty(len(states_idcs), dtype=int)
 			# States from which an action is taken for the first time
 			no_prev_action = sqrtN < self.eps
+			# print("NPA", no_prev_action, no_prev_action.sum())
 			actions[no_prev_action] = np.random.randint(0, 12, no_prev_action.sum())
 			# States from which an action has been taken previously
 			prev_action = ~no_prev_action
 			prev_action_idcs = states_idcs[prev_action]
+			# print("PAI", prev_action_idcs)
 			if any(prev_action_idcs):
 				U = (self.c * self.P[prev_action_idcs].T * sqrtN[prev_action] / (1 + self.N[prev_action_idcs].T)).T
 				Q = self.W[prev_action_idcs] - self.L[prev_action_idcs]
 				actions[~no_prev_action] = (U - Q).argmax(axis=1)
+			assert np.all(actions >= 0) and np.all(actions < 12)
 			# Updates
-			self.N[states_idcs, actions] += 1  # TODO: Bug in these two lines: Multiples are only counted once, though this may actually be advantageous
-			self.L[states_idcs, actions] += self.nu
+			# TODO
+			# print("ACTIONS", actions)
+			for i, a in zip(states_idcs, actions):
+				self.N[i, a] += 1
+				self.L[i, a] += self.nu
+			#self.N[states_idcs, actions] += 1  # TODO: Bug in these two lines: Multiples are only counted once, though this may actually be advantageous
+			#self.L[states_idcs, actions] += self.nu
 			[paths[i].append(a) for i, a in enumerate(actions)]  # TODO: May have to speed this part up
+			# print("NEIGHBORS", self.neighbors[states_idcs, actions])
+			# print("15 NEIGHBORS", self.neighbors[:15])
 			states_idcs = self.neighbors[states_idcs, actions]  # New states
 			leaves_idcs.extend(states_idcs[self.leaves[states_idcs]])
 			states_idcs = states_idcs[~self.leaves[states_idcs]]  # Removes those that are leaves
+		# print("PATHS", paths)
 		self.tt.end_profile("Exploring next node")
 		return paths, leaves_idcs
 
@@ -379,7 +460,7 @@ class MCTS(DeepSearcher):
 		return f"MCTS {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
 
 	def __len__(self):
-		return len(self.states)
+		return len(self.indices)
 
 
 class MCTS2(DeepSearcher):
@@ -682,4 +763,13 @@ class AStar(DeepSearcher):
 			node = self.closed[node]['parent']
 			if node == 'Starting node': return count
 			count += 1
+
+
+if __name__ == "__main__":
+	seedsetter()
+	searcher = MCTS(Model.load("data/local_train"), 0.6, 0.001, False, False, 10)
+	#state, _, _ = Cube.scramble(5)
+	state = np.array("11  5  2 23 14 20  8 17 15  8  3  6  1 21  5 17 19 10 13 22".split(), dtype=Cube.dtype)
+	print("Found solution:", searcher.search(state, .1))
+	print("States:", len(searcher))
 
