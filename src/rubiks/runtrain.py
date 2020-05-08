@@ -8,7 +8,7 @@ import torch
 
 from src.rubiks.utils import seedsetter, get_commit
 from src.rubiks.utils.parse import Parser
-from src.rubiks.utils.ticktock import get_timestamp
+from src.rubiks.utils import get_timestamp
 from src.rubiks.utils.logger import Logger
 
 from src.rubiks import gpu, get_is2024, with_used_repr
@@ -119,12 +119,12 @@ class TrainJob:
 				 is2024: bool,
 				 arch: str,
 				 analysis: bool,
-	
-	
+
+
 				 # Currently not set by argparser/configparser
 				 agent = DeepAgent(PolicySearch(None, True)),
 				 scrambling_depths: tuple = (8,),
-	
+
 				 verbose: bool = True,
 				 ):
 
