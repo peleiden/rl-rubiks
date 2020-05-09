@@ -71,8 +71,9 @@ class Evaluator:
 		self.log(f"Evaluation results")
 		for i, d in enumerate(self.scrambling_depths):
 			share_completed = np.count_nonzero(res[i]!=-1)*100/len(res[i])
-			mean_turns = res[i][res[i]!=-1].mean()
-			median_turns = np.median(res[i][res[i]!=-1])
+			won_games = res[i][res[i]!=-1]
+			mean_turns = won_games.mean() if won_games.size else np.nan  # Done this way to prevent warnings
+			median_turns = np.median(won_games) if won_games.size else np.nan
 			self.log(f"Scrambling depth {d}", with_timestamp=False)
 			self.log(f"\tShare completed: {share_completed:.2f} %", with_timestamp=False)
 			if (res[i]!=-1).any():

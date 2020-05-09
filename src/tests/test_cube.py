@@ -1,6 +1,6 @@
 from src.tests import MainTest
 
-from src.rubiks import get_is2024, set_is2024, with_used_repr
+from src.rubiks import gpu, get_is2024, set_is2024, with_used_repr
 from src.rubiks.cube.cube import Cube
 from src.rubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 
@@ -124,7 +124,7 @@ class TestRubiksCube(MainTest):
 	def test_as_oh(self):
 		state = Cube.get_solved()
 		oh = Cube.as_oh(state)
-		supposed_state = torch.zeros(20, 24)
+		supposed_state = torch.zeros(20, 24, device=gpu)
 		corners = [get_corner_pos(c, o) for c, o in zip(SimpleState.corners, SimpleState.corner_orientations)]
 		supposed_state[torch.arange(8), corners] = 1
 		sides = [get_side_pos(s, o) for s, o in zip(SimpleState.sides, SimpleState.side_orientations)]
@@ -155,6 +155,6 @@ class TestRubiksCube(MainTest):
 			[-1, -1, -1, -1, -1, 1, 1, 1],
 			[-1, 1, 1, 1, 1, 1, -1, -1],
 			[1, 1, -1, -1, -1, 1, 1, 1],
-		])
+		], device=gpu)
 		assert torch.all(correctness == Cube.as_correct(torch.from_numpy(state).unsqueeze(0)))
 

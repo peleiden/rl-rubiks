@@ -49,13 +49,13 @@ class Searcher:
 		self.tt = TickTock()
 
 	@no_grad
-	def search(self, state: np.ndarray, time_limit: float) -> bool:
+	def search(self, state: np.ndarray, time_limit: float, max_states: int) -> bool:
 		# Returns whether a path was found and generates action queue
 		# Implement _step method for searchers that look one step ahead, otherwise overwrite this method
 		self.reset()
 		self.tt.tick()
 		if Cube.is_solved(state): return True
-		while self.tt.tock() < time_limit:
+		while self.tt.tock() < time_limit and len(self) < max_states:
 			action, state, solution_found = self._step(state)
 			self.action_queue.append(action)
 			if solution_found:
@@ -109,7 +109,7 @@ class RandomDFS(Searcher):
 		return "Random depth-first search"
 
 class BFS(Searcher):
-	def search(self, state: np.ndarray, time_limit: float) -> (np.ndarray, bool):
+	def search(self, state: np.ndarray, time_limit: float, max_states: int) -> (np.ndarray, bool):
 		self.reset()
 		self.tt.tick()
 
@@ -119,7 +119,7 @@ class BFS(Searcher):
 		# Each element contains the state from which it came and the corresponding action
 		states = { state.tostring(): (None, None) }
 		queue = deque([state])
-		while self.tt.tock() < time_limit:
+		while self.tt.tock() < time_limit and len(self) < max_states:
 			state = queue.popleft()
 			tstate = state.tostring()
 			for i, action in enumerate(Cube.action_space):
@@ -215,9 +215,10 @@ class MCTS(DeepSearcher):
 		self.L         = np.concatenate([self.L, np.zeros((expand_size, Cube.action_dim))])
 
 	@no_grad
-	def search(self, state: np.ndarray, time_limit: float, max_states: int) -> bool:
+	def search(self, state: np.ndarray, time_limit: float, max_states: int=None) -> bool:
 		self.reset()
 		self.tt.tick()
+		max_states = max_states or int(1e10)
 
 		self.indices[state.tostring()] = 1
 		self.states[1] = state
@@ -230,7 +231,7 @@ class MCTS(DeepSearcher):
 		paths = [deque()]
 		leaves = np.array([1], dtype=int)
 		workers = 1
-		while self.tt.tock() < time_limit and len(self) < max_states:
+		while self.tt.tock() < time_limit and len(self) + self.workers * Cube.action_dim <= max_states:
 			self.tt.profile("Expanding leaves")
 			solve_leaf, solve_action = self.expand_leaves(np.array(leaves))
 			self.tt.end_profile("Expanding leaves")

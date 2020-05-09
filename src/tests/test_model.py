@@ -4,7 +4,7 @@ import torch
 
 from src.tests import MainTest
 
-from src.rubiks import cpu, gpu
+from src.rubiks import cpu, gpu, set_is2024
 from src.rubiks.model import Model, ModelConfig
 from src.rubiks.utils.logger import NullLogger
 

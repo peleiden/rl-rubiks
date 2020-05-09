@@ -310,7 +310,7 @@ class _Cube686(Cube):
 		This methods creates a correctness representation of the tensor of shape n x 6 x 8
 		"""
 		# TODO: Write tests for this method
-		oh = t.reshape(len(t), 6, 8, 6)
+		oh = t.reshape(len(t), 6, 8, 6).to(gpu)
 		correct_repr = torch.all(oh[:] == cls.solved_cuda, dim=3).long()
 		correct_repr[correct_repr==0] = -1
 		return correct_repr.float()

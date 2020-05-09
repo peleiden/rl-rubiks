@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from src.rubiks import gpu, set_is2024
 from src.rubiks.cube.cube import Cube
@@ -17,8 +18,8 @@ class TestMCTS(MainTest):
 	def _mcts_test(self, complete_graph: bool):
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
-		searcher = MCTS(net, c=1, nu=.1, complete_graph=complete_graph, search_graph=True, workers=10)
-		searcher.search(state, 1, int(1e10))
+		searcher = MCTS(net, c=1, nu=.01, complete_graph=complete_graph, search_graph=True, workers=10)
+		searcher.search(state, .1, int(1e10))
 		
 		# Indices
 		assert searcher.indices[state.tostring()] == 1
