@@ -1,7 +1,7 @@
 # Solving Rubik's cube using Deep Reinforcement Learning
 
 ###### Second year project at the bachelor in Artificial Intelligence and Data, Technical University of Denmark.
-![Pytest on Master](https://github.com/asgerius/rl-rubiks/workflows/pytest_push/badge.svg?branch=master)
+![pytest_master](https://github.com/asgerius/rl-rubiks/workflows/pytest_master/badge.svg?branch=master)
 
 ## Demo
 Visit the [Demo page](https://asgerius.github.io/rl-rubiks/) to see the trained Reinforcement Learning agents in action.
