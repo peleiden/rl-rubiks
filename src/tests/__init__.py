@@ -8,6 +8,8 @@ class MainTest:
 		os.makedirs("local_tests", exist_ok = True)
 		seedsetter()
 		repo_path = os.path.join( os.path.dirname(os.path.dirname(os.path.abspath(__file__))) )
+
+		if 'PYTHONPATH' not in os.environ: os.environ['PYTHONPATH'] = ''
 		if repo_path not in os.environ['PYTHONPATH']: os.environ['PYTHONPATH'] += f':{repo_path}'
 	@classmethod
 	def teardown_class(cls):
