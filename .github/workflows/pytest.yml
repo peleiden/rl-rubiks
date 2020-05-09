@@ -4,6 +4,10 @@ name: pytest_push
 on:
   push:
     branches: [ master ]
+    paths:
+        - src/rubiks/**.py
+        - src/tests/**.py
+
 
 jobs:
   tester:
@@ -29,10 +33,11 @@ jobs:
           ${{ runner.os }}-
       
     - name: Install dependencies
-      run: pip install -r rlrequirements.txt
+      run: |
+        pip install -r rlrequirements.txt
+        pip install pytest
       
     - name: Test with pytest
       run: |
-        echo "::set-env name=PYTHONPATH::home/runner/work/rl-rubiks/rl-rubiks"
-        pip install pytest
-        pytest
+        echo "::set-env name=PYTHONPATH::home/runner/work/rl-rubiks/rl-rubiks/"
+        python -m pytest
