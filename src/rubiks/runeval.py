@@ -160,17 +160,16 @@ class EvalJob:
 			self.agents = {searcher: Agent(searcher)}
 			self.reps = {searcher: True}
 
+		self.agent_results = {}
 		self.logger.log(f"Initialized {self.name} with agents {' '.join(str(agent) for agent in self.agents)}")
 		self.logger.log(f"TIME ESTIMATE: {len(self.agents)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
 
 	def execute(self):
 		self.logger.log(f"Beginning evaluator {self.name}\nLocation {self.location}\nCommit: {get_commit()}")
-		agent_results = {}
 		for (name, agent), representation in zip(self.agents.items(), self.reps.values()):
 			self.is2024 = representation
-			agent_results[name] = self._single_exec(name, agent)
+			self.agent_results[name] = self._single_exec(name, agent)
 
-		self.evaluator.plot_this_eval(agent_results, self.location)
 
 	@with_used_repr
 	def _single_exec(self, name, agent):
@@ -179,6 +178,22 @@ class EvalJob:
 		np.save(f"{self.location}/{name}_results.npy", res)
 		return res
 
+	@staticmethod
+	def plot_all_jobs(jobs: list, save_location: str):
+		results, settings = dict(), list()
+		for job in jobs:
+			for agent, result in job.agent_results.items():
+				key = agent if len(jobs) == 1 else f"{job.name} {agent}"
+				results[key] = result
+				settings.append(
+					{
+						'n_games': job.evaluator.n_games,
+						'max_time': job.evaluator.max_time,
+						'scrambling_depths': job.evaluator.scrambling_depths
+					}
+				)
+		savepaths = Evaluator.plot_evaluators(results, save_location, settings)
+		for i, job in enumerate(jobs): job.logger(f"Saved plots to {savepaths}")
 
 if __name__ == "__main__":
 	description = r"""
@@ -201,6 +216,8 @@ each of them.
 
 	parser = Parser(options, description=description, name='eval')
 	run_settings = parser.parse()
-	for job in [EvalJob(**settings, in_subfolder=len(run_settings)>1) for settings in run_settings]:
-		job.execute()
+	jobs = [EvalJob(**settings, in_subfolder=len(run_settings)>1) for settings in run_settings]
+
+	for job in jobs: job.execute()
+	EvalJob.plot_all_jobs(jobs, parser.save_location)
 

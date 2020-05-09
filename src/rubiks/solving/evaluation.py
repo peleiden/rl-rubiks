@@ -78,22 +78,24 @@ class Evaluator:
 			if (res[i]!=-1).any():
 				self.log(f"\tMean turns to complete (ex. unfinished): {mean_turns:.2f}", with_timestamp=False)
 				self.log(f"\tMedian turns to complete (ex. unfinished): {median_turns:.2f}", with_timestamp=False)
-		self.log(f"Sum score: {self.sum_score(res).mean():.2f}", with_timestamp=False)
+		self.log(f"Sum score: {self.sum_score(res, self.scrambling_depths).mean():.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
 		return res
 
-	def sum_score(self, res: np.ndarray) -> np.ndarray:
+	@staticmethod
+	def sum_score(res: np.ndarray, scrambling_depths: list) -> np.ndarray:
 		"""
 		Computes sum score game wise, that is it returns an array of length self.n_games
 		It assumes that all srambling depths lower that self.scrambling_depths[0] are always solved
 		and that all depths above self.scrambling_depths[-1] are never solved
 		Overall sum_score is the mean of the returned array
 		:param res: Numpy array of evaluation results as returned by self.eval
+		:param scrambling depths: The scrambling depths used for the evaluation
 		:return: Numpy array of length self.n_games
 		"""
 		solved = res != -1
-		lower_depths = self.scrambling_depths[0] - 1
+		lower_depths = scrambling_depths[0] - 1
 		return solved.sum(axis=0) + lower_depths
 
 	def plot_this_eval(self, eval_results: dict, save_dir: str,  **kwargs):
@@ -103,17 +105,19 @@ class Evaluator:
 			'max_time': self.max_time,
 			'scrambling_depths': self.scrambling_depths
 		}
-		save_paths = self.plot_an_eval(eval_results, save_dir, settings, **kwargs)
+		save_paths = self.plot_evaluators(eval_results, save_dir, [settings] * len(eval_results), **kwargs)
 		self.log(f"Saved evaluation plots to {save_paths}")
 
-	def plot_an_eval(self, eval_results: dict, save_dir: str,  eval_settings: dict, show: bool=False, title: str=''):
+	@staticmethod
+	def plot_evaluators(eval_results: dict, save_dir: str,  eval_settings: list, show: bool=False, title: str=''):
 		"""
-		{agent: results from self.eval}
+		{agent: results from eval}
 		"""
 		save_paths = []
 		#depth, win%-graph
+		games_equal, times_equal = Evaluator.check_equal_settings(eval_settings)
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
-		ax.set_ylabel(f"Percentage of {eval_settings['n_games']} games won")
+		ax.set_ylabel(f"Percentage of {eval_settings[0]['n_games']} games won" if games_equal else "Percentage of games won")
 		ax.set_xlabel(f"Scrambling depth: Number of random rotations applied to cubes")
 		ax.locator_params(axis='x', integer=True, tight=True)
 
@@ -121,15 +125,16 @@ class Evaluator:
 		colours = [tab_colours[i%len(tab_colours)] for i in range(len(eval_results))]
 
 		for i, (agent, results) in enumerate(eval_results.items()):
+			used_settings = eval_settings[i]
 			color = colours[i]
 			win_percentages = (results != -1).mean(axis=1) * 100
 
-			ax.plot(eval_settings['scrambling_depths'], win_percentages, linestyle='dashdot', color=color)
-			ax.scatter(eval_settings['scrambling_depths'], win_percentages, color=color, label=f"Win % of {agent}")
+			ax.plot(used_settings['scrambling_depths'], win_percentages, linestyle='dashdot', color=color)
+			ax.scatter(used_settings['scrambling_depths'], win_percentages, color=color, label=f"Win % of {agent}")
 		ax.legend()
 		ax.set_ylim([-5, 105])
 		ax.grid(True)
-		ax.set_title(title if title else f"Cubes solved in {eval_settings['max_time']:.2f} seconds")
+		ax.set_title(title if title else (f"Cubes solved in {eval_settings[0]['max_time']:.2f} seconds" if times_equal else "Cubes solved") )
 		fig.tight_layout()
 
 		os.makedirs(save_dir, exist_ok=True)
@@ -145,9 +150,10 @@ class Evaluator:
 		fig, axes = plt.subplots(len(eval_results), 1, figsize=(19.2, 10.8))
 
 		for i, (agent, results) in enumerate(eval_results.items()):
+			used_settings = eval_settings[i]
 
 			ax = axes[i] if len(eval_results) > 1 else axes
-			ax.set_title(f'Solution lengths for {agent} in {eval_settings["max_time"]:.2f} s')
+			ax.set_title(f'Solution lengths for {agent} in {used_settings["max_time"]:.2f} s')
 
 			ax.set_ylabel(f"Solution length")
 			ax.set_xlabel(f"Scrambling depth")
@@ -155,7 +161,7 @@ class Evaluator:
 			#Handling that some might not even win any games
 			plotables = (results != -1).any(axis=1)
 			results = [depth[depth != -1] for depth in results[plotables]]
-			depths = [eval_settings['scrambling_depths'][i] for i  in range(len(plotables)) if plotables[i]]
+			depths = [used_settings['scrambling_depths'][i] for i  in range(len(plotables)) if plotables[i]]
 			if len(depths): ax.boxplot(results, labels=depths)
 			ax.grid(True)
 
@@ -171,7 +177,7 @@ class Evaluator:
 		# Histograms of sum scores
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
-		sss = np.array([self.sum_score(results) for results in eval_results.values()])
+		sss = np.array([Evaluator.sum_score(results, eval_settings[i]['scrambling_depths']) for i, results in enumerate(eval_results.values())])
 		mus, stds = [ss.mean() for ss in sss], [ss.std() for ss in sss]
 		lower, higher = sss.min() - 2, sss.max() + 2
 		bins = np.arange(lower, higher+1)
@@ -182,14 +188,15 @@ class Evaluator:
 				align	= "left",
 				label	= [f"{agent}. mu = {mus[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
 		for i in range(len(eval_results)):
-			x = np.linspace(lower, higher, 100)
-			y = normal_pdf(x, mus[i], stds[i])
-			x = x[~np.isnan(y)]
-			y = y[~np.isnan(y)]
-			plt.plot(x, y, color="black")
+			if stds[i] > 0:
+				x = np.linspace(lower, higher, 100)
+				y = normal_pdf(x, mus[i], stds[i])
+				x = x[~np.isnan(y)]
+				y = y[~np.isnan(y)]
+				plt.plot(x, y, color="black")
 		ax.set_xlim([lower, higher])
 		ax.set_xticks(bins)
-		ax.set_title(f"Single game S distributions (evaluated on {self.max_time:.2f} s per game)")
+		ax.set_title(f"Single game S distributions (evaluated on {eval_settings[0]['max_time']:.2f} s per game)" if times_equal else "Single game S distributions")
 		ax.set_xlabel("S")
 		ax.set_ylabel("Frequency")
 		ax.legend(loc=1)
@@ -201,3 +208,13 @@ class Evaluator:
 		plt.clf()
 
 		return save_paths
+
+	@staticmethod
+	def check_equal_settings(eval_settings: list):
+		"""Super simple looper just to hide the ugliness from above function
+		"""
+		games, times = list(), list()
+		for setting in eval_settings:
+			games.append(setting['max_time'])
+			times.append(setting['n_games'])
+		return games.count(games[0]) == len(games), times.count(times[0]) == len(times)
