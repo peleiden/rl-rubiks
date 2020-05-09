@@ -20,7 +20,7 @@ cd rl-rubiks
 pip install -r rlrequirements.txt
 ```
 
-3) For the modules to work, you *might* need to add the main repo folder to your PYTHONPATH. 
+3) (Only needed if you get `ImportError`. For the modules to work, you *might* need to add the main repo folder to your PYTHONPATH. 
 In \*nix-systems, you can add the following line to your shell login script:
 ```
 export PYTHONPATH=$PYTHONPATH:<path where you cloned>/rl-rubiks
