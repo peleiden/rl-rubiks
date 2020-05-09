@@ -51,7 +51,7 @@ class Cube:
 	@classmethod
 	def iter_actions(cls, n: int=1):
 		"""
-		Returns a numpy array of size 2 x n*cls.action_dim containing repeated actions
+		Returns a numpy array of size 2 x n*cls.action_dim containing tiled actions
 		Practical for use with multi_rotate, e.g. Cube.multi_rotate(states, *Cube.iter_actions())
 		"""
 		return np.array(list(zip(*cls.action_space*n)), dtype=np.uint8)
@@ -101,8 +101,12 @@ class Cube:
 		return cls.get_solved_instance().copy()
 
 	@classmethod
-	def is_solved(cls, state: np.ndarray):
+	def is_solved(cls, state: np.ndarray) -> bool:
 		return (state == cls.get_solved_instance()).all()
+	
+	@classmethod
+	def multi_is_solved(cls, states: np.ndarray) -> np.ndarray:
+		return (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
 
 	@classmethod
 	def shape(cls):
@@ -124,8 +128,14 @@ class Cube:
 		return 480 if get_is2024() else 288
 
 	@staticmethod
-	def rev_action(action: int):
+	def rev_action(action: int) -> int:
 		return action + 1 if action % 2 == 0 else action - 1
+	
+	@staticmethod
+	def rev_actions(actions: np.ndarray) -> np.ndarray:
+		rev_actions = actions - 1
+		rev_actions[actions % 2 == 0] += 2
+		return rev_actions
 
 	@classmethod
 	def as633(cls, state: np.ndarray) -> np.ndarray:

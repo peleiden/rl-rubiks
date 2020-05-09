@@ -17,7 +17,7 @@ class Logger:
 
 	def __init__(self, fpath: str, title: str, verbose=True):
 		dirs = "/".join(fpath.split('/')[:-1])
-		if not os.path.exists(dirs):
+		if not os.path.exists(dirs) and dirs:
 			os.makedirs(dirs)
 
 		self.fpath = fpath

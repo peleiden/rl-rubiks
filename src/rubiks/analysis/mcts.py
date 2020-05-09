@@ -5,7 +5,7 @@ import numpy as np
 from src.rubiks import gpu, set_is2024
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
-from src.rubiks.solving.search import Searcher, MCTS
+from src.rubiks.solving.search import Searcher, MCTS, MCTS2
 from src.rubiks.utils import seedsetter
 from src.rubiks.utils.logger import Logger
 from src.rubiks.utils.ticktock import TickTock
@@ -18,9 +18,9 @@ net = Model.load("data/local_good_net").eval().to(gpu)
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float):
 	state, f, d = Cube.scramble(depth, True)
 	searcher = MCTS(net, c, nu, False, False, workers)
-	is_solved = searcher.search(state, time_limit)
-	assert is_solved == (Cube.get_solved().tostring() in searcher.states)
-	return is_solved, len(searcher.states)
+	is_solved = searcher.search(state, time_limit, int(1e10))
+	assert is_solved == (Cube.get_solved().tostring() in searcher.indices)
+	return is_solved, len(searcher.indices)
 
 def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	x = values
@@ -57,7 +57,7 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	plt.clf()
 
 def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
-	time_limits = np.linspace(1, 36, 10)
+	time_limits = np.linspace(.1, 2, 10)
 	expand = np.zeros_like(time_limits)
 	explore = np.zeros_like(time_limits)
 	searcher = MCTS(net, c=c, nu=nu, workers=workers, complete_graph=False, search_graph=False)
@@ -67,7 +67,7 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 		sols = np.zeros(n)
 		for j in range(n):
 			state, f, d = Cube.scramble(depth, True)
-			sols[j] = searcher.search(state, time_limit=tl)
+			sols[j] = searcher.search(state, time_limit=tl, max_states=int(1e10))
 			expand[i] += sum(searcher.tt.profiles["Expanding leaves"].hits)
 			try:
 				explore[i] += sum(searcher.tt.profiles["Exploring next node"].hits)
@@ -91,20 +91,33 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 	# plt.show()
 	plt.clf()
 
+def detailed_time(state, searcher, max_states: int, time_limit: float, c: float, nu: float, workers: int):
+	searcher = searcher(Model.load("data/local_train"), c=c, nu=nu, complete_graph=False, search_graph=False, workers=workers)
+	log.section(f"Detailed time analysis: {searcher}")
+	sol_found = searcher.search(state, time_limit, max_states)
+	log("Solved found" if sol_found else "Solved not found")
+	log(f"States explored: {len(searcher)}")
+	log(searcher.tt)
+
 if __name__ == "__main__":
 	# set_repr(False)
 	time_limit = .2
-	n = 300
-	default_vars = { "depth": 8, "c": 1, "nu": 0.01, "workers": 10 }
+	n = 200
+	default_vars = { "depth": 8, "c": 1, "nu": 0.005, "workers": 10 }
 	get_other_vars = lambda excl: {kw: v for kw, v in default_vars.items() if kw != excl}
-	# seedsetter()
-	# analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
-	# analyze_var(var="depth", values=np.arange(1, 21, 1), other_vars=get_other_vars("depth"))
-	# analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
-	# analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
-	n = 50
-	analyse_time_distribution(25, 0.5, 0.001, 10)
-	analyse_time_distribution(25, 0.5, 0.001, 100)
+	seedsetter()
+	#analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
+	#analyze_var(var="depth", values=np.arange(1, 21, 1), other_vars=get_other_vars("depth"))
+	#analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
+	#analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
+	n = 40
+	analyse_time_distribution(25, 0.5, 0.005, 10)
+	analyse_time_distribution(25, 0.5, 0.005, 100)
+	s = int(1e6)
+	tl = 1
+	state, _, _ = Cube.scramble(50)
+	detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10)
+	detailed_time(state, MCTS2, s, tl, 0.6, 0.005, 10)
 
 
 
