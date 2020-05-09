@@ -59,8 +59,9 @@ class Train:
 		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Used to limit vram usage
 
 		# Perform evaluation every evaluation_interval and after last rollout
-		self.evaluation_rollouts = np.array(list(range(0, self.rollouts, evaluation_interval)) + [self.rollouts-1])\
+		self.evaluation_rollouts = np.array(list(range(0, self.rollouts, evaluation_interval)))\
 			if evaluation_interval else np.array([])
+		if evaluation_interval and (self.rollouts-1 not in self.evaluation_rollouts): self.evaluation_rollouts = self.evaluation_rollouts.append(self.rollouts-1)
 		self.agent = agent
 
 		self.alpha_update = alpha_update  # alpha <- alpha + alpha_update every update_interval rollouts (excl. rollout 0)
@@ -332,6 +333,8 @@ class Train:
 			reward_ax = loss_ax.twinx()
 			reward_ax.set_ylim(ylim)
 			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
+			print(self.evaluation_rollouts)
+			print(self.eval_rewards)
 			reward_ax.plot(self.evaluation_rollouts, self.eval_rewards, "-o", color=color, label="Fraction of cubes solved")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 			h2, l2 = reward_ax.get_legend_handles_labels()
