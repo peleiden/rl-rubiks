@@ -8,6 +8,7 @@ on:
         - src/rubiks/**.py
         - src/tests/**.py
         - .github/workflows/pytest.yml
+        - rlrequirements.txt
 
 
 jobs:
