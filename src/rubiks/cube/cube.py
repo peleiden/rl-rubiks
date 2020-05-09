@@ -133,9 +133,8 @@ class Cube:
 	
 	@staticmethod
 	def rev_actions(actions: np.ndarray) -> np.ndarray:
-		rev_actions = actions.copy() - 1
+		rev_actions = actions - 1
 		rev_actions[actions % 2 == 0] += 2
-		assert np.all(rev_actions==np.array([Cube.rev_action(a) for a in actions]))  # TODO: Remove after confidence
 		return rev_actions
 
 	@classmethod

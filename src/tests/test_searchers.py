@@ -18,37 +18,54 @@ class TestMCTS(MainTest):
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
 		searcher = MCTS(net, c=1, nu=.1, complete_graph=complete_graph, search_graph=True, workers=10)
+		searcher.search(state, 1, int(1e10))
 		
-		# Generates a search tree and tests its correctness
-		searcher.search(state, 1)
-		assert np.all(searcher.leaves == searcher.leaves.all(axis=0))
-		# for state_str, index in searcher.indices.items():
+		# Indices
+		assert searcher.indices[state.tostring()] == 1
+		for s, i in searcher.indices.items():
+			assert searcher.states[i].tostring() == s
+		assert sorted(searcher.indices.values())[0] == 1
+		assert np.all(np.diff(sorted(searcher.indices.values())) == 1)
 
-		# for state in searcher.states.values():
-		# 	# Test neighbors and leaf status
-		# 	assert not state.is_leaf == all(state.neighs)
-		# 	for i, neigh in enumerate(state.neighs):
-		# 		new_state = Cube.rotate(state.state, *Cube.action_space[i])
-		# 		if neigh:
-		# 			if not np.all(neigh.state==new_state):
-		# 				breakpoint()
-		# 			assert neigh.state.tostring() == new_state.tostring()
-		# 			assert new_state.tostring() in searcher.states
-		# 		elif complete_graph:
-		# 			assert new_state.tostring() not in searcher.states
-		# 	# Assert that all W's are calculated correctly
-		# 	W = np.zeros(Cube.action_dim)
-		# 	for i, neigh in enumerate(state.neighs):
-		# 		if neigh and all(neigh.neighs):
-		# 			values = [x.value for x in neigh.neighs]
-		# 			W[i] = max(values)
-		# 	if (W != 0).all():
-		# 		assert all([x for neigh in state.neighs for x in neigh.neighs])
-		# 	if all(state.neighs) and all([all(neigh.neighs) for neigh in state.neighs if neigh]):
-		# 		assert (W != 0).all()
-		# 	assert (np.array(W) == state.W).all()
-		# 	# Tests P
-		# 	assert np.isclose(state.P.sum(), 1)
+		used_idcs = np.array(list(searcher.indices.values()))
+
+		# States
+		assert np.all(searcher.states[1] == state)
+		for i, s in enumerate(searcher.states):
+			if i not in used_idcs: continue
+			assert s.tostring() in searcher.indices
+			assert searcher.indices[s.tostring()] == i
+
+		# Neighbors
+		for i, neighs in enumerate(searcher.neighbors):
+			if i not in used_idcs: continue
+			state = searcher.states[i]
+			for j, neighbor_index in enumerate(neighs):
+				assert neighbor_index == 0 or neighbor_index in searcher.indices.values()
+				if neighbor_index == 0: continue
+				substate = Cube.rotate(state, *Cube.action_space[j])
+				assert np.all(searcher.states[neighbor_index] == substate)
+
+		# Policy and value
+		with torch.no_grad():
+			p, v = searcher.net(Cube.as_oh(searcher.states[used_idcs]))
+		p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()
+		assert np.all(np.isclose(searcher.P[used_idcs], p, atol=1e-5))
+		assert np.all(np.isclose(searcher.V[used_idcs], v, atol=1e-5))
+
+		# Leaves
+		assert np.all(searcher.neighbors.all(axis=1) != searcher.leaves)
+
+		# W
+		for i in used_idcs:
+			neighs = searcher.neighbors[i]
+			supposed_Ws = np.zeros(Cube.action_dim)
+			for j, neighbor_index in enumerate(neighs):
+				if neighbor_index == 0: continue
+				neighbor_neighbor_indices = searcher.neighbors[neighbor_index]
+				if np.all(neighbor_neighbor_indices):
+					supposed_Ws[j] = np.max(searcher.V[neighbor_neighbor_indices])
+			assert np.all(supposed_Ws == searcher.W[i])
 
 class TestAStar(MainTest):
 

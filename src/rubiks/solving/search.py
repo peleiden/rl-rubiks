@@ -229,9 +229,10 @@ class MCTS(DeepSearcher):
 
 		paths = [deque()]
 		leaves = np.array([1], dtype=int)
+		workers = 1
 		while self.tt.tock() < time_limit and len(self) < max_states:
 			self.tt.profile("Expanding leaves")
-			solve_leaf, solve_action = self.expand_leaves(leaves)
+			solve_leaf, solve_action = self.expand_leaves(np.array(leaves))
 			self.tt.end_profile("Expanding leaves")
 
 			# If a solution is found
@@ -242,7 +243,8 @@ class MCTS(DeepSearcher):
 				return True
 
 			# Find leaves
-			paths, leaves = zip(*[self.find_leaf(time_limit) for _ in range(self.workers)])
+			paths, leaves = zip(*[self.find_leaf(time_limit) for _ in range(workers)])
+			workers = min(workers+1, self.workers)
 
 		return False
 
@@ -252,43 +254,39 @@ class MCTS(DeepSearcher):
 		Returns the index of the leaf and the action to solve it
 		Both are -1 if no solution is found
 		"""
-		# print("EXPANDING LEAVES")
-		# print(self.states[leaves_idcs])
+
 		leaf_idx, action_idx = -1, -1
+
 		# Ensure space in stacks
 		if len(self.indices) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
-			self.tt.profile("Increase stack size")
 			self.increase_stack_size()
-			self.tt.end_profile("Increase stack size")
 		
 		# Explore new states
-		self.tt.profile("Getting new states")
+		self.tt.profile("Get substates")
 		states = self.states[leaves_idcs]
 		substates = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
-		self.tt.end_profile("Getting new states")
+		self.tt.end_profile("Get substates")
 
 		actions_taken = np.tile(np.arange(Cube.action_dim), len(leaves_idcs))
 		repeated_leaves_idcs = np.repeat(leaves_idcs, Cube.action_dim)
 
 		# Check for solution and return if found
-		self.tt.profile("Checking for solved state")  # TODO: Consider moving this to later
+		self.tt.profile("Check for solved state")
 		solved_new_states = Cube.multi_is_solved(substates)
 		solved_new_states_idcs = np.where(solved_new_states)[0]
 		if solved_new_states_idcs.size:
 			i = solved_new_states_idcs[0]
 			leaf_idx, action_idx = i // Cube.action_dim, actions_taken[i]
 			self._update_neighbors(leaves_idcs[leaf_idx])
-		self.tt.end_profile("Checking for solved state")
+		self.tt.end_profile("Check for solved state")
 
-		self.tt.profile("Substate strings")
 		substate_strs		= [s.tostring() for s in substates]
 		get_substate_strs	= lambda bools: [s for s, b in zip(substate_strs, bools) if b]  # Alternative to boolean list indexing
-		self.tt.end_profile("Substate strings")
 
-		self.tt.profile("New/old substates")
+		self.tt.profile("Classify new/old substates")
 		seen_substates		= np.array([s in self.indices for s in substate_strs])  # Boolean array: Substates that have been seen before
 		unseen_substates	= ~seen_substates  # Boolean array: Substates that have not been seen before
-		self.tt.end_profile("New/old substates")
+		self.tt.end_profile("Classify new/old substates")
 
 		self.tt.profile("Handle duplicates")
 		last_occurences		= np.array([s not in substate_strs[i+1:] for i, s in enumerate(substate_strs)])  # To prevent duplicates. O(n**2) goes brrrr
@@ -308,37 +306,31 @@ class MCTS(DeepSearcher):
 		old_states_idcs		= substate_idcs[last_seen]  # Indices in self.states corresponding to old_states
 
 		# Update states and neighbors
-		self.tt.profile("Update neighbors")
 		self.states[new_states_idcs] = substates[last_unseen]
 		self.neighbors[repeated_leaves_idcs, actions_taken] = substate_idcs
 		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = repeated_leaves_idcs
-		self.tt.end_profile("Update neighbors")
 
 		self.tt.profile("One-hot encoding")
 		new_states_oh = Cube.as_oh(new_states)
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
 		p, v = self.net(new_states_oh)
-		p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()  # TODO: Possible bug where v will by squeezed too much if it is 1x1
+		p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()
 		self.tt.end_profile("Feedforward")
 
-		self.tt.profile("Update p and v")
 		# Updates all values for new states
 		self.P[new_states_idcs] = p
 		self.V[new_states_idcs] = v
-		self.tt.end_profile("Update p and v")
 
 		# Updates leaves
-		self.tt.profile("Update leaves")
 		self.leaves[leaves_idcs] = False
 		self.leaves[old_states_idcs[self.neighbors[old_states_idcs].all(axis=1)]] = False
-		self.tt.end_profile("Update leaves")
 
 		self.tt.profile("Update W")
-		neighbor_idcs = self.neighbors[leaves_idcs]
-		for neighs in neighbor_idcs:  # TODO: Drop this loop
-			W = self.V[neighs].max()
-			self.W[neighs, Cube.rev_actions(np.arange(Cube.action_dim))] = W
+		neighbor_idcs = self.neighbors[leaves_idcs].ravel()
+		values = self.V[neighbor_idcs].reshape((len(leaves_idcs), Cube.action_dim))
+		Ws = values.max(axis=1)
+		self.W[neighbor_idcs, Cube.rev_actions(actions_taken)] = np.repeat(Ws, Cube.action_dim)
 		self.tt.end_profile("Update W")
 
 		return leaf_idx, action_idx
@@ -348,7 +340,7 @@ class MCTS(DeepSearcher):
 		Expands around state. If a new state is already in the tree, neighbor relations are updated
 		Assumes that state is already in the tree
 		Used for node expansion
-		TODO: Consider not using state_idx and instead all leaves
+		TODO: Consider not using state_idx and instead all leaves. Only after solved state found if graph search
 		"""
 		self.tt.profile("Update neighbors")
 		state = self.states[state_idx]
@@ -361,7 +353,7 @@ class MCTS(DeepSearcher):
 		self.leaves[[state_idx, *substate_idcs]] = self.neighbors[[state_idx, *substate_idcs]].all(axis=1)
 		self.tt.end_profile("Update neighbors")
 
-	def find_leaf(self, time_limit: float) -> (list, np.ndarray):
+	def find_leaf(self, time_limit: float) -> (deque, int):
 		"""
 		Searches the tree starting from starting state using self.workers workers
 		Returns a list of paths and an array containing indices of leaves
@@ -370,39 +362,21 @@ class MCTS(DeepSearcher):
 		current_index = 1
 		self.tt.profile("Exploring next node")
 		while not self.leaves[current_index] and self.tt.tock() < time_limit:
-			self.tt.profile("sqrt(N)")
 			sqrtN = np.sqrt(self.N[current_index].sum())
-			self.tt.end_profile("sqrt(N)")
 			if sqrtN < self.eps:
 				# If no actions have been taken from this before
-				self.tt.profile("Random actions")
 				action = np.random.randint(Cube.action_dim)
-				self.tt.end_profile("Random actions")
 			else:
 				# If actions have been taken from this state before
-				self.tt.profile("U")
 				U = self.c * self.P[current_index] * sqrtN / (1 + self.N[current_index])
-				self.tt.end_profile("U")
-				self.tt.profile("Q")
 				Q = self.W[current_index] - self.L[current_index]
-				self.tt.end_profile("Q")
-				self.tt.profile("Actions")
 				action = (U + Q).argmax()
-				self.tt.end_profile("Actions")
 			# Updates N and virtual loss
-			self.tt.profile("Update N and L")
-			# TODO: Perhaps use the fast buggy code here
 			self.N[current_index, action] += 1
 			self.L[current_index, action] += self.nu
-			self.tt.end_profile("Update N and L")
-			self.tt.profile("Update paths")
 			path.append(action)
-			self.tt.end_profile("Update paths")
-			self.tt.profile("Get next state")
 			current_index = self.neighbors[current_index, action]
-			self.tt.end_profile("Get next state")
 		self.tt.end_profile("Exploring next node")
-		# print(paths)
 		return path, current_index
 
 	def _shorten_action_queue(self):
@@ -420,205 +394,6 @@ class MCTS(DeepSearcher):
 
 	def __len__(self):
 		return len(self.indices)
-
-
-class MCTS2(DeepSearcher):
-	def __init__(self, net: Model, c: float, nu: float, complete_graph: bool, search_graph: bool, workers=10):
-		super().__init__(net)
-		# Hyperparameters: c controls exploration and nu controls virtual loss updation us
-		self.c = c
-		self.nu = nu
-		self.complete_graph = complete_graph
-		self.search_graph = search_graph
-		self.workers = workers
-
-		self.states = dict()
-		self.net = net
-
-	@no_grad
-	def search(self, state: np.ndarray, time_limit: int, max_states) -> bool:
-		self.reset()
-		self.tt.tick()
-
-		if Cube.is_solved(state): return True
-		# First state is evaluated and expanded individually
-		oh = Cube.as_oh(state)
-		p, v = self.net(oh)  # Policy and value
-		self.states[state.tostring()] = Node(state, p.softmax(dim=1).cpu().numpy().ravel(), float(v.cpu()))
-		del p, v
-
-		paths = [deque([])]
-		leaves = [self.states[state.tostring()]]
-		while self.tt.tock() < time_limit and len(self) < max_states:
-			self.tt.profile("Expanding leaves")
-			solve_leaf, solve_action = self.expand_leaves(leaves)
-			self.tt.end_profile("Expanding leaves")
-			if solve_leaf != -1:  # If a solution is found
-				self.action_queue = paths[solve_leaf] + deque([solve_action])
-				if self.search_graph:
-					self._shorten_action_queue()
-				return True
-			# Gets new paths and leaves to expand from
-			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], time_limit) for _ in range(self.workers)])
-
-		self.action_queue = paths[solve_leaf] + deque([solve_action])  # Saves an action queue even if it loses which is its best guess
-		return False
-
-	def search_leaf(self, node: Node, time_limit: float) -> (list, Node):
-		# Finds leaf starting from state
-		path = deque()
-		self.tt.profile("Exploring next node")
-		while not node.is_leaf and self.tt.tock() < time_limit:
-			self.tt.profile("sqrt(N)")
-			sqrtN = np.sqrt(node.N.sum())
-			self.tt.end_profile("sqrt(N)")
-			if sqrtN < self.eps:  # Randomly chooses path the first time a state is explored
-				self.tt.profile("Random actions")
-				action = np.random.choice(Cube.action_dim)
-				self.tt.end_profile("Random actions")
-			else:
-				self.tt.profile("U")
-				U = self.c * node.P * sqrtN / (1 + node.N)
-				self.tt.end_profile("U")
-				self.tt.profile("Q")
-				Q = node.W - node.L
-				self.tt.end_profile("Q")
-				self.tt.profile("Actions")
-				g = U + Q
-				action = np.argmax(g)
-				self.tt.end_profile("Actions")
-			self.tt.profile("Update N and L")
-			node.N[action] += 1
-			node.L[action] += self.nu
-			self.tt.end_profile("Update N and L")
-			self.tt.profile("Update path")
-			path.append(action)
-			self.tt.end_profile("Update path")
-			self.tt.profile("Get next node")
-			node = node.neighs[action]
-			self.tt.end_profile("Get next node")
-		self.tt.end_profile("Exploring next node")
-		return path, node
-
-	def _update_neighbors(self, state: np.ndarray):
-		"""
-		# Expands around state. If a new state is already in the tree, neighbor relations are updated
-		# Assumes that state is already in the tree
-		# Used for node expansion
-		"""
-		state_str = state.tostring()
-		new_states = Cube.multi_rotate(
-			np.tile(state, (Cube.action_dim, *[1]*len(Cube.get_solved_instance().shape))),
-			*Cube.iter_actions()
-		)
-		new_states_strs = [x.tostring() for x in new_states]
-		for i, (new_state, new_state_str) in enumerate(zip(new_states, new_states_strs)):
-			self.tt.profile("Ensure neighbors")
-			if new_state_str in self.states:
-				self.states[state_str].neighs[i] = self.states[new_state_str]
-				self.states[new_state_str].neighs[Cube.rev_action(i)] = self.states[state_str]
-				if all(self.states[new_state_str].neighs):
-					self.states[new_state_str].is_leaf = False
-			self.tt.end_profile("Ensure neighbors")
-		if all(self.states[state_str].neighs):
-			self.states[state_str].is_leaf = False
-
-	def expand_leaves(self, leaves: List[Node]) -> (int, int):
-		"""
-		Expands all given leaves
-		Returns the index of the leaf and the action to solve it
-		Both are -1 if no solution is found
-		"""
-		# print("\nEXPANDING LEAVES")
-		# [print(l.state.tolist()) for l in leaves]
-
-		# Explores all new states
-		self.tt.profile("Getting new states")
-		states = np.array([leaf.state for leaf in leaves])
-		new_states = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
-		self.tt.end_profile("Getting new states")
-
-		# Checks for solutions
-		self.tt.profile("Checking for solved state")
-		for i, state in enumerate(new_states):
-			if Cube.is_solved(state):
-				leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
-				solved_leaf = Node(state, None, None, leaves[leaf_idx], action_idx)
-				self.states[state.tostring()] = solved_leaf
-				self._update_neighbors(state)
-				return i // Cube.action_dim, i % Cube.action_dim
-		self.tt.end_profile("Checking for solved state")
-
-		# Gets information about new states
-		self.tt.profile("Substate strings")
-		new_states_str = [state.tostring() for state in new_states]
-		self.tt.end_profile("Substate strings")
-		self.tt.profile("One-hot encoding")
-		new_states_oh = Cube.as_oh(new_states)
-		self.tt.end_profile("One-hot encoding")
-		self.tt.profile("Feedforward")
-		policies, values = self.net(new_states_oh)
-		policies, values = policies.softmax(dim=1).cpu().numpy(), values.squeeze().cpu().numpy()
-		self.tt.end_profile("Feedforward")
-
-		self.tt.profile("Generate new states")
-		for i, (state, state_str, p, v) in enumerate(zip(new_states, new_states_str, policies, values)):
-			leaf_idx, action_idx = i // Cube.action_dim, i % Cube.action_dim
-			leaf = leaves[leaf_idx]
-			if state_str not in self.states:
-				new_leaf = Node(state, p, v, leaf, action_idx)
-				self.tt.profile("Update neighbors")
-				leaf.neighs[action_idx] = new_leaf
-				self.tt.end_profile("Update neighbors")
-				self.states[state_str] = new_leaf
-				# It is possible to add check for existing neighbors in graph here using self._update_neighbors(state) to ensure graph completeness
-				# However, this is so expensive that it has been found to reduce the number of explored states to around a quarter
-				# Also, it is not a major problem, as the edges will be updated when new_leaf is expanded, so the problem only exists on the edge of the graph
-				# TODO: Test performance difference after implementing this
-				# TODO: Save dumb nodes when expanding. This should allow graph completeness without massive overhead
-				if self.complete_graph:
-					self._update_neighbors(state)
-
-			else:
-				self.tt.profile("Update neighbors")
-				leaf.neighs[action_idx] = self.states[state_str]
-				self.tt.end_profile("Update neighbors")
-				self.states[state_str].neighs[Cube.rev_action(action_idx)] = leaf
-				if all(self.states[state_str].neighs):
-					self.states[state_str].is_leaf = False
-			leaf.is_leaf = False
-		self.tt.end_profile("Generate new states")
-
-		self.tt.profile("Update W")
-		for leaf in leaves:
-			max_val = max([x.value for x in leaf.neighs])
-			assert max_val != 0
-			for action_idx, neighbor in enumerate(leaf.neighs):
-				neighbor.W[Cube.rev_action(action_idx)] = max_val
-		self.tt.end_profile("Update W")
-
-		return -1, -1
-
-	def _shorten_action_queue(self):
-		# TODO: Implement and ensure graph completeness
-		# Generates new action queue with BFS through self.states
-		pass
-
-	def reset(self):
-		super().reset()
-		self.states = dict()
-
-	@classmethod
-	def from_saved(cls, loc: str, c: float, nu: float, complete_graph: bool, search_graph: bool, workers: int):
-		net = Model.load(loc)
-		net.to(gpu)
-		return cls(net, c=c, nu=nu, complete_graph=complete_graph, search_graph=search_graph, workers=workers)
-
-	def __str__(self):
-		return f"Old MCTS {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
-
-	def __len__(self):
-		return len(self.states)
 
 
 class AStar(DeepSearcher):
@@ -693,73 +468,5 @@ class AStar(DeepSearcher):
 			node = self.closed[node]['parent']
 			if node == 'Starting node': return count
 			count += 1
-
-
-if __name__ == "__main__":
-	seedsetter()
-	time_limit = 1
-	workers = 2
-	net = Model.load("data/local_train")
-	searcher = MCTS(net, 0.6, 0.001, False, False, workers)
-	log = Logger("local_MCTS.log", "MCTSBOI")
-	print = log
-	state = np.array("11  5  2 23 14 20  8 17 15  8  3  6  1 21  5 17 19 10 13 22".split(), dtype=Cube.dtype)
-	# state, _, _ = Cube.scramble(5)
-	print("Found solution:", searcher.search(state, time_limit))
-	print("States:", len(searcher))
-
-	searcher2 = MCTS2(net, 0.6, 0.001, False, False, workers)
-	print = Logger("local_MCTS2.log", "MCTSBOI2")
-	print("Found solution:", searcher2.search(state, time_limit))
-	print("States:", len(searcher2))
-
-	# Tests correctness of graph
-	print = log
-	# Indices
-	assert searcher.indices[state.tostring()] == 1
-	for s, i in searcher.indices.items():
-		assert searcher.states[i].tostring() == s
-	assert sorted(searcher.indices.values())[0] == 1
-	assert np.all(np.diff(sorted(searcher.indices.values())) == 1)
-
-	used_idcs = np.array(list(searcher.indices.values()))
-
-	# States
-	assert np.all(searcher.states[1] == state)
-	for i, s in enumerate(searcher.states):
-		if i not in used_idcs: continue
-		assert s.tostring() in searcher.indices
-		assert searcher.indices[s.tostring()] == i
-
-	# Neighbors
-	for i, neighs in enumerate(searcher.neighbors):
-		if i not in used_idcs: continue
-		state = searcher.states[i]
-		for j, neighbor_index in enumerate(neighs):
-			assert neighbor_index == 0 or neighbor_index in searcher.indices.values()
-			if neighbor_index == 0: continue
-			substate = Cube.rotate(state, *Cube.action_space[j])
-			assert np.all(searcher.states[neighbor_index] == substate)
-
-	# Policy and value
-	with torch.no_grad():
-		p, v = searcher.net(Cube.as_oh(searcher.states[used_idcs]))
-	p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()
-	assert np.all(np.isclose(searcher.P[used_idcs], p, atol=1e-5))
-	assert np.all(np.isclose(searcher.V[used_idcs], v, atol=1e-5))
-
-	# Leaves
-	assert np.all(searcher.neighbors.all(axis=1) != searcher.leaves)
-
-	# W
-	for i in used_idcs:
-		neighs = searcher.neighbors[i]
-		supposed_Ws = np.zeros(Cube.action_dim)
-		for j, neighbor_index in enumerate(neighs):
-			if neighbor_index == 0: continue
-			neighbor_neighbor_indices = searcher.neighbors[neighbor_index]
-			if np.all(neighbor_neighbor_indices):
-				supposed_Ws[j] = np.max(searcher.V[neighbor_neighbor_indices])
-		assert np.all(supposed_Ws == searcher.W[i])
 
 
