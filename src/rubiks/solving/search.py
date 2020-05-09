@@ -241,8 +241,8 @@ class MCTS(DeepSearcher):
 					self._shorten_action_queue()
 				return True
 
-			# Finding leaves
-			paths, leaves = self.find_leaves(time_limit, self.workers)
+			# Find leaves
+			paths, leaves = zip(*[self.find_leaf(time_limit) for _ in range(self.workers)])
 
 		return False
 
@@ -278,7 +278,6 @@ class MCTS(DeepSearcher):
 			i = solved_new_states_idcs[0]
 			leaf_idx, action_idx = i // Cube.action_dim, actions_taken[i]
 			self._update_neighbors(leaves_idcs[leaf_idx])
-			return leaf_idx, action_idx
 		self.tt.end_profile("Checking for solved state")
 
 		self.tt.profile("Substate strings")
@@ -346,9 +345,10 @@ class MCTS(DeepSearcher):
 
 	def _update_neighbors(self, state_idx: int):
 		"""
-		# Expands around state. If a new state is already in the tree, neighbor relations are updated
-		# Assumes that state is already in the tree
-		# Used for node expansion
+		Expands around state. If a new state is already in the tree, neighbor relations are updated
+		Assumes that state is already in the tree
+		Used for node expansion
+		TODO: Consider not using state_idx and instead all leaves
 		"""
 		self.tt.profile("Update neighbors")
 		state = self.states[state_idx]
@@ -361,60 +361,49 @@ class MCTS(DeepSearcher):
 		self.leaves[[state_idx, *substate_idcs]] = self.neighbors[[state_idx, *substate_idcs]].all(axis=1)
 		self.tt.end_profile("Update neighbors")
 
-	def find_leaves(self, time_limit: float, workers: int) -> (list, np.ndarray):
+	def find_leaf(self, time_limit: float) -> (list, np.ndarray):
 		"""
 		Searches the tree starting from starting state using self.workers workers
 		Returns a list of paths and an array containing indices of leaves
 		"""
-		paths = [deque() for _ in range(workers)]
-		states_idcs = np.ones(workers, dtype=int)
-		leaves_idcs = []
+		path = deque()
+		current_index = 1
 		self.tt.profile("Exploring next node")
-		while states_idcs.size and self.tt.tock() < time_limit:
+		while not self.leaves[current_index] and self.tt.tock() < time_limit:
 			self.tt.profile("sqrt(N)")
-			sqrtN = np.sqrt(self.N[states_idcs].sum(axis=1))
+			sqrtN = np.sqrt(self.N[current_index].sum())
 			self.tt.end_profile("sqrt(N)")
-			actions = np.empty(len(states_idcs), dtype=int)
-			# States from which an action is taken for the first time
-			self.tt.profile("Random actions")
-			no_prev_action = sqrtN < self.eps
-			actions[no_prev_action] = np.random.randint(0, 12, no_prev_action.sum())
-			self.tt.end_profile("Random actions")
-			# States from which an action has been taken previously
-			self.tt.profile("Previously taken actions")
-			prev_action = ~no_prev_action
-			prev_action_idcs = states_idcs[prev_action]
-			self.tt.end_profile("Previously taken actions")
-			if any(prev_action_idcs):
-				# PROBLEM: Virtual loss and N are not updated before all actions have been calculated. This means the actions taken will always be the same
+			if sqrtN < self.eps:
+				# If no actions have been taken from this before
+				self.tt.profile("Random actions")
+				action = np.random.randint(Cube.action_dim)
+				self.tt.end_profile("Random actions")
+			else:
+				# If actions have been taken from this state before
 				self.tt.profile("U")
-				U = (self.c * self.P[prev_action_idcs].T * sqrtN[prev_action] / (1 + self.N[prev_action_idcs].T)).T
+				U = self.c * self.P[current_index] * sqrtN / (1 + self.N[current_index])
 				self.tt.end_profile("U")
 				self.tt.profile("Q")
-				Q = self.W[prev_action_idcs] - self.L[prev_action_idcs]
+				Q = self.W[current_index] - self.L[current_index]
 				self.tt.end_profile("Q")
 				self.tt.profile("Actions")
-				actions[~no_prev_action] = (U + Q).argmax(axis=1)
+				action = (U + Q).argmax()
 				self.tt.end_profile("Actions")
 			# Updates N and virtual loss
 			self.tt.profile("Update N and L")
-			for i, a in zip(states_idcs, actions):
-				self.N[i, a] += 1
-				self.L[i, a] += self.nu
+			# TODO: Perhaps use the fast buggy code here
+			self.N[current_index, action] += 1
+			self.L[current_index, action] += self.nu
 			self.tt.end_profile("Update N and L")
-			# TODO: Perhaps use the buggy code here
 			self.tt.profile("Update paths")
-			# print(actions)
-			[paths[i].append(a) for i, a in enumerate(actions)]  # TODO: May have to speed this part up
+			path.append(action)
 			self.tt.end_profile("Update paths")
-			self.tt.profile("Get next states")
-			states_idcs = self.neighbors[states_idcs, actions]  # New states
-			leaves_idcs.extend(states_idcs[self.leaves[states_idcs]])
-			states_idcs = states_idcs[~self.leaves[states_idcs]]  # Removes those that are leaves
-			self.tt.end_profile("Get next states")
+			self.tt.profile("Get next state")
+			current_index = self.neighbors[current_index, action]
+			self.tt.end_profile("Get next state")
 		self.tt.end_profile("Exploring next node")
 		# print(paths)
-		return paths, leaves_idcs
+		return path, current_index
 
 	def _shorten_action_queue(self):
 		# TODO
