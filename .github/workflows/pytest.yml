@@ -1,5 +1,5 @@
 
-name: pytest_push
+name: pytest_master
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     paths:
         - src/rubiks/**.py
         - src/tests/**.py
+        - .github/workflows/pytest.yml
 
 
 jobs:
