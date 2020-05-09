@@ -73,18 +73,14 @@ class Parser:
 
 		experiments, with_config = self._read_config(conf_arg, args)
 
-		location = ''
 		if not experiments: #If configparser set nothing or only set defaults
 			self.argparser.set_defaults(**self.defaults)
 			args = self.argparser.parse_args(args)
-			if args.location:
-				self.defaults['location'] = args.location
-				location = args.location
+			if args.location: self.save_location = args.location
 			del args.config
 			experiments.append({'name': self.name, **vars(args)})
 
-
-		if document: self._document_settings(with_config, location)
+		if document: self._document_settings(with_config)
 
 		return experiments
 
@@ -107,7 +103,10 @@ class Parser:
 				exp_args = self.argparser.parse_args(args)
 
 				#For multiple experiments, subfolders are nice
-				if exp_args.location: exp_args.location = f"{exp_args.location}/{experiment_name.lower()}"
+				if exp_args.location:
+					if self.save_location and self.save_location != exp_args.location: raise ValueError("Multiple save locations are not supported")
+					self.save_location = exp_args.location
+					exp_args.location = f"{exp_args.location}/{experiment_name.lower()}"
 
 				del exp_args.config
 				experiments.append({'name': experiment_name, **vars(exp_args)})
@@ -115,12 +114,10 @@ class Parser:
 		return experiments, with_config
 
 
-	def _document_settings(self, with_config: bool, location: str):
+	def _document_settings(self, with_config: bool):
 		"""
 		Saves all settings used for experiments for reproducability.
 		"""
-		if location: self.save_location = location #To allow both for forced location and the automatic, default location
-		elif 'location' in self.defaults: self.save_location = self.defaults['location']
 
 		os.makedirs(self.save_location, exist_ok = True)
 
