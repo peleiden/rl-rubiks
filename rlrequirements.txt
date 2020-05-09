@@ -1,0 +1,9 @@
+#The required packages for running the code in src/rubiks
+bayesian_optimization==1.1.0
+scipy==1.4.1
+torch==1.4.0
+matplotlib==3.0.3
+numpy==1.16.2
+auto_mix_prep==0.2.0
+dataclasses==0.7
+GitPython==3.1.2
