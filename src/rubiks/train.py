@@ -333,8 +333,6 @@ class Train:
 			reward_ax = loss_ax.twinx()
 			reward_ax.set_ylim(ylim)
 			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
-			print(self.evaluation_rollouts)
-			print(self.eval_rewards)
 			reward_ax.plot(self.evaluation_rollouts, self.eval_rewards, "-o", color=color, label="Fraction of cubes solved")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 			h2, l2 = reward_ax.get_legend_handles_labels()
