@@ -12,8 +12,8 @@ class Agent:
 		"""
 		self._searcher = searcher
 
-	def generate_action_queue(self, state: np.ndarray, time_limit: float) -> (bool, int):
-		solution_found = self._searcher.search(state, time_limit, int(1e10))  # FIXME
+	def generate_action_queue(self, state: np.ndarray, time_limit: float, max_states: int=None) -> (bool, int):
+		solution_found = self._searcher.search(state, time_limit, max_states)
 		return solution_found, len(self._searcher.action_queue)
 
 	def action(self) -> (int, bool):

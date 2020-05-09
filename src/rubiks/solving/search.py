@@ -49,11 +49,13 @@ class Searcher:
 		self.tt = TickTock()
 
 	@no_grad
-	def search(self, state: np.ndarray, time_limit: float, max_states: int) -> bool:
+	def search(self, state: np.ndarray, time_limit: float, max_states: int=None) -> bool:
 		# Returns whether a path was found and generates action queue
 		# Implement _step method for searchers that look one step ahead, otherwise overwrite this method
 		self.reset()
 		self.tt.tick()
+		max_states = max_states or int(1e10)
+
 		if Cube.is_solved(state): return True
 		while self.tt.tock() < time_limit and len(self) < max_states:
 			action, state, solution_found = self._step(state)
@@ -109,9 +111,10 @@ class RandomDFS(Searcher):
 		return "Random depth-first search"
 
 class BFS(Searcher):
-	def search(self, state: np.ndarray, time_limit: float, max_states: int) -> (np.ndarray, bool):
+	def search(self, state: np.ndarray, time_limit: float, max_states: int=None) -> (np.ndarray, bool):
 		self.reset()
 		self.tt.tick()
+		max_states = max_states or int(1e10)
 
 		if Cube.is_solved(state): return True
 

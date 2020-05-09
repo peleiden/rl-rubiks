@@ -18,7 +18,7 @@ net = Model.load("data/local_good_net").eval().to(gpu)
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float):
 	state, f, d = Cube.scramble(depth, True)
 	searcher = MCTS(net, c, nu, False, False, workers)
-	is_solved = searcher.search(state, time_limit, int(1e10))
+	is_solved = searcher.search(state, time_limit)
 	assert is_solved == (Cube.get_solved().tostring() in searcher.indices)
 	return is_solved, len(searcher.indices)
 
@@ -67,7 +67,7 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 		sols = np.zeros(n)
 		for j in range(n):
 			state, f, d = Cube.scramble(depth, True)
-			sols[j] = searcher.search(state, time_limit=tl, max_states=int(1e10))
+			sols[j] = searcher.search(state, time_limit=tl)
 			expand[i] += sum(searcher.tt.profiles["Expanding leaves"].hits)
 			try:
 				explore[i] += sum(searcher.tt.profiles["Exploring next node"].hits)

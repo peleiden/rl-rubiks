@@ -19,7 +19,7 @@ class TestMCTS(MainTest):
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
 		searcher = MCTS(net, c=1, nu=.01, complete_graph=complete_graph, search_graph=True, workers=10)
-		searcher.search(state, .1, int(1e10))
+		searcher.search(state, .1)
 		
 		# Indices
 		assert searcher.indices[state.tostring()] == 1
