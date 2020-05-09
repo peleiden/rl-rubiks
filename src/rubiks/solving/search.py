@@ -11,7 +11,6 @@ from src.rubiks.utils import seedsetter
 from src.rubiks.utils.logger import Logger
 from src.rubiks.utils.ticktock import TickTock
 
-
 class Node:
 	def __init__(self, state: np.ndarray, policy: np.ndarray, value: float, from_node=None, action_idx: int=None):
 		self.is_leaf = True  # When initiated, the node is leaf of search graph
@@ -253,9 +252,8 @@ class MCTS(DeepSearcher):
 		Returns the index of the leaf and the action to solve it
 		Both are -1 if no solution is found
 		"""
+		leaf_idx, action_idx = -1, -1
 		print("\n--EXPANDING LEAVES--")
-		print("\n--EXPANDING LEAF--")
-		print("STATES", self.states[leaves_idcs])
 		# Ensure space in stacks
 		# TODO: Test that this is sufficient
 		if len(self.indices) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
@@ -278,9 +276,8 @@ class MCTS(DeepSearcher):
 		solved_new_states_idcs = np.where(solved_new_states)[0]
 		if solved_new_states_idcs.size:
 			i = solved_new_states_idcs[0]
-			leaf_idx, action_idx = repeated_leaves_idcs[i], actions_taken[i]
-			self._update_neighbors(leaf_idx)
-			return leaf_idx, action_idx
+			leaf_idx, action_idx = i // Cube.action_dim, actions_taken[i]
+			self._update_neighbors(leaves_idcs[leaf_idx])
 		self.tt.end_profile("Checking for solved state")
 
 		substate_strs		= [s.tostring() for s in substates]
@@ -332,7 +329,7 @@ class MCTS(DeepSearcher):
 			self.W[neighs, Cube.rev_actions(np.arange(Cube.action_dim))] = W
 		self.tt.end_profile("Update W")
 
-		return -1, -1
+		return leaf_idx, action_idx
 
 	def _update_neighbors(self, state_idx: int):
 		"""
@@ -347,6 +344,7 @@ class MCTS(DeepSearcher):
 		substate_idcs = np.array([self.indices[s.tostring()] for s in substates[actions_taken]])
 		self.neighbors[[state_idx]*len(actions_taken), actions_taken] = substate_idcs
 		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = state_idx
+		self.leaves[state_idx] = False
 		self.leaves[[state_idx, *substate_idcs]] = self.neighbors[[state_idx, *substate_idcs]].all(axis=1)
 		self.tt.end_profile("Update neighbors")
 
@@ -364,10 +362,10 @@ class MCTS(DeepSearcher):
 			# print("--ITERATION--", states_idcs)
 			assert not np.any(states_idcs == 0)
 			sqrtN = np.sqrt(self.N[states_idcs].sum(axis=1))
-			actions = -np.ones(len(states_idcs), dtype=int)  # TODO: use np.empty
+			actions = np.empty(len(states_idcs), dtype=int)  # TODO: use np.empty
 			# States from which an action is taken for the first time
 			no_prev_action = sqrtN < self.eps
-			actions[no_prev_action] = np.random.randint(0, 12, no_prev_action.sum())
+			actions[no_prev_action] = 0#np.random.randint(0, 12, no_prev_action.sum())
 			# States from which an action has been taken previously
 			prev_action = ~no_prev_action
 			prev_action_idcs = states_idcs[prev_action]
@@ -376,7 +374,7 @@ class MCTS(DeepSearcher):
 				Q = self.W[prev_action_idcs] + self.L[prev_action_idcs]
 				# print("L", self.L[prev_action_idcs].tolist())
 				# print("Q", Q.tolist())
-				actions[~no_prev_action] = (U - Q).argmax(axis=1)
+				actions[~no_prev_action] = (U + Q).argmax(axis=1)
 			# print("ACTIONS", actions)
 			assert np.all(actions >= 0) and np.all(actions < 12)
 			# Updates N and virtual loss
@@ -450,6 +448,7 @@ class MCTS2(DeepSearcher):
 				return True
 			# Gets new paths and leaves to expand from
 			paths, leaves = zip(*[self.search_leaf(self.states[state.tostring()], max_states) for _ in range(self.workers)])
+			print("PATHS", paths)
 
 		self.action_queue = paths[solve_leaf] + deque([solve_action])  # Saves an action queue even if it loses which is its best guess
 		return False
@@ -462,7 +461,7 @@ class MCTS2(DeepSearcher):
 		while not node.is_leaf:
 			sqrtN = np.sqrt(node.N.sum())
 			if sqrtN < self.eps:  # Randomly chooses path the first time a state is explored
-				action = np.random.choice(Cube.action_dim)
+				action = 0#np.random.choice(Cube.action_dim)
 			else:
 				U = self.c * node.P * sqrtN / (1 + node.N)
 				Q = node.W - node.L
@@ -472,7 +471,6 @@ class MCTS2(DeepSearcher):
 			node.L[action] += self.nu
 			path.append(action)
 			node = node.neighs[action]
-		print("PATH", path)
 		self.tt.end_profile("Exploring next node")
 		return path, node
 
@@ -507,7 +505,6 @@ class MCTS2(DeepSearcher):
 		"""
 
 		print("\n--EXPANDING LEAF--")
-		print("STATE", [l.state for l in leaves])
 
 		# Explores all new states
 		self.tt.profile("Getting new states to expand to")
@@ -668,17 +665,24 @@ class AStar(DeepSearcher):
 
 if __name__ == "__main__":
 	seedsetter()
-	searcher = MCTS(Model.load("data/local_train"), 0.6, 0.001, False, False, 1)
-	print = Logger(("MCTS" if type(searcher) == MCTS else "MCTS") + ".log", "MCTSBOI")
-	#state, _, _ = Cube.scramble(5)
+	states = 10000
+	workers = 10
+	net = Model.load("data/local_train")
+	searcher = MCTS(net, 0.6, 0.001, False, False, workers)
+	log = Logger("local_MCTS.log", "MCTSBOI")
+	print = log
 	state = np.array("11  5  2 23 14 20  8 17 15  8  3  6  1 21  5 17 19 10 13 22".split(), dtype=Cube.dtype)
-	print("Found solution:", searcher.search(state, 40))
+	state, _, _ = Cube.scramble(5)
+	print("Found solution:", searcher.search(state, states))
 	print("States:", len(searcher))
 
-	if type(searcher) != MCTS:
-		exit()
+	searcher2 = MCTS2(net, 0.6, 0.001, False, False, workers)
+	print = Logger("local_MCTS2.log", "MCTSBOI2")
+	print("Found solution:", searcher2.search(state, states))
+	print("States:", len(searcher2))
 
 	# Tests correctness of graph
+	print = log
 	# Indices
 	assert searcher.indices[state.tostring()] == 1
 	for s, i in searcher.indices.items():
@@ -710,7 +714,7 @@ if __name__ == "__main__":
 		p, v = searcher.net(Cube.as_oh(searcher.states[used_idcs]))
 	p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()
 	assert np.all(np.isclose(searcher.P[used_idcs], p))
-	assert np.all(np.isclose(searcher.V[used_idcs], v))
+	assert np.all(np.isclose(searcher.V[used_idcs], v, atol=1e-5))
 
 	# Leaves
 	assert np.all(searcher.neighbors.all(axis=1) != searcher.leaves)

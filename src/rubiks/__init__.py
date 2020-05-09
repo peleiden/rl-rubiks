@@ -2,7 +2,7 @@ import functools
 import torch
 
 cpu = torch.device("cpu")
-gpu = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+gpu = torch.device("cpu" if torch.cuda.is_available() else "cpu")  # TODO
 
 def reset_cuda():
 	torch.cuda.empty_cache()
