@@ -20,7 +20,7 @@ class TestAgent(MainTest):
 			Agent(BFS()),
 			DeepAgent(PolicySearch.from_saved(path, False)),
 			DeepAgent(PolicySearch.from_saved(path, True)),
-			DeepAgent(MCTS.from_saved(path, 1, 1, True, 1))
+			DeepAgent(MCTS.from_saved(path, 1, 1, True, 1, 'p'))
 		]
 		for agent in agents:
 			self._test_agent(agent)
