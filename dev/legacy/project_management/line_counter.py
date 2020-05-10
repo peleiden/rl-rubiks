@@ -9,7 +9,7 @@ from collections import deque, defaultdict
 import time
 
 def exclude(d: str):
-	exclude_patterns = ["local", "node_modules", "dist", ".idea", "__pycache__", ".git"]
+	exclude_patterns = ["local", "node_modules", "dist", ".idea", "__pycache__", ".git", ".pytest_cache", ".vscode"]
 	for pattern in exclude_patterns:
 		if pattern in d or f"/{pattern}" in d:
 			return True
@@ -18,7 +18,11 @@ def exclude(d: str):
 def get_files(patterns: dict):
 	files = defaultdict(list)
 	dirs = lambda x: next(os.walk(x))[1]
-	q = deque(dirs("."))
+	q = deque(".")
+	for f in os.listdir(q[0]):
+		for ext in (x[0] for x in patterns.values()):
+			if f.lower().endswith(ext):
+				files[ext].append(os.path.join(q[0], f))
 	while q:
 		v = q.popleft()
 		for d in dirs(v):
