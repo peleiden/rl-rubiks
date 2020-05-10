@@ -1,5 +1,5 @@
 cd "$(dirname "$0")"
-cd frontend
+cd ../frontend
 ng deploy --base-href https://asgerius.github.io/rl-rubiks/
 git checkout prod
 git pull
