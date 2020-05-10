@@ -231,6 +231,19 @@ class TrainJob:
 		return train.train_rollouts, train.train_losses
 
 
+def clean_dir(loc: str):
+	"""
+	Cleans a training directory created by runtrain
+	All except the config file is removed
+	"""
+	with open(f"{loc}/train_config.ini") as f:
+		content = f.read()
+	rmtree(loc)
+	os.mkdir(loc)
+	with open(f"{loc}/train_config.ini", "w") as f:
+		f.write(content)
+
+
 if __name__ == "__main__":
 	description = r"""
 
@@ -251,8 +264,7 @@ on the Rubik's Cube using config or CLI arguments.
 
 	parser = Parser(options, description=description, name='train')
 	jobs = [TrainJob(**settings) for settings in  parser.parse()]
-	rmtree(parser.save_location, ignore_errors=True)
-	os.mkdir(parser.save_location)
+	clean_dir(parser.save_location)
 	for job in jobs:
 		job.execute()
 
