@@ -331,7 +331,7 @@ class Train:
 					)
 		generator_net.load_state_dict(new_genparams)
 		self.tt.end_profile("Creating generator network")
-		return generator_net
+		return generator_net.to(gpu)
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
