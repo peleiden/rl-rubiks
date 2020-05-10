@@ -32,23 +32,23 @@ echo "export PYTHONPATH=\$PYTHONPATH:<path where you cloned>/rl-rubiks" >> ~/.ba
 On Windows, you can follow some of the instructions in [this SO thread](https://stackoverflow.com/questions/3701646/how-to-add-to-the-pythonpath-in-windows-so-it-finds-my-modules-packages) 
 
 ### Starting training
-The training can be started using `src/rubiks/runtrain.py`. From the main repo folder, run
+The training can be started using `runtrain.py`. From the main repo folder, run
 ```
-python src/rubiks/runtrain.py --help
+python runtrain.py --help
 ```
 for help on options. In many cases, using the parameters from a configuration file is preferable. An example of using this to run two trainings, can be seen be running
 ```
-python src/rubiks/runtrain.py --config data/configs/train_ex.ini
+python runtrain.py --config data/configs/train_ex.ini
 ```
 ### Evaluation of agents
 
-To evaluate the performance of one or more agents, a solving experiment can be started using `src/rubiks/runeval.py`. From the main repo folder, run
+To evaluate the performance of one or more agents, a solving experiment can be started using `runeval.py`. From the main repo folder, run
 ```
-python src/rubiks/runeval.py --help
+python runeval.py --help
 ```
 for help on options. This also works with configuration files; an example of which can be seen be running
 ```
-python src/rubiks/runeval.py --config data/configs/eval_ex.ini
+python runeval.py --config data/configs/eval_ex.ini
 ```
 
 ## Experiments

@@ -5,8 +5,8 @@ on:
   push:
     branches: [ master, prod ]
     paths:
-        - src/rubiks/**.py
-        - src/tests/**.py
+        - librubiks/**.py
+        - tests/**.py
         - .github/workflows/pytest.yml
         - rlrequirements.txt
 
