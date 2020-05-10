@@ -41,6 +41,11 @@ class Searcher:
 		return False
 
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
+		"""
+		Takes a step given a stae
+		:param state: numpy array containing a state
+		:return: Action index, new state, is solved
+		"""
 		raise NotImplementedError
 
 	def reset(self):
@@ -55,7 +60,6 @@ class Searcher:
 
 	def __len__(self):
 		# Returns number of states explored
-		# FIXME: Will not work with external multithreading
 		return self._explored_states
 
 
@@ -142,7 +146,25 @@ class PolicySearch(DeepSearcher):
 		return cls(net, sample_policy)
 
 	def __str__(self):
-		return f"Policy search {'with' if self.sample_policy else 'without'} sampling"
+		return f"{'Sampled' if self.sample_policy else 'Greedy'} policy"
+
+
+class ValueSearch(DeepSearcher):
+
+	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
+		substates = Cube.multi_rotate(Cube.repeat_state(state, Cube.action_dim), *Cube.iter_actions())
+		solutions = Cube.multi_is_solved(substates)
+		if np.any(solutions):
+			action = np.where(solutions)[0][0]
+			return action, substates[action], True
+		else:
+			substates_oh = Cube.as_oh(substates)
+			v = self.net(substates_oh, policy=False).squeeze().cpu().numpy()
+			action = np.argmax(v)
+			return action, substates[action], False
+
+	def __str__(self):
+		return "Greedy value"
 
 
 class MCTS(DeepSearcher):

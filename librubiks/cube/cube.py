@@ -128,14 +128,18 @@ class Cube:
 		return 480 if get_is2024() else 288
 
 	@staticmethod
-	def rev_action(action: int) -> int:
-		return action + 1 if action % 2 == 0 else action - 1
-
-	@staticmethod
 	def rev_actions(actions: np.ndarray) -> np.ndarray:
 		rev_actions = actions - 1
 		rev_actions[actions % 2 == 0] += 2
 		return rev_actions
+
+	@classmethod
+	def repeat_state(cls, state: np.ndarray, n: int) -> np.ndarray:
+		"""
+		Repeats state n times, such that the output array will have shape n x *Cube shape
+		Useful in combination with multi_rotate
+		"""
+		return np.tile(state, [n, *[1]*len(Cube.shape())])
 
 	@classmethod
 	def as633(cls, state: np.ndarray) -> np.ndarray:

@@ -15,7 +15,7 @@ from librubiks.train import Train
 
 from librubiks.solving.evaluation import Evaluator
 from librubiks.solving.agents import Agent, DeepAgent
-from librubiks.solving.search import PolicySearch
+from librubiks.solving.search import PolicySearch, ValueSearch
 
 import librubiks.solving.search as search
 
@@ -207,9 +207,8 @@ class EvalJob:
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}
-			elif searcher == search.AStar:
-				search_args = {} # Non-parametric method goes brrrr
-			else: raise Exception(f"Kwargs have not been prepared for the DeepSearcher {searcher}")
+			else:  # Non-parametric methods go brrrr
+				search_args = {}
 
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
 			# DeepSearchers might have to test multiple NN's

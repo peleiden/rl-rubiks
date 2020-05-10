@@ -206,7 +206,8 @@ class Evaluator:
 				edgecolor	= "black",
 				linewidth	= 2,
 				align		= "left",
-				label		= [f"{agent}. S = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
+				label		= [f"{agent}- S = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
+		highest_y = 0
 		for i in range(len(eval_results)):
 			if stds[i] > 0:
 				x = np.linspace(lower, higher, 200)
@@ -215,12 +216,14 @@ class Evaluator:
 				y = y[~np.isnan(y)]
 				plt.plot(x, y, color="black", linewidth=10)
 				plt.plot(x, y, color=colours[i], linewidth=5)
+				highest_y = max(highest_y, y.max())
 		ax.set_xlim([lower, higher])
 		ax.set_xticks(bins)
 		ax.set_title(f"Single game S distributions (evaluated on {eval_settings[0]['max_time']:.2f} s per game)" if times_equal else "Single game S distributions")
 		ax.set_xlabel("S")
+		ax.set_ylim([0, highest_y*(1+0.1*max(3, len(eval_results)))])  # To make room for labels
 		ax.set_ylabel("Frequency")
-		ax.legend(loc=1)
+		ax.legend(loc=2)
 		path = os.path.join(save_dir, "eval_S.png")
 		plt.savefig(path)
 		save_paths.append(path)
