@@ -18,7 +18,7 @@ class TestMCTS(MainTest):
 	def _mcts_test(self):
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
-		searcher = MCTS(net, c=1, nu=.01, search_graph=True, workers=10)
+		searcher = MCTS(net, c=1, nu=.01, search_graph=True, workers=10, policy_type="p")
 		searcher.search(state, .1)
 
 		# Indices
