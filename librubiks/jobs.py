@@ -178,6 +178,7 @@ class EvalJob:
 		self.name = name
 		self.location = location
 
+
 		assert isinstance(games, int) and games
 		assert max_time > 0
 		assert max_states >= 0
