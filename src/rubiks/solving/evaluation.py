@@ -15,11 +15,11 @@ from src.rubiks.solving.agents import Agent
 
 class Evaluator:
 	def __init__(self,
-			n_games				= 420,  # Nice
-			max_time			= 600,  # Max time to completion per game
-			max_states			= None,
-			scrambling_depths	= range(1, 10),
-			logger: Logger		= NullLogger()
+			n_games,  # Nice
+			scrambling_depths: range or list,
+			max_time = None,  # Max time to completion per game
+			max_states = None,
+			logger: Logger = NullLogger()
 		):
 
 		self.n_games = n_games
