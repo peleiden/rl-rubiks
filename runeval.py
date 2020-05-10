@@ -32,6 +32,11 @@ options = {
 		'help':	    'Max searching time for agent',
 		'type':	    float,
 	},
+	'max_states': {
+		'default':  0,
+		'help':	    'Max number of searched states for agent per configuration. 0 for unlimited',
+		'type':	    lambda arg: int(float(arg)),
+	},
 	'scrambling': {
 		'default':  '10 25',
 		'help':	    'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 25")\n'
@@ -48,12 +53,6 @@ options = {
 		'default':	.005,
 		'help':		'Virtual loss nu for MCTS',
 		'type':		float,
-	},
-	'mcts_complete_graph': {
-		'default':	False,
-		'help':		'Whether or not to ensure that the graph is complete when expanding',
-		'type':		literal_eval,
-		'choices':	[False, True],
 	},
 	'mcts_graph_search': {
 		'default':	True,

@@ -163,10 +163,10 @@ class EvalJob:
 			searcher: str,
 			games: int,
 			max_time: float,
+			max_states: int,
 			scrambling: str,
 			mcts_c: float,
 			mcts_nu: float,
-			mcts_complete_graph: bool,
 			mcts_graph_search: bool,
 			mcts_workers: int,
 			policy_sample: bool,
@@ -180,12 +180,14 @@ class EvalJob:
 
 		assert isinstance(games, int) and games
 		assert max_time > 0
+		assert max_states >= 0
+		assert max_time or max_states
 		scrambling = range(*scrambling)
 		assert scrambling[0] #dirty check for iter and not starting with 0 :)
 
 		#Create evaluator
 		self.logger = Logger(f"{self.location}/{self.name}.log", name, verbose) #Already creates logger at init to test whether path works
-		self.evaluator = Evaluator(n_games=games, max_time=max_time, scrambling_depths=scrambling, logger=self.logger)
+		self.evaluator = Evaluator(n_games=games, max_time=max_time, max_states=max_states, scrambling_depths=scrambling, logger=self.logger)
 
 		#Create agents
 		searcher = getattr(search, searcher)
@@ -197,9 +199,8 @@ class EvalJob:
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
 				assert mcts_c >= 0 and mcts_nu >= 0\
-					and isinstance(mcts_complete_graph, bool) and isinstance(mcts_graph_search, bool)\
 					and isinstance(mcts_workers, int) and mcts_workers > 0
-				search_args = {'c': mcts_c, 'nu': mcts_nu, 'complete_graph': mcts_complete_graph, 'search_graph': mcts_graph_search, 'workers': mcts_workers}
+				search_args = {'c': mcts_c, 'nu': mcts_nu,  'search_graph': mcts_graph_search, 'workers': mcts_workers}
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}
