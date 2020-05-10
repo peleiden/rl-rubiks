@@ -316,14 +316,14 @@ class MCTS(DeepSearcher):
 		self.W[neighbor_idcs, Cube.rev_actions(actions_taken)] = np.repeat(Ws, Cube.action_dim)
 		self.tt.end_profile("Update W")
 
-		softmax = lambda x: np.exp(-x) / np.exp(-x).sum(axis=1)
+		softmax = lambda x: np.exp(-x).T / np.exp(-x).sum(axis=1)
 		if self.policy_type == "v":
 			p = softmax(values)
-			self.P[leaves_idcs] = p
+			self.P[leaves_idcs] = p.T
 		elif self.policy_type == "w":
-			Ws = self.W[neighbor_idcs].reshape((len(leaves_idcs), Cube.action_dim))
+			Ws = self.W[leaves_idcs].reshape((len(leaves_idcs), Cube.action_dim))
 			p = softmax(Ws)
-			self.P[leaves_idcs] = p
+			self.P[leaves_idcs] = p.T
 
 
 		return leaf_idx, action_idx
@@ -377,10 +377,10 @@ class MCTS(DeepSearcher):
 		pass
 
 	@classmethod
-	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool, workers: int):
+	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
 		net = Model.load(loc)
 		net.to(gpu)
-		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers)
+		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers, policy_type=policy_type)
 
 	def __str__(self):
 		return f"MCTS {'with' if self.search_graph else 'without'} BFS (c={self.c}, nu={self.nu}, pt={self.policy_type})"
