@@ -123,7 +123,7 @@ class BayesianOptimizer(Optimizer):
 
 def MCTS_optimize():
 	#Lot of overhead just for default argument niceness: latest model is latest
-	from src.rubiks.runeval import train_folders
+	from runeval import train_folders
 
 	model_path = ''
 	if train_folders:

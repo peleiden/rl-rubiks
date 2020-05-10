@@ -30,7 +30,7 @@ def get_files(patterns: dict):
 					if f.lower().endswith(ext):
 						files[ext].append(os.path.join(d, f))
 	return files
-			
+
 
 repopath = os.path.realpath(os.path.join(os.getcwd(), "..", "..", ".."))
 os.chdir(repopath)
@@ -74,7 +74,7 @@ plt.ylabel("Nummer of lines (excl. empty lines and comments)")
 plt.legend(loc=2)
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(f"{repopath}/src/legacy/project_management/local_line_counts.png")
+plt.savefig(f"{repopath}/dev/legacy/project_management/local_line_counts.png")
 plt.show()
 
 
