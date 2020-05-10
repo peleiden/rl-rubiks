@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+from scipy import stats
 import matplotlib.colors as mcolour
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
@@ -81,25 +82,35 @@ class Evaluator:
 			if (res[i]!=-1).any():
 				self.log(f"\tMean turns to complete (ex. unfinished): {mean_turns:.2f}", with_timestamp=False)
 				self.log(f"\tMedian turns to complete (ex. unfinished): {median_turns:.2f}", with_timestamp=False)
-		self.log(f"Sum score: {self.sum_score(res, self.scrambling_depths).mean():.2f}", with_timestamp=False)
+		self.log(f"Sum score: {self.S_dist(res, self.scrambling_depths).mean():.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
 		return res
 
 	@staticmethod
-	def sum_score(res: np.ndarray, scrambling_depths: list) -> np.ndarray:
+	def S_dist(res: np.ndarray, scrambling_depths: np.ndarray) -> np.ndarray:
 		"""
 		Computes sum score game wise, that is it returns an array of length self.n_games
 		It assumes that all srambling depths lower that self.scrambling_depths[0] are always solved
 		and that all depths above self.scrambling_depths[-1] are never solved
-		Overall sum_score is the mean of the returned array
+		Overall S is the mean of the returned array
 		:param res: Numpy array of evaluation results as returned by self.eval
-		:param scrambling depths: The scrambling depths used for the evaluation
+		:param scrambling_depths: The scrambling depths used for the evaluation
 		:return: Numpy array of length self.n_games
 		"""
 		solved = res != -1
 		lower_depths = scrambling_depths[0] - 1
 		return solved.sum(axis=0) + lower_depths
+
+	@staticmethod
+	def S_confidence(S_dist: np.ndarray):
+		"""
+		Calculates mean and 95 % confidence interval on a distribution of S values as given by Evaluator.S_dist
+		:param S_dist: numpy array of S values
+		:return: mean and z * sigma
+		"""
+		mu = np.mean(S_dist)
+		std = np.std(S_dist)
 
 	def plot_this_eval(self, eval_results: dict, save_dir: str,  **kwargs):
 		self.log("Creating plot of evaluation")
@@ -180,7 +191,7 @@ class Evaluator:
 		# Histograms of sum scores
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
-		sss = np.array([Evaluator.sum_score(results, eval_settings[i]['scrambling_depths']) for i, results in enumerate(eval_results.values())])
+		sss = np.array([Evaluator.S_dist(results, eval_settings[i]['scrambling_depths']) for i, results in enumerate(eval_results.values())])
 		mus, stds = [ss.mean() for ss in sss], [ss.std() for ss in sss]
 		lower, higher = sss.min() - 2, sss.max() + 2
 		bins = np.arange(lower, higher+1)

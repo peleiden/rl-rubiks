@@ -61,7 +61,8 @@ class Train:
 		# Perform evaluation every evaluation_interval and after last rollout
 		self.evaluation_rollouts = np.array(list(range(0, self.rollouts, evaluation_interval)))\
 			if evaluation_interval else np.array([])
-		if evaluation_interval and (self.rollouts-1 not in self.evaluation_rollouts): self.evaluation_rollouts = self.evaluation_rollouts.append(self.rollouts-1)
+		if evaluation_interval and (self.rollouts-1 not in self.evaluation_rollouts):
+			self.evaluation_rollouts = np.append(self.evaluation_rollouts, self.rollouts-1)
 		self.agent = agent
 
 		self.alpha_update = alpha_update  # alpha <- alpha + alpha_update every update_interval rollouts (excl. rollout 0)
