@@ -10,34 +10,6 @@ from librubiks import gpu, no_grad
 from librubiks.model import Model
 from librubiks.cube import Cube
 
-class Node:
-	def __init__(self, state: np.ndarray, policy: np.ndarray, value: float, from_node=None, action_idx: int=None):
-		self.is_leaf = True  # When initiated, the node is leaf of search graph
-		self.state = state
-		self.P = policy
-		self.value = value
-		# self.neighs[i] is a tuple containing the state obtained by the action Cube.action_space[i]
-		# strings are used, so they can be used for lookups
-		self.neighs = [None] * Cube.action_dim
-		self.N = np.zeros(Cube.action_dim)
-		self.W = np.zeros(Cube.action_dim)
-		self.L = np.zeros(Cube.action_dim)
-		if action_idx is not None:
-			from_action_idx = Cube.rev_action(action_idx)
-			self.neighs[from_action_idx] = from_node
-
-	def __str__(self):
-		return "\n".join([
-			"----- Node -----",
-			f"Leaf:      {self.is_leaf}",
-			f"State:     {tuple(self.state)}",
-			f"Value:     {self.value}",
-			f"N:         {self.N}",
-			f"W:         {self.W}",
-			f"Neighbors: {[id(x) if x is not None else None for x in self.neighs]}",
-			"----------------",
-		])
-
 
 class Searcher:
 	eps = np.finfo("float").eps
