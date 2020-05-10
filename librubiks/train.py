@@ -327,7 +327,7 @@ class Train:
 		new_genparams = dict(genparams)
 		for pname, param in netparams.items():
 			new_genparams[pname].data.copy_(
-					self.tau * param.data + (1-self.tau) * new_genparams[pname].data
+					self.tau * param.data.to(gpu) + (1-self.tau) * new_genparams[pname].data.to(gpu)
 					)
 		generator_net.load_state_dict(new_genparams)
 		self.tt.end_profile("Creating generator network")
