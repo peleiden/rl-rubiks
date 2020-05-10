@@ -338,7 +338,7 @@ class MCTS(DeepSearcher):
 		self.W[neighbor_idcs, Cube.rev_actions(actions_taken)] = np.repeat(Ws, Cube.action_dim)
 		self.tt.end_profile("Update W")
 
-		softmax = lambda x: np.exp(-x).T / np.exp(-x).sum(axis=1)
+		softmax = lambda x: np.exp(x).T / np.exp(x).sum(axis=1)
 		if self.policy_type == "v":
 			p = softmax(values)
 			self.P[leaves_idcs] = p.T
