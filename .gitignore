@@ -1,4 +1,4 @@
-src/configs/local.ini
+data/configs/local.ini
 *@neomake*
 
 *markdown*
@@ -48,8 +48,8 @@ wheels/
 *.egg
 MANIFEST
 
-src/frontend/dist/
-src/frontend/node-modules/
+frontend/dist/
+frontend/node-modules/
 
 
 # PyInstaller
