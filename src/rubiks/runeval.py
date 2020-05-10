@@ -61,12 +61,6 @@ options = {
 		'help':		'Virtual loss nu for MCTS',
 		'type':		float,
 	},
-	'mcts_complete_graph': {
-		'default':	False,
-		'help':		'Whether or not to ensure that the graph is complete when expanding',
-		'type':		literal_eval,
-		'choices':	[False, True],
-	},
 	'mcts_graph_search': {
 		'default':	True,
 		'help':		'Whether or not graph search should be applied to MCTS to find the shortest path',
@@ -100,7 +94,6 @@ class EvalJob:
 			scrambling: str,
 			mcts_c: float,
 			mcts_nu: float,
-			mcts_complete_graph: bool,
 			mcts_graph_search: bool,
 			mcts_workers: int,
 			policy_sample: bool,
@@ -133,14 +126,14 @@ class EvalJob:
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
 				assert mcts_c >= 0 and mcts_nu >= 0\
-					and isinstance(mcts_complete_graph, bool) and isinstance(mcts_graph_search, bool)\
+					and isinstance(mcts_graph_search, bool)\
 					and isinstance(mcts_workers, int) and mcts_workers > 0
-				search_args = {'c': mcts_c, 'nu': mcts_nu, 'complete_graph': mcts_complete_graph, 'search_graph': mcts_graph_search, 'workers': mcts_workers}
+				search_args = {'c': mcts_c, 'nu': mcts_nu, 'search_graph': mcts_graph_search, 'workers': mcts_workers}
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}
 			elif searcher == search.AStar:
-				search_args = {} # Non-parametric method goes brrrr
+				search_args = {}  # Non-parametric method goes brrrr
 			else: raise Exception(f"Kwargs have not been prepared for the DeepSearcher {searcher}")
 
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders

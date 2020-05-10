@@ -17,7 +17,7 @@ net = Model.load("data/local_good_net").eval().to(gpu)
 
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float):
 	state, f, d = Cube.scramble(depth, True)
-	searcher = MCTS(net, c, nu, False, False, workers)
+	searcher = MCTS(net, c, nu, False, workers)
 	is_solved = searcher.search(state, time_limit)
 	assert is_solved == (Cube.get_solved().tostring() in searcher.indices)
 	return is_solved, len(searcher.indices)
@@ -60,7 +60,7 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 	time_limits = np.linspace(.1, 2, 10)
 	expand = np.zeros_like(time_limits)
 	explore = np.zeros_like(time_limits)
-	searcher = MCTS(net, c=c, nu=nu, workers=workers, complete_graph=False, search_graph=False)
+	searcher = MCTS(net, c=c, nu=nu, search_graph=False, workers=workers)
 	log.section(f"Analyzing time distribution at depth {depth}\nExpected max time <~ {TickTock.stringify_time(sum(time_limits*n), 'm')}")
 	for i, tl in enumerate(time_limits):
 		log(f"Analyzing with time limit of {tl:.2f} s")
@@ -92,7 +92,7 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int):
 	plt.clf()
 
 def detailed_time(state, searcher, max_states: int, time_limit: float, c: float, nu: float, workers: int):
-	searcher = searcher(Model.load("data/local_train"), c=c, nu=nu, complete_graph=False, search_graph=False, workers=workers)
+	searcher = searcher(Model.load("data/local_train"), c=c, nu=nu, search_graph=False, workers=workers)
 	log.section(f"Detailed time analysis: {searcher}")
 	sol_found = searcher.search(state, time_limit, max_states)
 	log("Solved found" if sol_found else "Solved not found")

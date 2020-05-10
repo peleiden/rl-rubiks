@@ -12,13 +12,12 @@ from src.tests import MainTest
 class TestMCTS(MainTest):
 
 	def test_search(self):
-		self._mcts_test(False)
-		self._mcts_test(True)
+		self._mcts_test()
 	
-	def _mcts_test(self, complete_graph: bool):
+	def _mcts_test(self):
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
-		searcher = MCTS(net, c=1, nu=.01, complete_graph=complete_graph, search_graph=True, workers=10)
+		searcher = MCTS(net, c=1, nu=.01, search_graph=True, workers=10)
 		searcher.search(state, .1)
 		
 		# Indices

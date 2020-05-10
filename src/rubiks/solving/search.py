@@ -184,11 +184,10 @@ class MCTS(DeepSearcher):
 	W: np.ndarray
 	L: np.ndarray
 
-	def __init__(self, net: Model, c: float, nu: float, complete_graph: bool, search_graph: bool, workers: int):
+	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers: int):
 		super().__init__(net)
 		self.c = c
 		self.nu = nu
-		self.complete_graph = complete_graph
 		self.search_graph = search_graph
 		self.workers = workers
 
@@ -389,10 +388,10 @@ class MCTS(DeepSearcher):
 		pass
 
 	@classmethod
-	def from_saved(cls, loc: str, c: float, nu: float, complete_graph: bool, search_graph: bool, workers: int):
+	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool, workers: int):
 		net = Model.load(loc)
 		net.to(gpu)
-		return cls(net, c=c, nu=nu, complete_graph=complete_graph, search_graph=search_graph, workers=workers)
+		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers)
 
 	def __str__(self):
 		return f"MCTS {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"

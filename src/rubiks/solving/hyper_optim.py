@@ -146,7 +146,6 @@ def MCTS_optimize():
 
 	persistent_params = {
 		'net' : Model.load(args.location),
-		'complete_graph': False,
 		'search_graph': False,
 	}
 
