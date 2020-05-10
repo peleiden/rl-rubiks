@@ -65,6 +65,12 @@ options = {
 		'help':		'Number of sequential workers in MCTS',
 		'type':		int,
 	},
+	'mcts_policy_type': {
+		'default':	'p',
+		'help':		'How the policy is calculated in MCTS. p for softmax(policy), v for softmax(v), or w for softmax(w)',
+		'type':		str,
+		'choices':	["p", "v", "w"],
+	},
 	'policy_sample': {
 		'default':	False,
 		'help':		'Whether or not there should be sampled when using the PolicySearch agent',

@@ -169,6 +169,7 @@ class EvalJob:
 			mcts_nu: float,
 			mcts_graph_search: bool,
 			mcts_workers: int,
+			mcts_policy_type: str,
 			policy_sample: bool,
 
 			# Currently not set by parser
@@ -200,8 +201,9 @@ class EvalJob:
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
 				assert mcts_c >= 0 and mcts_nu >= 0\
-					and isinstance(mcts_workers, int) and mcts_workers > 0
-				search_args = {'c': mcts_c, 'nu': mcts_nu,  'search_graph': mcts_graph_search, 'workers': mcts_workers}
+					and isinstance(mcts_workers, int) and mcts_workers > 0\
+					and mcts_policy_type in ["p", "v", "w"]
+				search_args = {'c': mcts_c, 'nu': mcts_nu,  'search_graph': mcts_graph_search, 'workers': mcts_workers, 'policy_type': mcts_policy_type}
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}

@@ -159,12 +159,13 @@ class MCTS(DeepSearcher):
 	W: np.ndarray
 	L: np.ndarray
 
-	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers: int):
+	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
 		super().__init__(net)
 		self.c = c
 		self.nu = nu
 		self.search_graph = search_graph
 		self.workers = workers
+		self.policy_type = policy_type
 
 		self.expand_nodes = 1000
 
@@ -293,13 +294,16 @@ class MCTS(DeepSearcher):
 		new_states_oh = Cube.as_oh(new_states)
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
-		p, v = self.net(new_states_oh)
-		p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()
-		self.tt.end_profile("Feedforward")
-
+		if self.policy_type == "p":
+			p, v = self.net(new_states_oh)
+			p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()
+			self.P[new_states_idcs] = p
+		else:
+			v = self.net(new_states_oh, policy=False)
+			v = v.squeeze().cpu().numpy()
 		# Updates all values for new states
-		self.P[new_states_idcs] = p
 		self.V[new_states_idcs] = v
+		self.tt.end_profile("Feedforward")
 
 		# Updates leaves
 		self.leaves[leaves_idcs] = False
@@ -311,6 +315,16 @@ class MCTS(DeepSearcher):
 		Ws = values.max(axis=1)
 		self.W[neighbor_idcs, Cube.rev_actions(actions_taken)] = np.repeat(Ws, Cube.action_dim)
 		self.tt.end_profile("Update W")
+
+		softmax = lambda x: np.exp(-x) / np.exp(-x).sum(axis=1)
+		if self.policy_type == "v":
+			p = softmax(values)
+			self.P[leaves_idcs] = p
+		elif self.policy_type == "w":
+			Ws = self.W[neighbor_idcs].reshape((len(leaves_idcs), Cube.action_dim))
+			p = softmax(Ws)
+			self.P[leaves_idcs] = p
+
 
 		return leaf_idx, action_idx
 
@@ -369,7 +383,7 @@ class MCTS(DeepSearcher):
 		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers)
 
 	def __str__(self):
-		return f"MCTS {'with' if self.search_graph else 'without'} graph search (c={self.c}, nu={self.nu})"
+		return f"MCTS {'with' if self.search_graph else 'without'} BFS (c={self.c}, nu={self.nu}, pt={self.policy_type})"
 
 	def __len__(self):
 		return len(self.indices)
