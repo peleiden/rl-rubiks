@@ -281,7 +281,6 @@ class MCTS(DeepSearcher):
 		if solved_new_states_idcs.size:
 			i = solved_new_states_idcs[0]
 			leaf_idx, action_idx = i // Cube.action_dim, actions_taken[i]
-			self._update_neighbors(leaves_idcs[leaf_idx])
 		self.tt.end_profile("Check for solved state")
 
 		substate_strs		= [s.tostring() for s in substates]
