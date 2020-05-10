@@ -13,13 +13,15 @@ from librubiks.utils import seedsetter
 class TestMCTS(MainTest):
 
 	def test_search(self):
-		self._mcts_test()
-
-	def _mcts_test(self):
-		net = Model.create(ModelConfig()).to(gpu).eval()
 		state, _, _ = Cube.scramble(50)
-		searcher = MCTS(net, c=1, nu=.01, search_graph=True, workers=10, policy_type="p")
-		searcher.search(state, .1)
+		self._mcts_test(state, False)
+		state, _, _ = Cube.scramble(5)
+		self._mcts_test(state, True)
+
+	def _mcts_test(self, state: np.ndarray, search_graph: bool):
+		net = Model.create(ModelConfig()).to(gpu).eval()
+		searcher = MCTS(net, c=1, nu=.01, search_graph=search_graph, workers=10, policy_type="p")
+		searcher.search(state, .2)
 
 		# Indices
 		assert searcher.indices[state.tostring()] == 1

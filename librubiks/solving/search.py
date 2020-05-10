@@ -242,6 +242,7 @@ class MCTS(DeepSearcher):
 			if solve_leaf != -1:
 				self.action_queue = paths[solve_leaf] + deque([solve_action])
 				if self.search_graph:
+					self._complete_graph()
 					self._shorten_action_queue()
 				return True
 
@@ -261,7 +262,7 @@ class MCTS(DeepSearcher):
 		leaf_idx, action_idx = -1, -1
 
 		# Ensure space in stacks
-		if len(self.indices) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
+		if len(self) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
 			self.increase_stack_size()
 
 		# Explore new states
@@ -296,16 +297,14 @@ class MCTS(DeepSearcher):
 		last_unseen			= last_occurences & unseen_substates  # Boolean array: Last occurances of substates that have not been seen before
 		self.tt.end_profile("Handle duplicates")
 
-		self.tt.profile("Update indices of new states")
+		self.tt.profile("Update indices")
 		new_states			= substates[last_unseen]  # Substates that are not already in the graph. Without duplicates
-		new_states_idcs		= len(self.indices) + np.arange(last_unseen.sum()) + 1  # Indices in self.states corresponding to new_states
+		new_states_idcs		= len(self) + np.arange(last_unseen.sum()) + 1  # Indices in self.states corresponding to new_states
 		new_idcs_dict		= { s: i for i, s in zip(new_states_idcs, get_substate_strs(last_unseen)) }
 		self.indices.update(new_idcs_dict)
 		substate_idcs		= np.array([self.indices[s] for s in substate_strs])
-		self.tt.end_profile("Update indices of new states")
-
-		old_states			= substates[last_seen]  # Substates that are already in the graph. Without duplicates
 		old_states_idcs		= substate_idcs[last_seen]  # Indices in self.states corresponding to old_states
+		self.tt.end_profile("Update indices")
 
 		# Update states and neighbors
 		self.states[new_states_idcs] = substates[last_unseen]
@@ -347,23 +346,21 @@ class MCTS(DeepSearcher):
 
 		return leaf_idx, action_idx
 
-	def _update_neighbors(self, state_idx: int):
+	def _complete_graph(self):
 		"""
-		Expands around state. If a new state is already in the tree, neighbor relations are updated
-		Assumes that state is already in the tree
-		Used for node expansion
-		TODO: Consider not using state_idx and instead all leaves. Only after solved state found if graph search
+		Ensures that the graph is complete by expanding around all leaves and updating neighbors
 		"""
-		self.tt.profile("Update neighbors")
-		state = self.states[state_idx]
-		substates = Cube.multi_rotate(np.repeat([state], Cube.action_dim, axis=0), *Cube.iter_actions())
-		actions_taken = np.array([i for i, s in enumerate(substates) if s.tostring() in self.indices], dtype=int)
-		substate_idcs = np.array([self.indices[s.tostring()] for s in substates[actions_taken]])
-		self.neighbors[[state_idx]*len(actions_taken), actions_taken] = substate_idcs
-		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = state_idx
-		self.leaves[state_idx] = False
-		self.leaves[[state_idx, *substate_idcs]] = self.neighbors[[state_idx, *substate_idcs]].all(axis=1)
-		self.tt.end_profile("Update neighbors")
+		self.tt.profile("Complete graph")
+		breakpoint()
+		leaves_idcs = np.where(self.leaves[:len(self)+1])[0]
+		actions_taken = np.tile(Cube.action_dim, len(leaves_idcs))
+		repeated_leaves_idcs = np.repeat(leaves_idcs, Cube.action_dim)
+		substates = Cube.multi_rotate(self.states[repeated_leaves_idcs], *Cube.iter_actions(len(leaves_idcs)))
+		substate_strs = [s.tostring() for s in substates]
+		substate_idcs = np.array([self.indices[s] if s in self.indices else s for s in substate_strs])
+		self.neighbors[repeated_leaves_idcs, actions_taken] = substate_idcs
+		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = repeated_leaves_idcs
+		self.tt.end_profile("Complete graph")
 
 	def find_leaf(self, time_limit: float) -> (deque, int):
 		"""
