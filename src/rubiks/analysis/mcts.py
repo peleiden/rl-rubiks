@@ -5,7 +5,7 @@ import numpy as np
 from src.rubiks import gpu, set_is2024
 from src.rubiks.cube.cube import Cube
 from src.rubiks.model import Model, ModelConfig
-from src.rubiks.solving.search import Searcher, MCTS, MCTS2
+from src.rubiks.solving.search import Searcher, MCTS
 from src.rubiks.utils import seedsetter
 from src.rubiks.utils.logger import Logger
 from src.rubiks.utils.ticktock import TickTock
@@ -111,13 +111,12 @@ if __name__ == "__main__":
 	#analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
 	#analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
 	n = 40
-	analyse_time_distribution(25, 0.5, 0.005, 10)
-	analyse_time_distribution(25, 0.5, 0.005, 100)
+	#analyse_time_distribution(25, 0.5, 0.005, 10)
+	#analyse_time_distribution(25, 0.5, 0.005, 100)
 	s = int(1e6)
 	tl = 1
 	state, _, _ = Cube.scramble(50)
 	detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10)
-	detailed_time(state, MCTS2, s, tl, 0.6, 0.005, 10)
 
 
 
