@@ -36,8 +36,13 @@ options = {
 	},
 	'max_time': {
 		'default':  30,
-		'help':	    'Max searching time for agent',
-		'type':	    float,
+		'help':	    'Max searching time for agent per configuration. 0 for unlimited',
+		'type':	    literal_eval,
+	},
+	'max_states': {
+		'default':  0,
+		'help':	    'Max number of searched states for agent per configuration. 0 for unlimited',
+		'type':	    lambda arg: int(float(arg)),
 	},
 	'scrambling': {
 		'default':  '10 25',
@@ -91,6 +96,7 @@ class EvalJob:
 			searcher: str,
 			games: int,
 			max_time: float,
+			max_states: int,
 			scrambling: str,
 			mcts_c: float,
 			mcts_nu: float,
@@ -107,13 +113,15 @@ class EvalJob:
 		self.location = location
 
 		assert isinstance(games, int) and games
-		assert max_time > 0
+		assert max_time >= 0
+		assert max_states >= 0
+		assert max_time or max_states
 		scrambling = range(*scrambling)
 		assert scrambling[0] #dirty check for iter and not starting with 0 :)
 
 		#Create evaluator
 		self.logger = Logger(f"{self.location}/{self.name}.log", name, verbose) #Already creates logger at init to test whether path works
-		self.evaluator = Evaluator(n_games=games, max_time=max_time, scrambling_depths=scrambling, logger=self.logger)
+		self.evaluator = Evaluator(n_games=games, max_time=max_time, max_states=max_states, scrambling_depths=scrambling, logger=self.logger)
 
 		#Create agents
 		searcher = getattr(search, searcher)

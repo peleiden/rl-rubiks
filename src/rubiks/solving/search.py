@@ -218,9 +218,11 @@ class MCTS(DeepSearcher):
 		self.L         = np.concatenate([self.L, np.zeros((expand_size, Cube.action_dim))])
 
 	@no_grad
-	def search(self, state: np.ndarray, time_limit: float, max_states: int=None) -> bool:
+	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
 		self.reset()
 		self.tt.tick()
+		assert time_limit or max_states
+		time_limit = time_limit or 1e10
 		max_states = max_states or int(1e10)
 
 		self.indices[state.tostring()] = 1

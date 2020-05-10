@@ -16,12 +16,14 @@ class Evaluator:
 	def __init__(self,
 			n_games				= 420,  # Nice
 			max_time			= 600,  # Max time to completion per game
+			max_states			= None,
 			scrambling_depths	= range(1, 10),
 			logger: Logger		= NullLogger()
 		):
 
 		self.n_games = n_games
 		self.max_time = max_time
+		self.max_states = max_states
 
 		self.tt = TickTock()
 		self.log = logger
@@ -39,7 +41,7 @@ class Evaluator:
 	def _eval_game(self, agent: Agent, depth: int):
 		turns_to_complete = -1  # -1 for unfinished
 		state, _, _ = Cube.scramble(depth, True)
-		solution_found, n_actions = agent.generate_action_queue(state, self.max_time)
+		solution_found, n_actions = agent.generate_action_queue(state, self.max_time, self.max_states)
 		if solution_found:
 			turns_to_complete = n_actions
 		return turns_to_complete
