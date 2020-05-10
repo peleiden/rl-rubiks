@@ -82,7 +82,8 @@ class Evaluator:
 			if (res[i]!=-1).any():
 				self.log(f"\tMean turns to complete (ex. unfinished): {mean_turns:.2f}", with_timestamp=False)
 				self.log(f"\tMedian turns to complete (ex. unfinished): {median_turns:.2f}", with_timestamp=False)
-		self.log(f"Sum score: {self.S_dist(res, self.scrambling_depths).mean():.2f}", with_timestamp=False)
+		S_mu, S_conf = self.S_confidence(self.S_dist(res, self.scrambling_depths))
+		self.log(f"S: {S_mu:.2f} p/m {S_conf:.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
 		return res
@@ -103,14 +104,17 @@ class Evaluator:
 		return solved.sum(axis=0) + lower_depths
 
 	@staticmethod
-	def S_confidence(S_dist: np.ndarray):
+	def S_confidence(S_dist: np.ndarray, alpha=0.05):
 		"""
-		Calculates mean and 95 % confidence interval on a distribution of S values as given by Evaluator.S_dist
+		Calculates mean and double sided confidence interval on a distribution of S values as given by Evaluator.S_dist
 		:param S_dist: numpy array of S values
+		:param alpha: Double sided confidence interval
 		:return: mean and z * sigma
 		"""
 		mu = np.mean(S_dist)
 		std = np.std(S_dist)
+		z = stats.norm.ppf(1 - alpha / 2)
+		return mu, z * std / np.sqrt(len(S_dist))
 
 	def plot_this_eval(self, eval_results: dict, save_dir: str,  **kwargs):
 		self.log("Creating plot of evaluation")
@@ -188,11 +192,12 @@ class Evaluator:
 		if show: plt.show()
 		plt.clf()
 
-		# Histograms of sum scores
+		# Histograms of S
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		sss = np.array([Evaluator.S_dist(results, eval_settings[i]['scrambling_depths']) for i, results in enumerate(eval_results.values())])
-		mus, stds = [ss.mean() for ss in sss], [ss.std() for ss in sss]
+		mus, confs = zip(*[Evaluator.S_confidence(ss) for ss in sss])
+		stds = [ss.std() for ss in sss]
 		lower, higher = sss.min() - 2, sss.max() + 2
 		bins = np.arange(lower, higher+1)
 		ax.hist(x		= sss.T,
@@ -200,21 +205,22 @@ class Evaluator:
 				density	= True,
 				color	= colours,
 				align	= "left",
-				label	= [f"{agent}. mu = {mus[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
+				label	= [f"{agent}. mu = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
 		for i in range(len(eval_results)):
 			if stds[i] > 0:
 				x = np.linspace(lower, higher, 100)
 				y = normal_pdf(x, mus[i], stds[i])
 				x = x[~np.isnan(y)]
 				y = y[~np.isnan(y)]
-				plt.plot(x, y, color="black")
+				plt.plot(x, y, color="black", linewidth=10)
+				plt.plot(x, y, color=colours[i], linewidth=5)
 		ax.set_xlim([lower, higher])
 		ax.set_xticks(bins)
 		ax.set_title(f"Single game S distributions (evaluated on {eval_settings[0]['max_time']:.2f} s per game)" if times_equal else "Single game S distributions")
 		ax.set_xlabel("S")
 		ax.set_ylabel("Frequency")
 		ax.legend(loc=1)
-		path = os.path.join(save_dir, "eval_sum_scores.png")
+		path = os.path.join(save_dir, "eval_S.png")
 		plt.savefig(path)
 		save_paths.append(path)
 
