@@ -41,6 +41,7 @@ class Train:
 				 evaluator: Evaluator,
 				 evaluation_interval: int,
 				 with_analysis: bool,
+				 tau: float,
 				 policy_criterion	= torch.nn.CrossEntropyLoss,
 				 value_criterion	= torch.nn.MSELoss,
 				 logger: Logger		= NullLogger(),
@@ -49,7 +50,10 @@ class Train:
 
 
 		:param bool with_analysis: If true, a number of statistics relating to loss behaviour and model output are stored.
-		"""  # TODO: Document params
+		:param float alpha_update: alpha <- alpha + alpha_update every update_interval rollouts (excl. rollout 0)
+		:param float gamma: lr <- lr * gamma every update_interval rollouts (excl. rollout 0)
+		:param float tau: How much of the new network to use to generate ADI data
+		"""
 		self.rollouts = rollouts
 		self.train_rollouts = np.arange(self.rollouts)
 		self.batch_size = self.states_per_rollout if not batch_size else batch_size
@@ -64,10 +68,12 @@ class Train:
 			self.evaluation_rollouts = np.append(self.evaluation_rollouts, self.rollouts-1)
 		self.agent = agent
 
-		self.alpha_update = alpha_update  # alpha <- alpha + alpha_update every update_interval rollouts (excl. rollout 0)
+		self.tau = tau
+		self.alpha_update = alpha_update
 		self.lr	= lr
-		self.gamma = gamma  # lr <- lr * gamma every update_interval rollouts (excl. rollout 0)
+		self.gamma = gamma
 		self.update_interval = update_interval  # How often alpha and lr are updated
+
 		self.optim = optim_fn
 		self.policy_criterion = policy_criterion(reduction='none')
 		self.value_criterion = value_criterion(reduction='none')
@@ -122,6 +128,8 @@ class Train:
 		self.agent.update_net(net)
 		if self.with_analysis: self.analysis.orig_params = net.get_params()
 
+		generator_net = net.clone()
+
 		alpha = 1 if self.alpha_update == 1 else 0
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, self.gamma)
@@ -133,8 +141,10 @@ class Train:
 		for rollout in range(self.rollouts):
 			reset_cuda()
 
+			generator_net = self._update_gen_net(generator_net, net) if self.tau != 1 else net
+
 			self.tt.profile("ADI training data")
-			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(net, alpha)
+			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(generator_net, alpha)
 			self.tt.profile("To cuda")
 			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
 																		 value_targets.to(gpu),\
@@ -261,10 +271,6 @@ class Train:
 
 		# Keeps track of solved states - Max Lapan's convergence fix
 		solved_scrambled_states = Cube.multi_is_solved(states)
-		solved_scrambled_states_new = np.zeros(len(states), dtype=bool)
-		solved_scrambled_states_new[np.arange(0, len(states), self.rollout_depth)] = True
-		assert np.all(solved_scrambled_states_new==solved_scrambled_states)  # TODO: Remove after confidence
-
 
 		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
@@ -314,6 +320,18 @@ class Train:
 			self.tt.end_profile("ADI analysis")
 		return oh_states, policy_targets, value_targets, torch.from_numpy(loss_weights).float()
 
+	def _update_gen_net(self, generator_net: Model, net: Model):
+		"""Create a network with parameters weighted by self.tau"""
+		self.tt.profile("Creating generator network")
+		genparams, netparams = generator_net.state_dict(), net.state_dict()
+		new_genparams = dict(genparams)
+		for pname, param in netparams.items():
+			new_genparams[pname].data.copy_(
+					self.tau * param.data + (1-self.tau) * new_genparams[pname].data
+					)
+		generator_net.load_state_dict(new_genparams)
+		self.tt.end_profile("Creating generator network")
+		return generator_net
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
@@ -368,6 +386,5 @@ class Train:
 		batches = [slice(batch*bsize, (batch+1)*bsize) for batch in range(nbatches)]
 		batches[-1] = slice(batches[-1].start, size)
 		return batches
-
 
 

@@ -49,6 +49,11 @@ options = {
 		'help':	    'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr 100 times during training',
 		'type':	    float,
 	},
+	'tau': {
+		'default':  1,
+		'help':	    'Network change parameter for generating training data. If tau=1, use newest network for ADI ',
+		'type':	    float,
+	},
 	'update_interval': {
 		'default':	50,
 		'help':		'How often alpha and lr are updated. First update is performed when rollout == update_interval. Set to 0 for never',

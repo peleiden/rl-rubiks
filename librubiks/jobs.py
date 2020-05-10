@@ -35,6 +35,7 @@ class TrainJob:
 				 alpha_update: float,
 				 lr: float,
 				 gamma: float,
+				 tau: float,
 				 update_interval: int,
 				 optim_fn: str,
 				 evaluation_interval: int,
@@ -68,6 +69,8 @@ class TrainJob:
 		assert float(lr) and lr <= 1
 		self.gamma = gamma
 		assert 0 < gamma <= 1
+		self.tau = tau
+		assert 0 < tau <= 1
 		self.update_interval = update_interval
 		assert isinstance(self.update_interval, int) and 0 <= self.update_interval
 		self.optim_fn = getattr(torch.optim, optim_fn)
@@ -118,6 +121,7 @@ class TrainJob:
 					  alpha_update			= self.alpha_update,
 					  lr					= self.lr,
 					  gamma					= self.gamma,
+					  tau				= self.tau,
 					  update_interval		= self.update_interval,
 					  agent					= self.agent,
 					  logger				= self.logger,
