@@ -75,8 +75,8 @@ class BayesianOptimizer(Optimizer):
 			target_function: Callable[[dict], float],
 			parameters: dict,
 
-			alpha=1e-6,
-			n_restarts = 20,
+			alpha: float =1e-6,
+			n_restarts: int = 20,
 			acquisition: str='ei',
 
 			logger: Logger=NullLogger(),
@@ -128,32 +128,39 @@ def MCTS_optimize():
 	model_path = ''
 	if train_folders:
 		for folder in [train_folders[-1]] + glob(f"{train_folders[-1]}/*/"):
-				if os.path.isfile(os.path.join(folder, 'model.pt')):
-					model_path  = os.path.join(folder)
-					break
+			if os.path.isfile(os.path.join(folder, 'model.pt')):
+				model_path  = os.path.join(folder)
+				break
 
 	parser = argparse.ArgumentParser(description='Optimize Monte Carlo Tree Search for one model')
 	parser.add_argument('--location', help='Location for model.pt. Results will also be saved here',
 		type=str, default=model_path)
 	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
 		type=int, default=25)
+	parser.add_argument('--policy_type', help='How the policy is calculated in MCTS. p for softmax(policy), v for softmax(v), or w for softmax(w)',
+			type = str, choices = ['p', 'v', 'w'], default='p')
+
+	parser.add_argument('--eval_games', help='Number of games to evaluate at each depth in [12,20[',
+			type = int, default='20')
 	args = parser.parse_args()
 
 	params = {
 		'c': (0.1, 1),
 		'nu': (0, 0.01),
 		'workers': (1, 200),
+
 	}
 	def prepper(params): params['workers'] = int(params['workers'])
 
 	persistent_params = {
 		'net' : Model.load(args.location),
 		'search_graph': False,
+		'policy_type': args.policy_type,
 	}
 
 	logger = Logger(os.path.join(args.location, 'optimizer.log'), 'Optimization')
 	logger.log(f"MCTS optimization. Loaded network from {model_path}.")
-	evaluator = Evaluator(n_games=20, max_time=1, scrambling_depths=range(12, 20))
+	evaluator = Evaluator(n_games=args.eval_games, max_time=1, scrambling_depths=range(12, 20))
 	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
 	optimizer.objective_from_evaluator(evaluator, MCTS, persistent_params, param_prepper=prepper)
 	optimizer.optimize(args.iterations)
