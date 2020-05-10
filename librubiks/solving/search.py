@@ -243,7 +243,7 @@ class MCTS(DeepSearcher):
 				self.action_queue = paths[solve_leaf] + deque([solve_action])
 				if self.search_graph:
 					self._complete_graph()
-					self._shorten_action_queue(solve_leaf)
+					self._shorten_action_queue(leaves[solve_leaf])
 				return True
 
 			# Find leaves
@@ -280,7 +280,7 @@ class MCTS(DeepSearcher):
 		solved_new_states_idcs = np.where(solved_new_states)[0]
 		if solved_new_states_idcs.size:
 			i = solved_new_states_idcs[0]
-			leaf_idx, action_idx = leaves_idcs[i // Cube.action_dim], actions_taken[i]
+			leaf_idx, action_idx = i // Cube.action_dim, actions_taken[i]
 		self.tt.end_profile("Check for solved state")
 
 		substate_strs		= [s.tostring() for s in substates]
