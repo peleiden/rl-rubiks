@@ -199,12 +199,14 @@ class Evaluator:
 		stds = [ss.std() for ss in sss]
 		lower, higher = sss.min() - 2, sss.max() + 2
 		bins = np.arange(lower, higher+1)
-		ax.hist(x		= sss.T,
-				bins	= bins,
-				density	= True,
-				color	= colours,
-				align	= "left",
-				label	= [f"{agent}. mu = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
+		ax.hist(x			= sss.T,
+				bins		= bins,
+				density		= True,
+				color		= colours,
+				edgecolor	= "black",
+				linewidth	= 2,
+				align		= "left",
+				label		= [f"{agent}. S = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
 		for i in range(len(eval_results)):
 			if stds[i] > 0:
 				x = np.linspace(lower, higher, 200)
