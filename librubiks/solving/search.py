@@ -226,10 +226,6 @@ class MCTS(DeepSearcher):
 		self.indices[state.tostring()] = 1
 		self.states[1] = state
 		if Cube.is_solved(state): return True
-		# oh = Cube.as_oh(state)
-		# p, v = self.net(oh)
-		# self.P[1] = p.softmax(dim=1).cpu().numpy()
-		# self.V[1] = v.cpu().numpy()
 
 		path = [1]
 		actions_taken = []
@@ -301,7 +297,7 @@ class MCTS(DeepSearcher):
 
 		# Update policy, value, and W
 		self.tt.profile("One-hot encoding")
-		state_oh = Cube.as_oh(state)  # TODO: Consider computing values of substates instead. May save time
+		state_oh = Cube.as_oh(state)  # TODO: Consider computing values of substates instead. May save time. Will be necessary with value, if softmax(V/W) is used
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
 		p, v = self.net(state_oh)
@@ -485,39 +481,40 @@ class DankSearch(DeepSearcher):
 		self.reset()
 		self.tt.tick()
 		assert time_limit or max_states
+		time_limit = time_limit or 1e10
+		max_states = max_states or int(1e10)
 
 		if Cube.is_solved(state):
 			return True
 
 		states = Cube.repeat_state(state, self.workers)
-		while self.tt.tock() < time_limit and max_states + self.workers * self.depth <= max_states:
+		while self.tt.tock() < time_limit and len(self) + self.workers * self.depth <= max_states:
 			paths, states, states_oh, solved = self.expand(states)
 			if solved != (-1, -1):
-				self.action_queue += paths[solved[0]][:solved[1]]
+				self.action_queue += deque(paths[solved[0]][:solved[1]])
 				return True
 			assert torch.all(Cube.as_oh(states)==states_oh)
-			v = self.net(policy=False).cpu().squeeze()
-			best_value_state_index = v.argmax()
+			v = self.net(states_oh, policy=False).cpu().squeeze()
+			best_value_state_index = int(v.argmax())
 			worker, depth = best_value_state_index // self.depth, best_value_state_index % self.depth
-			self.action_queue += paths[worker][:depth]
+			self.action_queue += deque(paths[worker][:depth])  # TODO: Problably bug with depth = 0
 
 		return False
-
 
 	def _get_indices(self, depth: int) -> np.ndarray:
 		return np.arange(self.workers) * self.depth + depth
 
 	def expand(self, states: np.ndarray) -> (list, np.ndarray, torch.tensor, tuple):
-		paths = [deque() for _ in range(self.workers)]
+		paths = [[] for _ in range(self.workers)]
 		new_states = np.empty((self.workers * self.depth, *Cube.shape()), dtype=Cube.dtype)
 		new_states_oh = torch.empty(self.workers * self.depth, Cube.get_oh_shape(), dtype=torch.float)
 		for d in range(self.depth):
-			use_random = np.random.choice(2, self.workers, p=[1-self.epsilon, self.epsilon])
+			use_random = np.random.choice(2, self.workers, p=[1-self.epsilon, self.epsilon]).astype(bool)
 			use_policy = ~use_random
 			actions = np.empty(self.workers, dtype=int)
 			actions[use_random] = np.random.randint(0, Cube.action_dim, use_random.sum())
 			states_oh = Cube.as_oh(states[use_policy])
-			p = self.net(states[use_policy], value=False).cpu().numpy()
+			p = self.net(states_oh, value=False).cpu().numpy()
 			actions[use_policy] = p.argmax(axis=1)
 			[path.append(a) for path, a in zip(paths, actions)]
 
@@ -528,14 +525,22 @@ class DankSearch(DeepSearcher):
 				w = np.where(solved_states)[0][0]
 				return paths, None, None, (w, d)
 			new_states[self._get_indices(d)] = states
-			if d != 0:
-				new_states_oh[self._get_indices(d-1)] = states_oh
-		new_states_oh[self._get_indices(d)] = Cube.as_oh(states)
+			new_states_oh[self._get_indices(d)] = Cube.as_oh(states)  # Don't waste time like this
 		self._explored_states += len(new_states)
 
 		return paths, new_states, new_states_oh, (-1, -1)
 
+	@classmethod
+	def from_saved(cls, loc: str, epsilon: float, workers: int, depth: int):
+		net = Model.load(loc)
+		net.to(gpu)
+		return cls(net, epsilon=epsilon, workers=workers, depth=depth)
+
 	def __str__(self):
-		return f"DankSearch (e={self.epsilon:.2f}, w={self.workers}, d={self.depth})"
+		return f"DS (e={self.epsilon:.2f}, w={self.workers}, d={self.depth})"
 
-
+if __name__ == "__main__":
+	state, _, _ = Cube.scramble(5)
+	ds = DankSearch.from_saved("data/local_train", .1, 10, 100)
+	sol_found = ds.search(state, 1)
+	print("Solution found:", sol_found)
