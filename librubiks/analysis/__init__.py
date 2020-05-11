@@ -22,7 +22,7 @@ class TrainAnalysis:
 
 		self.games = games
 		self.depth = depth
-		self.depths = np.arange(1, depth)
+		self.depths = np.arange(depth)
 		extra_evals = min(evaluations[-1] if len(evaluations) else 0, extra_evals) #Wont add evals in the future (or if no evals are needed)
 		self.evaluations = np.unique( np.append(evaluations, range( extra_evals )) )
 
@@ -65,11 +65,8 @@ class TrainAnalysis:
 			net.eval()
 
 			# Calculating value targets
-			targets = value_targets.cpu().numpy()
-			self.avg_value_targets.append(np.empty_like(self.depths, dtype=float))
-			for i, depth in enumerate(self.depths):
-				idcs = np.arange(self.games) * self.depth + depth
-				self.avg_value_targets[-1][i] = targets[idcs].mean()
+			targets = value_targets.cpu().numpy().reshape((-1, self.depth))
+			self.avg_value_targets.append(targets.mean(axis=0))
 
 			# Calculating model change
 			model_change = torch.sqrt((net.get_params()-self.params)**2).mean().cpu()
@@ -81,6 +78,7 @@ class TrainAnalysis:
 			#TODO: Calculate value given to first 12 substates
 
 			net.train()
+
 	def ADI(self, values: torch.Tensor):
 		"""Saves statistics after a run of ADI. """
 		self.substate_val_stds.append(

@@ -305,7 +305,7 @@ class Train:
 		values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
-		#value_targets[solved_scrambled_states] = 0  # Max Lapan's convergence fix
+		value_targets[solved_scrambled_states] = 0  # Max Lapan's convergence fix
 		self.tt.end_profile("Calculating targets")
 
 		weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
