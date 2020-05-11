@@ -225,134 +225,118 @@ class MCTS(DeepSearcher):
 		self.indices[state.tostring()] = 1
 		self.states[1] = state
 		if Cube.is_solved(state): return True
-		oh = Cube.as_oh(state)
-		p, v = self.net(oh)
-		self.P[1] = p.softmax(dim=1).cpu().numpy()
-		self.V[1] = v.cpu().numpy()
+		# oh = Cube.as_oh(state)
+		# p, v = self.net(oh)
+		# self.P[1] = p.softmax(dim=1).cpu().numpy()
+		# self.V[1] = v.cpu().numpy()
 
-		paths = [deque()]
-		leaves = np.array([1], dtype=int)
-		workers = 1
-		while self.tt.tock() < time_limit and len(self) + self.workers * Cube.action_dim <= max_states:
+		path = [1]
+		actions_taken = []
+		while self.tt.tock() < time_limit and len(self) + Cube.action_dim <= max_states:
 			self.tt.profile("Expanding leaves")
-			solve_leaf, solve_action = self.expand_leaves(np.array(leaves))
+			solve_leaf, solve_action = self.expand_leaf(path, actions_taken)
 			self.tt.end_profile("Expanding leaves")
 
 			# If a solution is found
 			if solve_leaf:
-				self.action_queue = paths[solve_leaf] + deque([solve_action])
+				self.action_queue = path + [solve_action]
 				if self.search_graph:
 					self._complete_graph()
-					self._shorten_action_queue(leaves[solve_leaf])
+					self._shorten_action_queue(solve_leaf)
 				return True
 
 			# Find leaves
-			paths, leaves = zip(*[self.find_leaf(time_limit) for _ in range(workers)])
-			workers = min(workers+1, self.workers)
+			path, actions_taken = self.find_leaf(time_limit)
+
+		self.action_queue = path  # Generates a best guess action queue in case of no
 
 		return False
 
-	def expand_leaves(self, leaves_idcs: np.ndarray) -> (int, int):
+	def expand_leaf(self, visited_states_idcs: list, actions_taken: list) -> (int, int):
 		"""
-		Expands all given states which are given by the indices in leaves_idcs
+		Expands around the given leaf and updates V and W in all visited_states_idcs
 		Returns the index of the leaf and the action to solve it
 		Both are 0 if no solution is found
+		:param visited_states_idcs: List of states that have been visited including the starting node. Length n
+		:param actions_taken: List of actions taken from starting state. Length n-1
+		:return: The index of the leaf that is the solution and the action that must be taken from leaf_index.
+			Both are 0 if solution is not found
 		"""
-
-		leaf_idx, action_idx = 0, 0
-
-		# Ensure space in stacks
-		if len(self) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
+		if len(self) + Cube.action_dim > len(self.states):
 			self.increase_stack_size()
 
-		# Explore new states
+		leaf_index = visited_states_idcs[-1]
+
 		self.tt.profile("Get substates")
-		states = self.states[leaves_idcs]
-		substates = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
+		state = self.states[leaf_index]
+		substates = Cube.multi_rotate(Cube.repeat_state(state), *Cube.iter_actions())
 		self.tt.end_profile("Get substates")
 
-		actions_taken = np.tile(np.arange(Cube.action_dim), len(leaves_idcs))
-		repeated_leaves_idcs = np.repeat(leaves_idcs, Cube.action_dim)
+		# Check what states have been seen already
+		substate_strs = [s.tostring() for s in substates]  # Unique identifier for each substate
+		get_substate_strs = lambda bools: [s for s, b in zip(substate_strs, bools) if b]
+		seen_substates = np.array([s in self.indices for s in substate_strs])  # States already in the graph
+		unseen_substates = ~seen_substates  # States not already in the graph
 
-		# Check for solution and return if found
-		self.tt.profile("Check for solved state")
-		solved_new_states = Cube.multi_is_solved(substates)
-		solved_new_states_idcs = np.where(solved_new_states)[0]
-		if solved_new_states_idcs.size:
-			i = solved_new_states_idcs[0]
-			leaf_idx, action_idx = i // Cube.action_dim, actions_taken[i]
-		self.tt.end_profile("Check for solved state")
-
-		substate_strs		= [s.tostring() for s in substates]
-		get_substate_strs	= lambda bools: [s for s, b in zip(substate_strs, bools) if b]  # Alternative to boolean list indexing
-
-		self.tt.profile("Classify new/old substates")
-		seen_substates		= np.array([s in self.indices for s in substate_strs])  # Boolean array: Substates that have been seen before
-		unseen_substates	= ~seen_substates  # Boolean array: Substates that have not been seen before
-		self.tt.end_profile("Classify new/old substates")
-
-		self.tt.profile("Handle duplicates")
-		last_occurences		= np.array([s not in substate_strs[i+1:] for i, s in enumerate(substate_strs)])  # To prevent duplicates. O(n**2) goes brrrr
-		last_seen			= last_occurences & seen_substates  # Boolean array: Last occurances of substates that have been seen before
-		last_unseen			= last_occurences & unseen_substates  # Boolean array: Last occurances of substates that have not been seen before
-		self.tt.end_profile("Handle duplicates")
-
-		self.tt.profile("Update indices")
-		new_states			= substates[last_unseen]  # Substates that are not already in the graph. Without duplicates
-		new_states_idcs		= len(self) + np.arange(last_unseen.sum()) + 1  # Indices in self.states corresponding to new_states
-		new_idcs_dict		= { s: i for i, s in zip(new_states_idcs, get_substate_strs(last_unseen)) }
+		self.tt.profile("Update indices and states")
+		new_states_idcs = len(self) + np.arange(unseen_substates.sum()) + 1
+		new_idcs_dict = { s: i for i, s in zip(new_states_idcs, get_substate_strs(unseen_substates)) }
 		self.indices.update(new_idcs_dict)
-		substate_idcs		= np.array([self.indices[s] for s in substate_strs])
-		old_states_idcs		= substate_idcs[last_seen]  # Indices in self.states corresponding to old_states
-		self.tt.end_profile("Update indices")
+		substate_idcs = np.array([self.indices[s] for s in substate_strs])
+		self.states[substate_idcs] = substates
+		self.tt.end_profile("Update indices and states")
 
-		# Update states and neighbors
-		self.states[new_states_idcs] = substates[last_unseen]
-		self.neighbors[repeated_leaves_idcs, actions_taken] = substate_idcs
-		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = repeated_leaves_idcs
+		self.tt.profile("Check for solution")
+		solved_substate = np.where(Cube.multi_is_solved(substates))[0]
+		if solved_substate.size:
+			action = solved_substate[0]
+			new_index = len(self.indices) + 1
+			self.indices[substate_strs[action]] = new_index
+			self.states[new_index] = substates[action]
+			self.neighbors[leaf_index, action] = new_index
+			self.neighbors[new_index, Cube.rev_action(action)] = leaf_index
+			return leaf_index, action
+		self.tt.end_profile("Check for solution")
 
+		# Update policy, value, and W
 		self.tt.profile("One-hot encoding")
-		new_states_oh = Cube.as_oh(new_states)
+		state_oh = Cube.as_oh(state)  # TODO: Consider computing values of substates instead. May save time
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
-		if self.policy_type == "p":
-			p, v = self.net(new_states_oh)
-			p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()
-			self.P[new_states_idcs] = p
-		else:
-			v = self.net(new_states_oh, policy=False)
-			v = v.squeeze().cpu().numpy()
-		# Updates all values for new states
-		self.V[new_states_idcs] = v
+		p, v = self.net(state_oh)
+		p, v = p.cpu().softmax(dim=1).numpy().squeeze(), float(v.cpu().squeeze())
 		self.tt.end_profile("Feedforward")
+		self.tt.profile("Update P, V, and W")
+		self.P[leaf_index] = p
+		existing_values = self.V[visited_states_idcs[:-1]]  # TODO: What do they mean by 'backing up the value'?
+		self.V[visited_states_idcs] = max(existing_values.max() if existing_values.size else v, v)
+		W = np.vstack([self.W[visited_states_idcs[:-1], actions_taken], np.ones(len(actions_taken))*self.V[leaf_index]])
+		self.W[visited_states_idcs[:-1], actions_taken] = W.max(axis=0)
+		self.tt.end_profile("Update P, V, and W")
 
-		# Updates leaves
-		self.leaves[leaves_idcs] = False
-		self.leaves[old_states_idcs[self.neighbors[old_states_idcs].all(axis=1)]] = False
+		self.tt.profile("Update neigbors and leaf status")
+		actions = np.arange(Cube.action_dim)
+		self.neighbors[leaf_index, actions] = substate_idcs
+		self.neighbors[substate_idcs, Cube.rev_actions(actions)] = leaf_index
+		self.leaves[leaf_index] = False
+		self.tt.end_profile("Update neigbors and leaf status")
 
-		self.tt.profile("Update W")
-		neighbor_idcs = self.neighbors[leaves_idcs].ravel()
-		values = self.V[neighbor_idcs].reshape((len(leaves_idcs), Cube.action_dim))
-		Ws = values.max(axis=1)
-		self.W[neighbor_idcs, Cube.rev_actions(actions_taken)] = np.repeat(Ws, Cube.action_dim)
-		self.tt.end_profile("Update W")
+		# Update N and L
+		self.tt.profile("Update N and L")
+		self.N[visited_states_idcs[:-1], actions_taken] += 1
+		self.L[visited_states_idcs[:-1], actions_taken] += self.nu
+		self.tt.end_profile("Update N and L")
 
-		softmax = lambda x: (np.exp(x).T / np.exp(x).sum(axis=1)).T
-		if self.policy_type == "v":
-			self.P[leaves_idcs] = softmax(values)
-		elif self.policy_type == "w":
-			Ws = self.W[leaves_idcs].reshape((len(leaves_idcs), Cube.action_dim))
-			self.P[leaves_idcs] = softmax(Ws)
+		return 0, 0
 
-		return leaf_idx, action_idx
-
-	def find_leaf(self, time_limit: float) -> (deque, int):
+	def find_leaf(self, time_limit: float) -> (list, list):
 		"""
-		Searches the tree starting from starting state using self.workers workers
-		Returns a list of paths and an array containing indices of leaves
+		Searches the tree starting from starting state
+		Returns a list of visited states (as indices for self.states) and a list of actions taken
 		"""
-		path = deque()
 		current_index = 1
+		path = [1]
+		actions_taken = []
 		self.tt.profile("Exploring next node")
 		while not self.leaves[current_index] and self.tt.tock() < time_limit:
 			sqrtN = np.sqrt(self.N[current_index].sum())
@@ -364,13 +348,11 @@ class MCTS(DeepSearcher):
 				U = self.c * self.P[current_index] * sqrtN / (1 + self.N[current_index])
 				Q = self.W[current_index] - self.L[current_index]
 				action = (U + Q).argmax()
-			# Updates N and virtual loss
-			self.N[current_index, action] += 1
-			self.L[current_index, action] += self.nu
-			path.append(action)
 			current_index = self.neighbors[current_index, action]
+			path.append(current_index)
+			actions_taken.append(action)
 		self.tt.end_profile("Exploring next node")
-		return path, current_index
+		return path, actions_taken
 
 	def _complete_graph(self):
 		"""
