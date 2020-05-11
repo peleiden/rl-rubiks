@@ -162,7 +162,6 @@ class Train:
 				optimizer.zero_grad()
 				policy_pred, value_pred = net(training_data[batch], policy=True, value=True)
 
-
 				# Use loss on both policy and value
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
 				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
@@ -306,7 +305,7 @@ class Train:
 		values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
-		value_targets[solved_scrambled_states] = 0
+		#value_targets[solved_scrambled_states] = 0  # Max Lapan's convergence fix
 		self.tt.end_profile("Calculating targets")
 
 		weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
@@ -332,6 +331,7 @@ class Train:
 		generator_net.load_state_dict(new_genparams)
 		self.tt.end_profile("Creating generator network")
 		return generator_net.to(gpu)
+
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
