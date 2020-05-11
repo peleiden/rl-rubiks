@@ -20,6 +20,8 @@ cd rl-rubiks
 pip install -r rlrequirements.txt
 ```
 There are also some optional dependencies: `GitPython` for saving commits in logs and `networkx` and `imageio` for visualizing values of initial states over time when running with `--analysis=True`.
+
+
 3) (Only needed if you get `ImportError`) For the modules to work, you *might* need to add the main repo folder to your PYTHONPATH. 
 In \*nix-systems, you can add the following line to your shell login script:
 ```
