@@ -98,6 +98,14 @@ def detailed_time(state, searcher, max_states: int, time_limit: float, c: float,
 	log(f"States explored: {len(searcher)}")
 	log(searcher.tt)
 
+def W(max_states, time_limit, opts):
+	state, _, _ = Cube.scramble(50)
+	searcher = MCTS.from_saved("data/local_train", search_graph=False, **opts)
+	searcher.search(state, time_limit=time_limit, max_states=max_states)
+	log.section("Analyzing W")
+	log(f"Number of states {len(searcher)}")
+	log(f"Share of W = 0: {np.mean(searcher.W==0):.2f}")
+
 if __name__ == "__main__":
 	# set_repr(False)
 	time_limit = .2
@@ -115,7 +123,8 @@ if __name__ == "__main__":
 	s = int(1e6)
 	tl = 1
 	state, _, _ = Cube.scramble(50)
-	detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
+	# detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
+	W(None, 1, get_other_vars("depth"))
 
 
 
