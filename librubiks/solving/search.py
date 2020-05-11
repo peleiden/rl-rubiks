@@ -87,6 +87,7 @@ class RandomDFS(Searcher):
 	def __str__(self):
 		return "Random depth-first search"
 
+
 class BFS(Searcher):
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> (np.ndarray, bool):
 		self.reset()
@@ -460,7 +461,7 @@ class AStar(DeepSearcher):
 			return -float(v.cpu())
 
 	def __str__(self):
-		return f"AStar search"
+		return f"A*"
 
 	def __len__(self):
 		node = list(self.closed)[-1]
@@ -469,5 +470,72 @@ class AStar(DeepSearcher):
 			node = self.closed[node]['parent']
 			if node == 'Starting node': return count
 			count += 1
+
+
+class DankSearch(DeepSearcher):
+
+	def __init__(self, net, epsilon: float, workers: int, depth: int):
+		super().__init__(net)
+		self.epsilon = epsilon
+		self.workers = workers
+		self.depth = depth
+
+	@no_grad
+	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
+		self.reset()
+		self.tt.tick()
+		assert time_limit or max_states
+
+		if Cube.is_solved(state):
+			return True
+
+		states = Cube.repeat_state(state, self.workers)
+		while self.tt.tock() < time_limit and max_states + self.workers * self.depth <= max_states:
+			paths, states, states_oh, solved = self.expand(states)
+			if solved != (-1, -1):
+				self.action_queue += paths[solved[0]][:solved[1]]
+				return True
+			assert torch.all(Cube.as_oh(states)==states_oh)
+			v = self.net(policy=False).cpu().squeeze()
+			best_value_state_index = v.argmax()
+			worker, depth = best_value_state_index // self.depth, best_value_state_index % self.depth
+			self.action_queue += paths[worker][:depth]
+
+		return False
+
+
+	def _get_indices(self, depth: int) -> np.ndarray:
+		return np.arange(self.workers) * self.depth + depth
+
+	def expand(self, states: np.ndarray) -> (list, np.ndarray, torch.tensor, tuple):
+		paths = [deque() for _ in range(self.workers)]
+		new_states = np.empty((self.workers * self.depth, *Cube.shape()), dtype=Cube.dtype)
+		new_states_oh = torch.empty(self.workers * self.depth, Cube.get_oh_shape(), dtype=torch.float)
+		for d in range(self.depth):
+			use_random = np.random.choice(2, self.workers, p=[1-self.epsilon, self.epsilon])
+			use_policy = ~use_random
+			actions = np.empty(self.workers, dtype=int)
+			actions[use_random] = np.random.randint(0, Cube.action_dim, use_random.sum())
+			states_oh = Cube.as_oh(states[use_policy])
+			p = self.net(states[use_policy], value=False).cpu().numpy()
+			actions[use_policy] = p.argmax(axis=1)
+			[path.append(a) for path, a in zip(paths, actions)]
+
+			faces, dirs = actions % 6, actions // 6
+			states = Cube.multi_rotate(states, faces, dirs)
+			solved_states = Cube.multi_is_solved(states)
+			if np.any(solved_states):
+				w = np.where(solved_states)[0][0]
+				return paths, None, None, (w, d)
+			new_states[self._get_indices(d)] = states
+			if d != 0:
+				new_states_oh[self._get_indices(d-1)] = states_oh
+		new_states_oh[self._get_indices(d)] = Cube.as_oh(states)
+		self._explored_states += len(new_states)
+
+		return paths, new_states, new_states_oh, (-1, -1)
+
+	def __str__(self):
+		return f"DankSearch (e={self.epsilon:.2f}, w={self.workers}, d={self.depth})"
 
 
