@@ -25,6 +25,7 @@ class Cube:
 	# If the six sides are represented by an array, the order should be F, B, T, D, L, R
 	# For niceness
 	F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
+	action_names = ('F', 'B', 'T', 'D', 'L', 'R')
 
 	dtype = np.int8  # Data type used for internal representation
 	_solved2024 = _get_2024solved(dtype)

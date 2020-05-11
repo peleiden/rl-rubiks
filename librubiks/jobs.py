@@ -136,6 +136,7 @@ class TrainJob:
 			train.analysis.plot_substate_distributions(self.location)
 			train.analysis.plot_value_targets(self.location)
 			train.analysis.plot_net_changes(self.location)
+			train.analysis.visualize_first_states(self.location)
 			np.save(f"{datapath}/avg_target_values.npy", train.analysis.avg_value_targets)
 			np.save(f"{datapath}/policy_entropies.npy", train.analysis.policy_entropies)
 			np.save(f"{datapath}/substate_val_stds.npy", train.analysis.substate_val_stds)
