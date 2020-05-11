@@ -129,7 +129,7 @@ class TrainAnalysis:
 		self.log("Plotting average value targets")
 		plt.figure(figsize=(19.2, 10.8))
 		for target, rollout in zip(self.avg_value_targets, self.evaluations):
-			plt.plot(self.depths, target, label=f"Rollout {rollout}")
+			plt.plot(self.depths, target, label=f"{rollout} Rollouts")
 		plt.legend(loc=1)
 		plt.xlabel("Scrambling depth")
 		plt.ylabel("Average target value")

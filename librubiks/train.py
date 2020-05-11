@@ -155,6 +155,11 @@ class Train:
 
 			reset_cuda()
 
+			if self.with_analysis:
+				self.tt.profile("Analysis of rollout")
+				self.analysis.rollout(net, rollout, value_targets)
+				self.tt.end_profile("Analysis of rollout")
+
 			self.tt.profile("Training loop")
 			net.train()
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
@@ -194,11 +199,6 @@ class Train:
 
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
-
-			if self.with_analysis:
-				self.tt.profile("Analysis of rollout")
-				self.analysis.rollout(net, rollout, value_targets)
-				self.tt.end_profile("Analysis of rollout")
 
 			if rollout in self.evaluation_rollouts:
 				net.eval()
@@ -305,7 +305,7 @@ class Train:
 		values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
-		value_targets[solved_scrambled_states] = 0  # Max Lapan's convergence fix
+		#value_targets[solved_scrambled_states] = 0  # Max Lapan's convergence fix
 		self.tt.end_profile("Calculating targets")
 
 		weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
