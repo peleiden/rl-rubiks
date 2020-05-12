@@ -24,7 +24,13 @@ all_colours = colours[:-1] + tab_colours[:-2]
 
 class TrainAnalysis:
 	"""Performs analysis of the training procedure to understand loss and training behaviour"""
-	def __init__(self, evaluations: np.ndarray, games: int, depth: int, extra_evals: int, logger: Logger=NullLogger()):
+	def __init__(self,
+				 evaluations: np.ndarray,
+				 games: int,
+				 depth: int, 
+				 extra_evals: int,
+				 reward_method: str,
+				 logger: Logger = NullLogger()):
 		"""Initialize containers mostly
 
 		:param np.ndarray evaluations:  array of the evaluations performed on the model. Used for the more intensive analysis
@@ -38,6 +44,7 @@ class TrainAnalysis:
 		self.depths = np.arange(depth)
 		self.extra_evals = min(evaluations[-1] if len(evaluations) else 0, extra_evals) #Wont add evals in the future (or if no evals are needed)
 		self.evaluations = np.unique( np.append(evaluations, range( self.extra_evals )) )
+		self.reward_method = reward_method
 
 		self.orig_params = None
 		self.params = None
@@ -211,9 +218,9 @@ class TrainAnalysis:
 		colours = iter(all_colours)
 		filter_by_bools = lambda list_, bools: [x for x, b in zip(list_, bools) if b]
 		for target, rollout in zip(filter_by_bools(self.avg_value_targets, ~focus_rollouts), filter_by_bools(self.evaluations, ~focus_rollouts)):
-			plt.plot(self.depths, target, "--", color="grey", alpha=.4)
+			plt.plot(self.depths + (self.reward_method != "lapanfix"), target, "--", color="grey", alpha=.4)
 		for target, rollout in zip(filter_by_bools(self.avg_value_targets, focus_rollouts), filter_by_bools(self.evaluations, focus_rollouts)):
-			plt.plot(self.depths, target, linewidth=3, color=next(colours), label=f"{rollout} Rollouts")
+			plt.plot(self.depths + (self.reward_method != "lapanfix"), target, linewidth=3, color=next(colours), label=f"{rollout} Rollouts")
 		plt.legend(loc=1)
 		plt.xlim(np.array([-.05, 1.05]) * np.array([0, self.depths[-1]+1]))
 		plt.xlabel("Scrambling depth")
