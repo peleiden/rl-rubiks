@@ -27,7 +27,7 @@ class TrainAnalysis:
 	def __init__(self,
 				 evaluations: np.ndarray,
 				 games: int,
-				 depth: int, 
+				 depth: int,
 				 extra_evals: int,
 				 reward_method: str,
 				 logger: Logger = NullLogger()):
@@ -212,6 +212,7 @@ class TrainAnalysis:
 
 
 	def plot_value_targets(self, loc: str, show=False):
+		if not len(self.evaluations): return
 		self.log("Plotting average value targets")
 		plt.figure(figsize=(19.2, 10.8))
 		focus_rollouts = self._get_evaluations_for_value()

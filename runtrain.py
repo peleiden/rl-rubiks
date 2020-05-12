@@ -61,9 +61,9 @@ options = {
 	},
 	'reward_method' : {
 		'default':  'lapanfix',
-		'help':	    'Which way to set target values near goal state. "paper" forces nothing and does not train on goal state.\
-				"lapanfix" trains on goalstate and forces it = 0. "schultzfix" forces substates for goal to 0 and  does not train on goal state. \
-				"reward0" changes reward for transitioning to goal state to 0 and does not train on goal state.',
+		'help':	    'Which way to set target values near goal state. "paper" forces nothing and does not train on goal state. ' +
+				'"lapanfix" trains on goalstate and forces it = 0. "schultzfix" forces substates for goal to 0 and does not train on goal state. ' +
+				'"reward0" changes reward for transitioning to goal state to 0 and does not train on goal state.',
 		'type':	    str,
 		'choices':  ['paper', 'lapanfix', 'schultzfix', 'reward0'],
 	},

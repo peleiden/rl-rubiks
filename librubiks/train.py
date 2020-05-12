@@ -99,7 +99,7 @@ class Train:
 
 		self.with_analysis = with_analysis
 		if self.with_analysis:
-			self.analysis = TrainAnalysis(self.evaluation_rollouts, self.rollout_games, self.rollout_depth, extra_evals=50, logger=self.log) #Logger should not be set in standard use
+			self.analysis = TrainAnalysis(self.evaluation_rollouts, self.rollout_games, self.rollout_depth, extra_evals=50, reward_method=reward_method, logger=self.log) #Logger should not be set in standard use
 
 		self.tt = TickTock()
 
@@ -157,17 +157,13 @@ class Train:
 
 			reset_cuda()
 
-			if self.with_analysis:
-				self.tt.profile("Analysis of rollout")
-				self.analysis.rollout(net, rollout, value_targets)
-				self.tt.end_profile("Analysis of rollout")
-
 			self.tt.profile("Training loop")
 			net.train()
 			batches = self._get_batches(self.states_per_rollout, self.batch_size)
 			for i, batch in enumerate(batches):
 				optimizer.zero_grad()
 				policy_pred, value_pred = net(training_data[batch], policy=True, value=True)
+
 
 				# Use loss on both policy and value
 				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
@@ -201,6 +197,11 @@ class Train:
 
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
 				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
+
+			if self.with_analysis:
+				self.tt.profile("Analysis of rollout")
+				self.analysis.rollout(net, rollout, value_targets)
+				self.tt.end_profile("Analysis of rollout")
 
 			if rollout in self.evaluation_rollouts:
 				net.eval()
@@ -282,9 +283,9 @@ class Train:
 		substates_oh = Cube.as_oh(substates)
 		self.tt.end_profile("One-hot encoding")
 
-		# Get rewards. 1 for solved states else -1
 		self.tt.profile("Reward")
 		solved_substates = Cube.multi_is_solved(substates)
+		# Reward for won state is 1 normally but 0 if running with reward0
 		rewards = (torch.zeros if self.reward_method == 'reward0' else torch.ones)\
 			(*solved_substates.shape)
 		rewards[~solved_substates] = -1
@@ -310,11 +311,14 @@ class Train:
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
 		if self.reward_method == 'lapanfix':
+			# Trains on goal state, sets goalstate to 0
 			value_targets[solved_scrambled_states] = 0
 		elif self.reward_method == 'schultzfix':
+			# Does not train on goal state, but sets first 12 substates to 0
 			first_substates = np.zeros(len(states), dtype=bool)
 			first_substates[np.arange(0, len(states), self.rollout_depth)] = True
 			value_targets[first_substates] = 0
+
 		self.tt.end_profile("Calculating targets")
 
 		# Weighting examples according to alpha
@@ -341,7 +345,6 @@ class Train:
 		generator_net.load_state_dict(new_genparams)
 		self.tt.end_profile("Creating generator network")
 		return generator_net.to(gpu)
-
 	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
