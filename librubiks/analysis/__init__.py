@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from scipy.stats import entropy
 import matplotlib.pyplot as plt
-import matplotlib.animation as animations
+import matplotlib.colors as mcolour
 
 from librubiks import gpu
 from librubiks.cube import Cube
@@ -17,6 +17,10 @@ try:
 	has_image_tools = True
 except ModuleNotFoundError:
 	has_image_tools = False
+
+colours = list(mcolour.BASE_COLORS)
+tab_colours = list(mcolour.TABLEAU_COLORS)
+all_colours = colours[:-1] + tab_colours[:-2]
 
 class TrainAnalysis:
 	"""Performs analysis of the training procedure to understand loss and training behaviour"""
@@ -31,7 +35,7 @@ class TrainAnalysis:
 
 		self.games = games
 		self.depth = depth
-		self.depths = np.arange(1, depth)
+		self.depths = np.arange(depth)
 		self.extra_evals = min(evaluations[-1] if len(evaluations) else 0, extra_evals) #Wont add evals in the future (or if no evals are needed)
 		self.evaluations = np.unique( np.append(evaluations, range( self.extra_evals )) )
 
@@ -77,11 +81,8 @@ class TrainAnalysis:
 			net.eval()
 
 			# Calculating value targets
-			targets = value_targets.cpu().numpy()
-			self.avg_value_targets.append(np.empty_like(self.depths, dtype=float))
-			for i, depth in enumerate(self.depths):
-				idcs = np.arange(self.games) * self.depth + depth
-				self.avg_value_targets[-1][i] = targets[idcs].mean()
+			targets = value_targets.cpu().numpy().reshape((-1, self.depth))
+			self.avg_value_targets.append(targets.mean(axis=0))
 
 			# Calculating model change
 			model_change = torch.sqrt((net.get_params()-self.params)**2).mean().cpu()
@@ -95,6 +96,7 @@ class TrainAnalysis:
 				self.first_state_values.append( net(self.first_states, policy=False, value=True).detach().cpu().numpy() )
 
 			net.train()
+
 	def ADI(self, values: torch.Tensor):
 		"""Saves statistics after a run of ADI. """
 		self.substate_val_stds.append(
@@ -187,15 +189,37 @@ class TrainAnalysis:
 			imageio.mimsave(savepath, gif_frames, format='GIF', duration=0.25)
 			self.log(f"Saved visualizations of first state values to {savepath}")
 		elif not has_image_tools: self.log(f"Visualizaiton of first state values could not be saved: Install imageio and networkx to do this")
+
+	def _get_evaluations_for_value(self):
+		"""
+		Returns a boolean vector of length len(self.evaluations) containing whether or not the curve should be in focus
+		"""
+		early_rollouts = 5
+		late_rollouts = 10
+		early_indices = np.arange(early_rollouts) * 3
+		late_indices = np.unique(np.linspace(early_indices[-1], len(self.evaluations)-1, late_rollouts+1)[1:].astype(int))
+		focus_rollouts = np.zeros(len(self.evaluations), dtype=bool)
+		focus_rollouts[early_indices] = True
+		focus_rollouts[late_indices] = True
+		return focus_rollouts
+
+
 	def plot_value_targets(self, loc: str, show=False):
 		self.log("Plotting average value targets")
 		plt.figure(figsize=(19.2, 10.8))
-		for target, rollout in zip(self.avg_value_targets, self.evaluations):
-			plt.plot(self.depths, target, label=f"Rollout {rollout}")
+		focus_rollouts = self._get_evaluations_for_value()
+		colours = iter(all_colours)
+		filter_by_bools = lambda list_, bools: [x for x, b in zip(list_, bools) if b]
+		for target, rollout in zip(filter_by_bools(self.avg_value_targets, ~focus_rollouts), filter_by_bools(self.evaluations, ~focus_rollouts)):
+			plt.plot(self.depths, target, "--", color="grey", alpha=.4)
+		for target, rollout in zip(filter_by_bools(self.avg_value_targets, focus_rollouts), filter_by_bools(self.evaluations, focus_rollouts)):
+			plt.plot(self.depths, target, linewidth=3, color=next(colours), label=f"{rollout} Rollouts")
 		plt.legend(loc=1)
+		plt.xlim(np.array([-.05, 1.05]) * np.array([0, self.depths[-1]+1]))
 		plt.xlabel("Scrambling depth")
 		plt.ylabel("Average target value")
 		path = os.path.join(loc, "avg_target_values.png")
+		plt.grid(True)
 		plt.savefig(path)
 		if show: plt.show()
 		plt.clf()

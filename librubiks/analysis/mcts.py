@@ -11,7 +11,7 @@ from librubiks.utils import seedsetter, Logger, TickTock
 
 tt = TickTock()
 log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
-net = Model.load("data/local_good_net").eval().to(gpu)
+net = Model.load("data/local_train").eval().to(gpu)
 
 
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float):
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 	s = int(1e6)
 	tl = 1
 	state, _, _ = Cube.scramble(50)
-	# detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
+	detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
 	W(None, 1, get_other_vars("depth"))
 
 

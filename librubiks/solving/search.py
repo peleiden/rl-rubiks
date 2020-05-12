@@ -87,6 +87,7 @@ class RandomDFS(Searcher):
 	def __str__(self):
 		return "Random depth-first search"
 
+
 class BFS(Searcher):
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> (np.ndarray, bool):
 		self.reset()
@@ -415,6 +416,232 @@ class MCTS(DeepSearcher):
 		return len(self.indices)
 
 
+class MCTS_(DeepSearcher):
+
+	_expand_nodes = 1000  # Expands stack by 1000, then 2000, then 4000 and etc. each expansion
+	n_states = 0
+	indices = dict()  # Key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used
+	states: np.ndarray
+	neighbors: np.ndarray  # n x 12 array of neighbor indices. As first index is unused, np.all(self.neighbors, axis=1) can be used
+	leaves: np.ndarray  # Boolean vector containing whether a node is a leaf
+	P: np.ndarray
+	V: np.ndarray
+	N: np.ndarray
+	W: np.ndarray
+	L: np.ndarray
+
+	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
+		super().__init__(net)
+		self.c = c
+		self.nu = nu
+		self.search_graph = search_graph
+		self.workers = workers
+		self.policy_type = policy_type
+
+		self.expand_nodes = 1000
+
+	def reset(self):
+		super().reset()
+		self.indices   = dict()
+		self.states    = np.empty((self.expand_nodes, *Cube.shape()), dtype=Cube.dtype)
+		self.neighbors = np.zeros((self.expand_nodes, Cube.action_dim), dtype=int)
+		self.leaves    = np.ones(self.expand_nodes, dtype=bool)
+		self.P         = np.empty((self.expand_nodes, Cube.action_dim))
+		self.V         = np.empty(self.expand_nodes)
+		self.N         = np.zeros((self.expand_nodes, Cube.action_dim), dtype=int)
+		self.W         = np.zeros((self.expand_nodes, Cube.action_dim))
+		self.L         = np.zeros((self.expand_nodes, Cube.action_dim))
+
+	def increase_stack_size(self):
+		expand_size    = len(self.states)
+		self.states	   = np.concatenate([self.states, np.empty((expand_size, *Cube.shape()), dtype=Cube.dtype)])
+		self.neighbors = np.concatenate([self.neighbors, np.zeros((expand_size, Cube.action_dim), dtype=int)])
+		self.leaves    = np.concatenate([self.leaves, np.ones(expand_size, dtype=bool)])
+		self.P         = np.concatenate([self.P, np.empty((expand_size, Cube.action_dim))])
+		self.V         = np.concatenate([self.V, np.empty(expand_size)])
+		self.N         = np.concatenate([self.N, np.zeros((expand_size, Cube.action_dim), dtype=int)])
+		self.W         = np.concatenate([self.W, np.zeros((expand_size, Cube.action_dim))])
+		self.L         = np.concatenate([self.L, np.zeros((expand_size, Cube.action_dim))])
+
+	@no_grad
+	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
+		self.reset()
+		self.tt.tick()
+		assert time_limit or max_states
+		time_limit = time_limit or 1e10
+		max_states = max_states or int(1e10)
+
+		self.indices[state.tostring()] = 1
+		self.states[1] = state
+		if Cube.is_solved(state): return True
+
+		path = [1]
+		actions_taken = []
+		while self.tt.tock() < time_limit and len(self) + Cube.action_dim <= max_states:
+			self.tt.profile("Expanding leaves")
+			solve_leaf, solve_action = self.expand_leaf(path, actions_taken)
+			self.tt.end_profile("Expanding leaves")
+
+			# If a solution is found
+			if solve_leaf:
+				self.action_queue = path + [solve_action]
+				if self.search_graph:
+					self._complete_graph()
+					self._shorten_action_queue(solve_leaf)
+				return True
+
+			# Find leaves
+			path, actions_taken = self.find_leaf(time_limit)
+
+		self.action_queue = path  # Generates a best guess action queue in case of no
+
+		return False
+
+	def expand_leaf(self, visited_states_idcs: list, actions_taken: list) -> (int, int):
+		"""
+		Expands around the given leaf and updates V and W in all visited_states_idcs
+		Returns the index of the leaf and the action to solve it
+		Both are 0 if no solution is found
+		:param visited_states_idcs: List of states that have been visited including the starting node. Length n
+		:param actions_taken: List of actions taken from starting state. Length n-1
+		:return: The index of the leaf that is the solution and the action that must be taken from leaf_index.
+			Both are 0 if solution is not found
+		"""
+		if len(self) + Cube.action_dim > len(self.states):
+			self.increase_stack_size()
+
+		leaf_index = visited_states_idcs[-1]
+
+		self.tt.profile("Get substates")
+		state = self.states[leaf_index]
+		substates = Cube.multi_rotate(Cube.repeat_state(state), *Cube.iter_actions())
+		self.tt.end_profile("Get substates")
+
+		# Check what states have been seen already
+		substate_strs = [s.tostring() for s in substates]  # Unique identifier for each substate
+		get_substate_strs = lambda bools: [s for s, b in zip(substate_strs, bools) if b]
+		seen_substates = np.array([s in self.indices for s in substate_strs])  # States already in the graph
+		unseen_substates = ~seen_substates  # States not already in the graph
+
+		self.tt.profile("Update indices and states")
+		new_states_idcs = len(self) + np.arange(unseen_substates.sum()) + 1
+		new_idcs_dict = { s: i for i, s in zip(new_states_idcs, get_substate_strs(unseen_substates)) }
+		self.indices.update(new_idcs_dict)
+		substate_idcs = np.array([self.indices[s] for s in substate_strs])
+		self.states[substate_idcs] = substates
+		self.tt.end_profile("Update indices and states")
+
+		self.tt.profile("Check for solution")
+		solved_substate = np.where(Cube.multi_is_solved(substates))[0]
+		if solved_substate.size:
+			action = solved_substate[0]
+			new_index = len(self.indices) + 1
+			self.indices[substate_strs[action]] = new_index
+			self.states[new_index] = substates[action]
+			self.neighbors[leaf_index, action] = new_index
+			self.neighbors[new_index, Cube.rev_action(action)] = leaf_index
+			return leaf_index, action
+		self.tt.end_profile("Check for solution")
+
+		# Update policy, value, and W
+		self.tt.profile("One-hot encoding")
+		state_oh = Cube.as_oh(state)  # TODO: Consider computing values of substates instead. May save time. Will be necessary with value, if softmax(V/W) is used
+		self.tt.end_profile("One-hot encoding")
+		self.tt.profile("Feedforward")
+		p, v = self.net(state_oh)
+		p, v = p.cpu().softmax(dim=1).numpy().squeeze(), float(v.cpu().squeeze())
+		self.tt.end_profile("Feedforward")
+		self.tt.profile("Update P, V, and W")
+		self.P[leaf_index] = p
+		existing_values = self.V[visited_states_idcs[:-1]]  # TODO: What do they mean by 'backing up the value'?
+		self.V[visited_states_idcs] = max(existing_values.max() if existing_values.size else v, v)
+		W = np.vstack([self.W[visited_states_idcs[:-1], actions_taken], np.ones(len(actions_taken))*self.V[leaf_index]])
+		self.W[visited_states_idcs[:-1], actions_taken] = W.max(axis=0)
+		self.tt.end_profile("Update P, V, and W")
+
+		self.tt.profile("Update neigbors and leaf status")
+		actions = np.arange(Cube.action_dim)
+		self.neighbors[leaf_index, actions] = substate_idcs
+		self.neighbors[substate_idcs, Cube.rev_actions(actions)] = leaf_index
+		self.leaves[leaf_index] = False
+		self.tt.end_profile("Update neigbors and leaf status")
+
+		# Update N and L
+		self.tt.profile("Update N and L")
+		self.N[visited_states_idcs[:-1], actions_taken] += 1
+		self.L[visited_states_idcs[:-1], actions_taken] += self.nu
+		self.tt.end_profile("Update N and L")
+
+		return 0, 0
+
+	def find_leaf(self, time_limit: float) -> (list, list):
+		"""
+		Searches the tree starting from starting state
+		Returns a list of visited states (as indices for self.states) and a list of actions taken
+		"""
+		current_index = 1
+		path = [1]
+		actions_taken = []
+		self.tt.profile("Exploring next node")
+		while not self.leaves[current_index] and self.tt.tock() < time_limit:
+			sqrtN = np.sqrt(self.N[current_index].sum())
+			if sqrtN < self.eps:
+				# If no actions have been taken from this before
+				action = np.random.randint(Cube.action_dim)
+			else:
+				# If actions have been taken from this state before
+				U = self.c * self.P[current_index] * sqrtN / (1 + self.N[current_index])
+				Q = self.W[current_index] - self.L[current_index]
+				action = (U + Q).argmax()
+			current_index = self.neighbors[current_index, action]
+			path.append(current_index)
+			actions_taken.append(action)
+		self.tt.end_profile("Exploring next node")
+		return path, actions_taken
+
+	def _complete_graph(self):
+		"""
+		Ensures that the graph is complete by expanding around all leaves and updating neighbors
+		"""
+		self.tt.profile("Complete graph")
+		leaves_idcs = np.where(self.leaves[:len(self)+1])[0]
+		actions_taken = np.tile(Cube.action_dim, len(leaves_idcs))
+		repeated_leaves_idcs = np.repeat(leaves_idcs, Cube.action_dim)
+		substates = Cube.multi_rotate(self.states[repeated_leaves_idcs], *Cube.iter_actions(len(leaves_idcs)))
+		substate_strs = [s.tostring() for s in substates]
+		substate_idcs = np.array([self.indices[s] if s in self.indices else s for s in substate_strs])
+		self.neighbors[repeated_leaves_idcs, actions_taken] = substate_idcs
+		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = repeated_leaves_idcs
+		self.tt.end_profile("Complete graph")
+
+	def _shorten_action_queue(self, start_index: int):
+		visited = {start_index}  # Contains indices that have been visited
+		q = deque([start_index])
+		while q:
+			v = q.popleft()
+			for i, n in enumerate(self.neighbors[v]):
+				if not n:
+					continue
+				elif n == 1:
+					# TODO: Save paths and break here
+					return
+				visited.add(n)
+				q.append(n)
+
+
+	@classmethod
+	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
+		net = Model.load(loc)
+		net.to(gpu)
+		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers, policy_type=policy_type)
+
+	def __str__(self):
+		return f"MCTS {'with' if self.search_graph else 'without'} BFS (c={self.c}, nu={self.nu}, pt={self.policy_type})"
+
+	def __len__(self):
+		return len(self.indices)
+
+
 class AStar(DeepSearcher):
 
 	def __init__(self, net: Model):
@@ -478,7 +705,7 @@ class AStar(DeepSearcher):
 			return -float(v.cpu())
 
 	def __str__(self):
-		return f"AStar search"
+		return f"A*"
 
 	def __len__(self):
 		node = list(self.closed)[-1]
@@ -489,3 +716,79 @@ class AStar(DeepSearcher):
 			count += 1
 
 
+class DankSearch(DeepSearcher):
+
+	def __init__(self, net, epsilon: float, workers: int, depth: int):
+		super().__init__(net)
+		self.epsilon = epsilon
+		self.workers = workers
+		self.depth = depth
+
+	@no_grad
+	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
+		self.reset()
+		self.tt.tick()
+		assert time_limit or max_states
+		time_limit = time_limit or 1e10
+		max_states = max_states or int(1e10)
+
+		if Cube.is_solved(state):
+			return True
+
+		states = Cube.repeat_state(state, self.workers)
+		while self.tt.tock() < time_limit and len(self) + self.workers * self.depth <= max_states:
+			paths, states, states_oh, solved = self.expand(states)
+			if solved != (-1, -1):
+				self.action_queue += deque(paths[solved[0]][:solved[1]])
+				return True
+			assert torch.all(Cube.as_oh(states)==states_oh)
+			v = self.net(states_oh, policy=False).cpu().squeeze()
+			best_value_state_index = int(v.argmax())
+			worker, depth = best_value_state_index // self.depth, best_value_state_index % self.depth
+			self.action_queue += deque(paths[worker][:depth])  # TODO: Problably bug with depth = 0
+
+		return False
+
+	def _get_indices(self, depth: int) -> np.ndarray:
+		return np.arange(self.workers) * self.depth + depth
+
+	def expand(self, states: np.ndarray) -> (list, np.ndarray, torch.tensor, tuple):
+		paths = [[] for _ in range(self.workers)]
+		new_states = np.empty((self.workers * self.depth, *Cube.shape()), dtype=Cube.dtype)
+		new_states_oh = torch.empty(self.workers * self.depth, Cube.get_oh_shape(), dtype=torch.float)
+		for d in range(self.depth):
+			use_random = np.random.choice(2, self.workers, p=[1-self.epsilon, self.epsilon]).astype(bool)
+			use_policy = ~use_random
+			actions = np.empty(self.workers, dtype=int)
+			actions[use_random] = np.random.randint(0, Cube.action_dim, use_random.sum())
+			states_oh = Cube.as_oh(states[use_policy])
+			p = self.net(states_oh, value=False).cpu().numpy()
+			actions[use_policy] = p.argmax(axis=1)
+			[path.append(a) for path, a in zip(paths, actions)]
+
+			faces, dirs = actions % 6, actions // 6
+			states = Cube.multi_rotate(states, faces, dirs)
+			solved_states = Cube.multi_is_solved(states)
+			if np.any(solved_states):
+				w = np.where(solved_states)[0][0]
+				return paths, None, None, (w, d)
+			new_states[self._get_indices(d)] = states
+			new_states_oh[self._get_indices(d)] = Cube.as_oh(states)  # Don't waste time like this
+		self._explored_states += len(new_states)
+
+		return paths, new_states, new_states_oh, (-1, -1)
+
+	@classmethod
+	def from_saved(cls, loc: str, epsilon: float, workers: int, depth: int):
+		net = Model.load(loc)
+		net.to(gpu)
+		return cls(net, epsilon=epsilon, workers=workers, depth=depth)
+
+	def __str__(self):
+		return f"DS (e={self.epsilon:.2f}, w={self.workers}, d={self.depth})"
+
+if __name__ == "__main__":
+	state, _, _ = Cube.scramble(5)
+	ds = DankSearch.from_saved("data/local_train", .1, 10, 100)
+	sol_found = ds.search(state, 1)
+	print("Solution found:", sol_found)
