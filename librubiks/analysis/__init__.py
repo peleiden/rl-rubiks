@@ -154,6 +154,7 @@ class TrainAnalysis:
 		for target, rollout in zip(filter_by_bools(self.avg_value_targets, focus_rollouts), filter_by_bools(self.evaluations, focus_rollouts)):
 			plt.plot(self.depths, target, linewidth=3, color=next(colours), label=f"{rollout} Rollouts")
 		plt.legend(loc=1)
+		plt.xlim([0, self.depths[-1]+1])
 		plt.xlabel("Scrambling depth")
 		plt.ylabel("Average target value")
 		path = os.path.join(loc, "avg_target_values.png")
