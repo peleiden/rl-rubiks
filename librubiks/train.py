@@ -42,6 +42,7 @@ class Train:
 				 evaluation_interval: int,
 				 with_analysis: bool,
 				 tau: float,
+				 reward_method: str,
 				 policy_criterion	= torch.nn.CrossEntropyLoss,
 				 value_criterion	= torch.nn.MSELoss,
 				 logger: Logger		= NullLogger(),
@@ -60,6 +61,7 @@ class Train:
 		self.rollout_games = rollout_games
 		self.rollout_depth = rollout_depth
 		self.adi_ff_batches = 1  # Number of batches used for feedforward in ADI_traindata. Used to limit vram usage
+		self.reward_method = reward_method
 
 		# Perform evaluation every evaluation_interval and after last rollout
 		self.evaluation_rollouts = np.array(list(range(0, self.rollouts, evaluation_interval)))\
@@ -280,13 +282,6 @@ class Train:
 		substates_oh = Cube.as_oh(substates)
 		self.tt.end_profile("One-hot encoding")
 
-		# Get rewards. 1 for solved states else -1
-		self.tt.profile("Reward")
-		solved_substates = Cube.multi_is_solved(substates)
-		rewards = torch.ones(*solved_substates.shape)
-		rewards[~solved_substates] = -1
-		self.tt.end_profile("Reward")
-
 		# Generates policy and value targets
 		self.tt.profile("ADI feedforward")
 		while True:
@@ -301,14 +296,30 @@ class Train:
 				self.adi_ff_batches *= 2
 		self.tt.end_profile("ADI feedforward")
 
+		# Get rewards. 1 for solved states else -1
+		self.tt.profile("Reward")
+		solved_substates = Cube.multi_is_solved(substates)
+		rewards = torch.ones(*solved_substates.shape)
+		rewards[~solved_substates] = -1
+		self.tt.end_profile("Reward")
+
+
 		self.tt.profile("Calculating targets")
 		values += rewards
 		values = values.reshape(-1, 12)
 		policy_targets = torch.argmax(values, dim=1)
 		value_targets = values[np.arange(len(values)), policy_targets]
-		value_targets[solved_scrambled_states] = 0
+		if self.reward_method == 'lapanfix':
+			value_targets[solved_scrambled_states] = 0
+		elif self.reward_method == 'schultzfix':
+			first_substates = None #FIXME
+			value_targets[first_substates] = 0
+		elif self.reward_method == 'reward0':
+			value_targets[solved_substates] = 0
+
 		self.tt.end_profile("Calculating targets")
 
+		# Weighting examples according to alpha
 		weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
 		unweighted = np.ones_like(weighted)
 		weighted, unweighted = weighted / weighted.sum(), unweighted / len(unweighted)

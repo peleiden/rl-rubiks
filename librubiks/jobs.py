@@ -42,7 +42,7 @@ class TrainJob:
 				 is2024: bool,
 				 arch: str,
 				 analysis: bool,
-
+				 reward_method: str,
 
 				 # Currently not set by argparser/configparser
 				 agent = DeepAgent(PolicySearch(None, True)),
@@ -91,6 +91,9 @@ class TrainJob:
 		self.analysis = analysis
 		assert isinstance(self.analysis, bool)
 
+		self.reward_method = reward_method
+		assert self.reward_method in ["paper", "lapanfix", "schultzfix", "reward0"]
+
 		assert arch in ["fc", "res", "conv"]
 		if arch == "conv": assert not self.is2024
 		assert isinstance(self.model_cfg, ModelConfig)
@@ -114,6 +117,7 @@ class TrainJob:
 					  lr					= self.lr,
 					  gamma					= self.gamma,
 					  tau				= self.tau,
+					  reward_method			= self.reward_method,
 					  update_interval		= self.update_interval,
 					  agent					= self.agent,
 					  logger				= self.logger,
