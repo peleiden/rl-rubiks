@@ -76,18 +76,20 @@ class Cube:
 		return _Cube686.pad(oh, pad_size)
 
 	@classmethod
-	def sequence_scrambler(cls, games: int, depth: int):
+	def sequence_scrambler(cls, games: int, depth: int, with_solved: bool):
 		"""
 		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
 		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
+		:with_solved: Whether to include the solved cube in the sequence
 		"""
 		states = []
 		current_states = np.array([cls.get_solved_instance()]*games)
 		faces = np.random.randint(0, 6, (depth, games))
 		dirs = np.random.randint(0, 2, (depth, games))
-		for d in range(depth):
-			states.append(current_states)
+		if with_solved: states.append(current_states)
+		for d in range(depth - with_solved):
 			current_states = cls.multi_rotate(current_states, faces[d], dirs[d])
+			states.append(current_states)
 		states = np.vstack(np.transpose(states, (1, 0, *np.arange(2, len(cls.shape())+2))))
 		oh_states = cls.as_oh(states)
 		return states, oh_states
