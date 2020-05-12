@@ -4,10 +4,15 @@ import numpy as np
 import torch
 from scipy.stats import entropy
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolour
 
 from librubiks.cube import Cube
 from librubiks.model import Model
 from librubiks.utils import NullLogger, Logger
+
+colours = list(mcolour.BASE_COLORS)
+tab_colours = list(mcolour.TABLEAU_COLORS)
+all_colours = colours[:-1] + tab_colours[:-2]
 
 class TrainAnalysis:
 	"""Performs analysis of the training procedure to understand loss and training behaviour"""
@@ -124,16 +129,35 @@ class TrainAnalysis:
 		# Plot? Something cool? Graphviz?
 		# pass
 
+	def _get_evaluations_for_value(self):
+		"""
+		Returns a boolean vector of length len(self.evaluations) containing whether or not the curve should be in focus
+		"""
+		early_rollouts = 5
+		late_rollouts = 10
+		early_indices = np.arange(early_rollouts) * 3
+		late_indices = np.unique(np.linspace(early_indices[-1], len(self.evaluations)-1, late_rollouts+1)[1:].astype(int))
+		focus_rollouts = np.zeros(len(self.evaluations), dtype=bool)
+		focus_rollouts[early_indices] = True
+		focus_rollouts[late_indices] = True
+		return focus_rollouts
+
 
 	def plot_value_targets(self, loc: str, show=False):
 		self.log("Plotting average value targets")
 		plt.figure(figsize=(19.2, 10.8))
-		for target, rollout in zip(self.avg_value_targets, self.evaluations):
-			plt.plot(self.depths, target, label=f"{rollout} Rollouts")
+		focus_rollouts = self._get_evaluations_for_value()
+		colours = iter(all_colours)
+		filter_by_bools = lambda list_, bools: [x for x, b in zip(list_, bools) if b]
+		for target, rollout in zip(filter_by_bools(self.avg_value_targets, ~focus_rollouts), filter_by_bools(self.evaluations, ~focus_rollouts)):
+			plt.plot(self.depths, target, "--", color="grey", alpha=.4)
+		for target, rollout in zip(filter_by_bools(self.avg_value_targets, focus_rollouts), filter_by_bools(self.evaluations, focus_rollouts)):
+			plt.plot(self.depths, target, linewidth=3, color=next(colours), label=f"{rollout} Rollouts")
 		plt.legend(loc=1)
 		plt.xlabel("Scrambling depth")
 		plt.ylabel("Average target value")
 		path = os.path.join(loc, "avg_target_values.png")
+		plt.grid(True)
 		plt.savefig(path)
 		if show: plt.show()
 		plt.clf()
