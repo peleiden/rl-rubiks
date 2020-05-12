@@ -267,7 +267,8 @@ class Train:
 		"""
 		net.eval()
 		self.tt.profile("Scrambling")
-		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth)
+		# Only include solved state in training if using Max Lapan convergence fix
+		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth, with_solved = self.reward_method == 'lapanfix')
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
@@ -280,6 +281,14 @@ class Train:
 		self.tt.profile("One-hot encoding")
 		substates_oh = Cube.as_oh(substates)
 		self.tt.end_profile("One-hot encoding")
+
+		# Get rewards. 1 for solved states else -1
+		self.tt.profile("Reward")
+		solved_substates = Cube.multi_is_solved(substates)
+		rewards = (torch.zeros if self.reward_method == 'reward0' else torch.ones)\
+			(*solved_substates.shape)
+		rewards[~solved_substates] = -1
+		self.tt.end_profile("Reward")
 
 		# Generates policy and value targets
 		self.tt.profile("ADI feedforward")
@@ -295,14 +304,6 @@ class Train:
 				self.adi_ff_batches *= 2
 		self.tt.end_profile("ADI feedforward")
 
-		# Get rewards. 1 for solved states else -1
-		self.tt.profile("Reward")
-		solved_substates = Cube.multi_is_solved(substates)
-		rewards = torch.ones(*solved_substates.shape)
-		rewards[~solved_substates] = -1
-		self.tt.end_profile("Reward")
-
-
 		self.tt.profile("Calculating targets")
 		values += rewards
 		values = values.reshape(-1, 12)
@@ -311,11 +312,9 @@ class Train:
 		if self.reward_method == 'lapanfix':
 			value_targets[solved_scrambled_states] = 0
 		elif self.reward_method == 'schultzfix':
-			first_substates = None #FIXME
+			first_substates = np.zeros(len(states), dtype=bool)
+			first_substates[np.arange(0, len(states), self.rollout_depth)] = True
 			value_targets[first_substates] = 0
-		elif self.reward_method == 'reward0':
-			value_targets[solved_substates] = 0
-
 		self.tt.end_profile("Calculating targets")
 
 		# Weighting examples according to alpha
