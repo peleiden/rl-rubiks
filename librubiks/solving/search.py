@@ -87,8 +87,10 @@ class RandomDFS(Searcher):
 	def __str__(self):
 		return "Random depth-first search"
 
-
 class BFS(Searcher):
+
+	states = dict()
+
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> (np.ndarray, bool):
 		self.reset()
 		self.tt.tick()
@@ -98,9 +100,8 @@ class BFS(Searcher):
 
 		if Cube.is_solved(state): return True
 
-		# TODO: Speed this up using multi_rotate
 		# Each element contains the state from which it came and the corresponding action
-		states = { state.tostring(): (None, None) }
+		self.states = { state.tostring(): (None, None) }
 		queue = deque([state])
 		while self.tt.tock() < time_limit and len(self) < max_states:
 			state = queue.popleft()
@@ -108,24 +109,25 @@ class BFS(Searcher):
 			for i, action in enumerate(Cube.action_space):
 				new_state = Cube.rotate(state, *action)
 				new_tstate = new_state.tostring()
-				if new_tstate in states:
+				if new_tstate in self.states:
 					continue
 				elif Cube.is_solved(new_state):
 					self.action_queue.appendleft(i)
-					while states[tstate][0] is not None:
-						self.action_queue.appendleft(states[tstate][1])
-						tstate = states[tstate][0]
-					self.explored_states = len(self.action_queue)
+					while self.states[tstate][0] is not None:
+						self.action_queue.appendleft(self.states[tstate][1])
+						tstate = self.states[tstate][0]
 					return True
 				else:
-					states[new_tstate] = (tstate, i)
+					self.states[new_tstate] = (tstate, i)
 					queue.append(new_state)
 
-		self.explored_states = len(self.action_queue)
 		return False
 
 	def __str__(self):
 		return "Breadth-first search"
+	
+	def __len__(self):
+		return len(self.states)
 
 
 class PolicySearch(DeepSearcher):
@@ -344,6 +346,8 @@ class MCTS(DeepSearcher):
 		elif self.policy_type == "w":
 			Ws = self.W[leaves_idcs].reshape((len(leaves_idcs), Cube.action_dim))
 			self.P[leaves_idcs] = softmax(Ws)
+		
+		self.L[...] = 0
 
 		return leaf_idx, action_idx
 
@@ -705,7 +709,7 @@ class AStar(DeepSearcher):
 			return -float(v.cpu())
 
 	def __str__(self):
-		return f"A*"
+		return f"AStar search"
 
 	def __len__(self):
 		node = list(self.closed)[-1]
@@ -778,17 +782,3 @@ class DankSearch(DeepSearcher):
 
 		return paths, new_states, new_states_oh, (-1, -1)
 
-	@classmethod
-	def from_saved(cls, loc: str, epsilon: float, workers: int, depth: int):
-		net = Model.load(loc)
-		net.to(gpu)
-		return cls(net, epsilon=epsilon, workers=workers, depth=depth)
-
-	def __str__(self):
-		return f"DS (e={self.epsilon:.2f}, w={self.workers}, d={self.depth})"
-
-if __name__ == "__main__":
-	state, _, _ = Cube.scramble(5)
-	ds = DankSearch.from_saved("data/local_train", .1, 10, 100)
-	sol_found = ds.search(state, 1)
-	print("Solution found:", sol_found)
