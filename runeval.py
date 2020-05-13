@@ -55,7 +55,7 @@ options = {
 		'type':		float,
 	},
 	'mcts_graph_search': {
-		'default':	True,
+		'default':	False,
 		'help':		'Whether or not graph search should be applied to MCTS to find the shortest path',
 		'type':		literal_eval,
 		'choices':	[True, False],
