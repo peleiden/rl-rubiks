@@ -1,29 +1,28 @@
 import numpy as np
 from dataclasses import dataclass
 
-# Midlertidig dokumentation
-# Hver cubie har en position, 0-7 for hjørner og 0-11 for sider
-# Hver rotation mapper hver relevant position til en anden
-# Derudover mappes orientering
-# Den sticker på cubien, der holdes øje med, har en orientering 0-2 for hjørner og 0-1 for sider
-# Tallet angiver en "prioritet". Den side, der har flest stickers i løst tilstand, har højst prioritet
-# F/B starter med 8 hver, T_D med 2 hver og L/R med 0 hver
-# På grund af symmetrien vil der aldrig være overlap
-# Alle maps er angivet for positiv omløbsretning
-# Set forfra
-# Forreste lag | Midterste lag | Bagerste lag
-# h0 s0 h3     | s4    s7      | h4 s8  h7
-# s1    s3     |               | s9     s11
-# h1 s2 h2     | s5    s6      | h5 s10 h6
+"""
+Every cubie has a position 0-7 for corners and 0-11 for sides. A rotation maps every relevant position to another.
+Orientations are also mapped. The sticker on the cubie, which is kept track of, has an orientation 0-2 for corners and 0-1 for sides.
+The number represents a "priority". The side with the most stickers in the solved configuration has highest priority.
+F/B start with 8 each, T/D with 2, and L/R with 0. Due to the symmetry of the cube, there will never be overlaps.
+All maps are given in positive revolution.
+Seen from the front:
+Front layer    Middle layer    Back layer
+h0 s0 h3     | s4    s7      | h4 s8  h7
+s1    s3     |               | s9     s11
+h1 s2 h2     | s5    s6      | h5 s10 h6
+
+Indices in 6x3x3 array
+6x3x3 is based on
+  T        2
+L F R B  4 0 5 1
+  D        3
+First -> second -> third has a "right turn"
+First in each index also sticker value
+"""
 
 
-# Indices in 6x3x3 array
-# 6x3x3 is based on
-#   T        2
-# L F R B  4 0 5 1
-#   D        3
-# First -> second -> third has a "right turn"
-# First in each index also sticker value
 def get_633maps(F, B, T, D, L, R):
 	corner_633map = (
 		((F, 0, 0), (L, 0, 2), (T, 2, 0)),
