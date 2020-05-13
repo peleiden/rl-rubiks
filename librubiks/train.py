@@ -313,6 +313,7 @@ class Train:
 		if self.reward_method == 'lapanfix':
 			# Trains on goal state, sets goalstate to 0
 			value_targets[solved_scrambled_states] = 0
+			assert np.all(solved_scrambled_states[np.arange(self.rollout_games)*self.rollout_depth])
 		elif self.reward_method == 'schultzfix':
 			# Does not train on goal state, but sets first 12 substates to 0
 			first_substates = np.zeros(len(states), dtype=bool)

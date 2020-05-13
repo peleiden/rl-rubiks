@@ -145,7 +145,7 @@ class TrainAnalysis:
 		self.log(f"Saved substate probability plot to {path}")
 
 	def visualize_first_states(self, loc: str):
-		if has_image_tools and self.evaluations:
+		if has_image_tools and self.evaluations.size:
 			self.log("Making visualization of first state values")
 			gif_frames = []
 
@@ -201,13 +201,16 @@ class TrainAnalysis:
 		"""
 		Returns a boolean vector of length len(self.evaluations) containing whether or not the curve should be in focus
 		"""
-		early_rollouts = 5
-		late_rollouts = 10
-		early_indices = np.arange(early_rollouts) * 3
-		late_indices = np.unique(np.linspace(early_indices[-1], len(self.evaluations)-1, late_rollouts+1)[1:].astype(int))
 		focus_rollouts = np.zeros(len(self.evaluations), dtype=bool)
-		focus_rollouts[early_indices] = True
-		focus_rollouts[late_indices] = True
+		if len(self.evaluations) > 26:
+			early_rollouts = 5
+			late_rollouts = 10
+			early_indices = np.arange(early_rollouts)
+			late_indices = np.unique(np.linspace(early_indices[-1], len(self.evaluations)-1, late_rollouts+1, dtype=int)[1:])
+			focus_rollouts[early_indices] = True
+			focus_rollouts[late_indices] = True
+		else:
+			focus_rollouts[np.unique(np.linspace(0, len(self.evaluations)-1, 15, dtype=int))] = True
 		return focus_rollouts
 
 
