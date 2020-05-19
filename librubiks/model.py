@@ -169,7 +169,7 @@ class Model(nn.Module):
 
 		os.makedirs(save_dir, exist_ok=True)
 		if is_min:
-			model_path = os.path.join(save_dir, "model-min.pt")
+			model_path = os.path.join(save_dir, "model-best.pt")
 			torch.save(self.state_dict(), model_path)
 			self.log(f"Saved min model to {model_path}")
 			return
@@ -181,15 +181,19 @@ class Model(nn.Module):
 		self.log(f"Saved model to {model_path} and configuration to {conf_path}")
 
 	@staticmethod
-	def load(load_dir: str, logger=NullLogger(), load_min=False):
+	def load(load_dir: str, logger=NullLogger(), load_best=False):
 		"""
 		Load a model from a configuration directory
 		"""
 
-		model_path = os.path.join(load_dir, "model.pt" if not load_min else "model-min.pt")
+		model_path = os.path.join(load_dir, "model.pt" if not load_best else "model-best.pt")
 		conf_path = os.path.join(load_dir, "config.json")
 		with open(conf_path, encoding="utf-8") as conf:
-			state_dict = torch.load(model_path, map_location=gpu)
+			try:
+				state_dict = torch.load(model_path, map_location=gpu)
+			except FileNotFoundError:
+				model_path = os.path.join(load_dir, "model.pt")
+				state_dict = torch.load(model_path, map_location=gpu)
 			config = ModelConfig.from_json_dict(json.load(conf))
 
 		model = Model.create(config, logger)

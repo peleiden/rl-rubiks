@@ -130,7 +130,8 @@ class TrainJob:
 		net = Model.create(self.model_cfg, self.logger).to(gpu)
 		net, min_net = train.train(net)
 		net.save(self.location)
-		min_net.save(self.location, True)
+		if self.evaluation_interval:
+			min_net.save(self.location, True)
 
 		train.plot_training(self.location)
 		datapath = os.path.join(self.location, "train-data")
@@ -161,6 +162,7 @@ class EvalJob:
 			name: str,
 			# Set by parser, should correspond to options in runeval
 			location: str,
+			use_best: bool,
 			searcher: str,
 			games: int,
 			max_time: float,
@@ -220,7 +222,7 @@ class EvalJob:
 					cfg = json.load(f)
 
 				set_is2024(cfg["is2024"])
-				searcher = searcher.from_saved(folder, **search_args)
+				searcher = searcher.from_saved(folder, use_best=use_best, **search_args)
 				key = f'{str(searcher)} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'
 
 				self.reps[key] = cfg["is2024"]

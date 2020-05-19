@@ -16,6 +16,12 @@ options = {
 		'help':	    "Location to search for model and save results.\nMust use location/<run_name>/model.pt structure.",
 		'type':	    str,
 	},
+	'use_best': {
+		'default':	False,
+		'help':		"Set to True to use model-best.pt instead of model.pt.",
+		'type':		literal_eval,
+		'choices':	[True, False],
+	},
 	'searcher': {
 		'default':  'MCTS',
 		'help':	    'Name of searcher for agent corresponding to searcher class in librubiks.solving.search',

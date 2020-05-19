@@ -69,8 +69,8 @@ class DeepSearcher(Searcher):
 		self.net = net
 
 	@classmethod
-	def from_saved(cls, loc: str):
-		net = Model.load(loc)
+	def from_saved(cls, loc: str, use_best: bool):
+		net = Model.load(loc, load_best=use_best)
 		net.to(gpu)
 		return cls(net)
 
@@ -143,8 +143,8 @@ class PolicySearch(DeepSearcher):
 		return action, state, Cube.is_solved(state)
 
 	@classmethod
-	def from_saved(cls, loc: str, sample_policy=False):
-		net = Model.load(loc)
+	def from_saved(cls, loc: str, use_best: bool, sample_policy=False):
+		net = Model.load(loc, load_best=use_best)
 		net.to(gpu)
 		return cls(net, sample_policy)
 
@@ -408,8 +408,8 @@ class MCTS(DeepSearcher):
 
 
 	@classmethod
-	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
-		net = Model.load(loc)
+	def from_saved(cls, loc: str, use_best: bool, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
+		net = Model.load(loc, load_best=use_best)
 		net.to(gpu)
 		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers, policy_type=policy_type)
 
@@ -634,8 +634,8 @@ class MCTS_(DeepSearcher):
 
 
 	@classmethod
-	def from_saved(cls, loc: str, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
-		net = Model.load(loc)
+	def from_saved(cls, loc: str, use_best: bool, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
+		net = Model.load(loc, load_best=use_best)
 		net.to(gpu)
 		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers, policy_type=policy_type)
 
