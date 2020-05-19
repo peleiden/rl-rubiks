@@ -126,7 +126,7 @@ class Train:
 			f"Evaluations: {len(self.evaluation_rollouts)}",
 		]))
 		best_solve = 0
-		min_net = net.clone()
+		best_net = net.clone()
 		self.agent.update_net(net)
 		if self.with_analysis: self.analysis.orig_params = net.get_params()
 
@@ -216,9 +216,8 @@ class Train:
 
 				if eval_reward > best_solve:
 					best_solve = eval_reward
-					min_net = net.clone()
+					best_net = net.clone()
 					self.log(f"Updated best net with solve rate {eval_reward*100:.2f} % at depth {self.evaluator.scrambling_depths}")
-
 
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
@@ -239,7 +238,7 @@ class Train:
 			f"- States per training second:  {TickTock.thousand_seps(states_per_sec)}",
 		]))
 
-		return net, min_net
+		return net, best_net
 
 	def _get_adi_ff_slices(self):
 		data_points = self.rollout_games * self.rollout_depth * Cube.action_dim
