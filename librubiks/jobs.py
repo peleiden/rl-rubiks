@@ -45,7 +45,7 @@ class TrainJob:
 				 reward_method: str,
 
 				 # Currently not set by argparser/configparser
-				 agent = DeepAgent(PolicySearch(None, True)),
+				 agent = DeepAgent(PolicySearch(net=None, sample_policy=False)),
 				 scrambling_depths: tuple = (8,),
 
 				 verbose: bool = True,
