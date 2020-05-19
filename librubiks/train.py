@@ -135,10 +135,10 @@ class Train:
 		alpha = 1 if self.alpha_update == 1 else 0
 		optimizer = self.optim(net.parameters(), lr=self.lr)
 		lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, self.gamma)
-		self.policy_losses, self.value_losses, self.train_losses, self.eval_rewards, self.avg_value_targets = np.zeros(self.rollouts),\
-																											  np.zeros(self.rollouts),\
-																											  np.empty(self.rollouts),\
-																											  list(), list()
+		self.policy_losses = np.zeros(self.rollouts)
+		self.value_losses = np.zeros(self.rollouts)
+		self.train_losses = np.empty(self.rollouts)
+		self.eval_rewards, self.avg_value_targets = list(), list()
 
 		for rollout in range(self.rollouts):
 			reset_cuda()

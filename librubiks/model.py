@@ -153,7 +153,7 @@ class Model(nn.Module):
 	def clone(self):
 		new_state_dict = {}
 		for kw, v in self.state_dict().items():
-			new_state_dict[kw] = v.cpu().clone()
+			new_state_dict[kw] = v.clone()
 		new_net = Model.create(self.config)
 		new_net.load_state_dict(new_state_dict)
 		return new_net
