@@ -165,13 +165,13 @@ class Train:
 				policy_pred, value_pred = net(training_data[batch], policy=True, value=True)
 
 				# Use loss on both policy and value
-				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
-				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
-				loss = policy_loss + value_loss
+				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) * loss_weights[batch]
+				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) * loss_weights[batch]
+				loss = torch.mean(policy_loss + value_loss)
 				loss.backward()
 				optimizer.step()
-				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy()
-				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
+				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy().mean() / len(batches)
+				self.value_losses[rollout] += value_loss.detach().cpu().numpy().mean() / len(batches)
 
 				if self.with_analysis: #Save policy output to compute entropy
 					with torch.no_grad():
@@ -179,8 +179,7 @@ class Train:
 							torch.nn.functional.softmax(policy_pred.detach(), dim=0).cpu().numpy()
 						)
 
-			loss_per_state = (self.policy_losses[rollout] + self.value_losses[rollout]) / (self.rollout_games * self.rollout_depth)
-			self.train_losses[rollout] = loss_per_state
+			self.train_losses[rollout] = (self.policy_losses[rollout] + self.value_losses[rollout])
 			self.tt.end_profile("Training loop")
 
 			# Updates learning rate and alpha
@@ -197,7 +196,7 @@ class Train:
 					alpha = 1
 
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
-				self.log(f"Rollout {rollout} completed with mean loss per state {self.train_losses[rollout]}")
+				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}")
 
 			if self.with_analysis:
 				self.tt.profile("Analysis of rollout")
@@ -325,8 +324,9 @@ class Train:
 
 		# Weighting examples according to alpha
 		weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
-		unweighted = np.ones_like(weighted) / (self.rollout_depth*self.rollout_games) * weighted.sum()
-		loss_weights = (1-alpha) * weighted + alpha * unweighted
+		unweighted = np.ones_like(weighted)
+		ws, us = weighted.sum(), len(unweighted)
+		loss_weights = ((1-alpha) * weighted / ws + alpha * unweighted / us) * (ws + us)
 
 		if self.with_analysis:
 			self.tt.profile("ADI analysis")
