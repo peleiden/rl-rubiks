@@ -148,10 +148,10 @@ class Train:
 			self.tt.profile("ADI training data")
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(generator_net, alpha)
 			self.tt.profile("To cuda")
-			training_data, value_targets, policy_targets, loss_weights = training_data.to(gpu),\
-																		 value_targets.to(gpu),\
-																		 policy_targets.to(gpu),\
-																		 loss_weights.to(gpu)
+			training_data = training_data.to(gpu)
+			value_targets = value_targets.to(gpu)
+			policy_targets = policy_targets.to(gpu)
+			loss_weights = loss_weights.to(gpu)
 			self.tt.end_profile("To cuda")
 			self.tt.end_profile("ADI training data")
 
