@@ -39,6 +39,7 @@ class TrainJob:
 				 update_interval: int,
 				 optim_fn: str,
 				 evaluation_interval: int,
+				 nn_init: str,
 				 is2024: bool,
 				 arch: str,
 				 analysis: bool,
@@ -86,7 +87,10 @@ class TrainJob:
 		self.agent = agent
 		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
-		self.model_cfg = ModelConfig(architecture=arch, is2024=is2024)
+
+		assert nn_init in ["glorot", "he"] or ( float(nn_init) or True ),\
+				f"Initialization must be glorot, he or a number, but was {nn_init}"
+		self.model_cfg = ModelConfig(architecture=arch, is2024=is2024, init=nn_init)
 
 		self.analysis = analysis
 		assert isinstance(self.analysis, bool)
