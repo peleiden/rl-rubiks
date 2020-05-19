@@ -9,7 +9,7 @@ class TestOptimizer(MainTest):
 	def test_BO(self):
 		def f(params): return -params['x']+42
 
-		bo = BayesianOptimizer(f, {'x': (0, 42)},  n_restarts=1)
+		bo = BayesianOptimizer(f, {'x': (0, 42)},  n_restarts=2)
 		bo.optimize(2)
 		assert len(bo.score_history) == 2
 		assert bo.highscore >= bo.score_history[0]
