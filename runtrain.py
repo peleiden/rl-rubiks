@@ -77,6 +77,11 @@ options = {
 		'help':	    'An evaluation is performed every evaluation_interval rollouts. Set to 0 for never',
 		'type':	    int,
 	},
+	'nn_init': {
+		'default':  'glorot',
+		'help':	    'Initialialization strategy for the NN. Choose either "glorot", "he" or write a number.  If a number is given, the network is initialized to this constant.',
+		'type':	    str,
+	},
 	'is2024': {
 		'default':  True,
 		'help':	    'True for 20x24 Rubiks representation and False for 6x8x6',

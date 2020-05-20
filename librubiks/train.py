@@ -164,22 +164,22 @@ class Train:
 				optimizer.zero_grad()
 				policy_pred, value_pred = net(training_data[batch], policy=True, value=True)
 
-
 				# Use loss on both policy and value
-				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) @ loss_weights[batch]
-				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) @ loss_weights[batch]
-				loss = policy_loss + value_loss
+				policy_loss = self.policy_criterion(policy_pred, policy_targets[batch]) * loss_weights[batch]
+				value_loss = self.value_criterion(value_pred.squeeze(), value_targets[batch]) * loss_weights[batch]
+				loss = torch.mean(policy_loss + value_loss)
 				loss.backward()
 				optimizer.step()
-				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy()
-				self.value_losses[rollout] += value_loss.detach().cpu().numpy()
+				self.policy_losses[rollout] += policy_loss.detach().cpu().numpy().mean() / len(batches)
+				self.value_losses[rollout] += value_loss.detach().cpu().numpy().mean() / len(batches)
 
 				if self.with_analysis: #Save policy output to compute entropy
-					with torch.no_grad(): self.analysis.rollout_policy.append(
-						torch.nn.functional.softmax(policy_pred.detach(), dim=0).cpu().numpy()
-					)
+					with torch.no_grad():
+						self.analysis.rollout_policy.append(
+							torch.nn.functional.softmax(policy_pred.detach(), dim=0).cpu().numpy()
+						)
 
-			self.train_losses[rollout] = self.policy_losses[rollout] + self.value_losses[rollout]
+			self.train_losses[rollout] = (self.policy_losses[rollout] + self.value_losses[rollout])
 			self.tt.end_profile("Training loop")
 
 			# Updates learning rate and alpha
@@ -196,7 +196,7 @@ class Train:
 					alpha = 1
 
 			if self.log.is_verbose() or rollout in (np.linspace(0, 1, 20)*self.rollouts).astype(int):
-				self.log(f"Rollout {rollout} completed with weighted loss {self.train_losses[rollout]}")
+				self.log(f"Rollout {rollout} completed with mean loss {self.train_losses[rollout]}")
 
 			if self.with_analysis:
 				self.tt.profile("Analysis of rollout")
@@ -312,7 +312,6 @@ class Train:
 		if self.reward_method == 'lapanfix':
 			# Trains on goal state, sets goalstate to 0
 			value_targets[solved_scrambled_states] = 0
-			assert np.all(solved_scrambled_states[np.arange(self.rollout_games)*self.rollout_depth])
 		elif self.reward_method == 'schultzfix':
 			# Does not train on goal state, but sets first 12 substates to 0
 			first_substates = np.zeros(len(states), dtype=bool)
@@ -324,8 +323,8 @@ class Train:
 		# Weighting examples according to alpha
 		weighted = np.tile(1 / np.arange(1, self.rollout_depth+1), self.rollout_games)
 		unweighted = np.ones_like(weighted)
-		weighted, unweighted = weighted / weighted.sum(), unweighted / len(unweighted)
-		loss_weights = (1-alpha) * weighted + alpha * unweighted
+		ws, us = weighted.sum(), len(unweighted)
+		loss_weights = ((1-alpha) * weighted / ws + alpha * unweighted / us) * (ws + us)
 
 		if self.with_analysis:
 			self.tt.profile("ADI analysis")

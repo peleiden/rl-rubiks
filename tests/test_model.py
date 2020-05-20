@@ -51,3 +51,10 @@ class TestModel(MainTest):
 		with open("local_tests/test_config.json", encoding="utf-8") as f:
 			cf = ModelConfig.from_json_dict(json.load(f))
 		assert type(cf.activation_function) == type(torch.nn.ReLU())
+
+	def test_init(self):
+		for init in ['glorot', 'he', 0, 1.123123123e-3]:
+			cf = ModelConfig(init=init)
+			model = Model.create(cf).to(gpu)
+			x = torch.randn(2,480).to(gpu)
+			model(x)

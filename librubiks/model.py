@@ -18,6 +18,7 @@ class ModelConfig:
 	activation_function: torch.nn.functional = torch.nn.ELU()
 	batchnorm: bool = True
 	architecture: str = 'fc'  # Options: 'fc', 'res', 'convo'
+	init: str = 'glorot' # Options: glorot, he or a number
 
 	# Hidden layer sizes in shared network and in the two part networks given as lists. If None: The value is controlled by architecture (often wanted)
 	shared_sizes: list = None
@@ -142,7 +143,12 @@ class Model(nn.Module):
 		"""
 		layers = []
 		for i in range(len(thiccness)-1):
-			layers.append(nn.Linear(thiccness[i], thiccness[i+1]))
+			l = nn.Linear(thiccness[i], thiccness[i+1])
+			if self.config.init == 'glorot': torch.nn.init.xavier_uniform_(l.weight)
+			elif self.config.init == 'he': torch.nn.init.kaiming_uniform(l.weight)
+			else: torch.nn.init.constant_(l.weight, float(self.config.init))
+			layers.append(l)
+
 			if not (final and i == len(thiccness) - 2):
 				layers.append(self.config.activation_function)
 				if self.config.batchnorm:
