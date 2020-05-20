@@ -3,11 +3,16 @@ import torch
 
 from tests import MainTest
 
-from librubiks import gpu, set_is2024
+from librubiks import gpu
 from librubiks.cube import Cube
 from librubiks.model import Model, ModelConfig
 from librubiks.solving.search import MCTS, AStar
-from librubiks.utils import seedsetter
+
+
+def _action_queue_test(state, searcher, sol_found):
+	for action in searcher.action_queue:
+		state = Cube.rotate(state, *Cube.action_space[action])
+	assert Cube.is_solved(state) == sol_found
 
 
 class TestMCTS(MainTest):
@@ -15,14 +20,15 @@ class TestMCTS(MainTest):
 	def test_search(self):
 		state, _, _ = Cube.scramble(50)
 		self._mcts_test(state, False)
-		# state, _, _ = Cube.scramble(5)
-		# self._mcts_test(state, True)
-		# FIXME: Test for searching
+		state, _, _ = Cube.scramble(3)
+		searcher, sol_found = self._mcts_test(state, False)
+		_action_queue_test(state, searcher, sol_found)
+		searcher, sol_found = self._mcts_test(state, True)
+		_action_queue_test(state, searcher, sol_found)
 
 	def _mcts_test(self, state: np.ndarray, search_graph: bool):
-		net = Model.create(ModelConfig()).to(gpu).eval()
-		searcher = MCTS(net, c=1, nu=.01, search_graph=search_graph, workers=10, policy_type="p")
-		searcher.search(state, .2)
+		searcher = MCTS.from_saved("data/hpc-20-04-12", False, c=1, nu=.001, search_graph=search_graph, workers=10, policy_type="p")
+		solved = searcher.search(state, .2)
 
 		# Indices
 		assert searcher.indices[state.tostring()] == 1
@@ -41,14 +47,15 @@ class TestMCTS(MainTest):
 			assert searcher.indices[s.tostring()] == i
 
 		# Neighbors
-		for i, neighs in enumerate(searcher.neighbors):
-			if i not in used_idcs: continue
-			state = searcher.states[i]
-			for j, neighbor_index in enumerate(neighs):
-				assert neighbor_index == 0 or neighbor_index in searcher.indices.values()
-				if neighbor_index == 0: continue
-				substate = Cube.rotate(state, *Cube.action_space[j])
-				assert np.all(searcher.states[neighbor_index] == substate)
+		if not search_graph:
+			for i, neighs in enumerate(searcher.neighbors):
+				if i not in used_idcs: continue
+				state = searcher.states[i]
+				for j, neighbor_index in enumerate(neighs):
+					assert neighbor_index == 0 or neighbor_index in searcher.indices.values()
+					if neighbor_index == 0: continue
+					substate = Cube.rotate(state, *Cube.action_space[j])
+					assert np.all(searcher.states[neighbor_index] == substate)
 
 		# Policy and value
 		with torch.no_grad():
@@ -58,7 +65,8 @@ class TestMCTS(MainTest):
 		assert np.all(np.isclose(searcher.V[used_idcs], v, atol=1e-5))
 
 		# Leaves
-		assert np.all(searcher.neighbors.all(axis=1) != searcher.leaves)
+		if not search_graph:
+			assert np.all(searcher.neighbors.all(axis=1) != searcher.leaves)
 
 		# W
 		for i in used_idcs:
@@ -70,6 +78,8 @@ class TestMCTS(MainTest):
 				if np.all(neighbor_neighbor_indices):
 					supposed_Ws[j] = np.max(searcher.V[neighbor_neighbor_indices])
 			assert np.all(supposed_Ws == searcher.W[i])
+		
+		return searcher, solved
 
 class TestAStar(MainTest):
 

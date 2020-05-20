@@ -7,7 +7,7 @@ import torch
 from librubiks.utils import TickTock
 
 from librubiks import gpu, no_grad
-from librubiks.model import Model
+from librubiks.model import Model, ModelConfig
 from librubiks.cube import Cube
 
 
@@ -87,6 +87,7 @@ class RandomDFS(Searcher):
 	def __str__(self):
 		return "Random depth-first search"
 
+
 class BFS(Searcher):
 
 	states = dict()
@@ -100,7 +101,7 @@ class BFS(Searcher):
 
 		if Cube.is_solved(state): return True
 
-		# Each element contains the state from which it came and the corresponding action
+		# Each element contains the state from which it came and the action taken to get to it
 		self.states = { state.tostring(): (None, None) }
 		queue = deque([state])
 		while self.tt.tock() < time_limit and len(self) < max_states:
@@ -242,11 +243,13 @@ class MCTS(DeepSearcher):
 			self.tt.end_profile("Expanding leaves")
 
 			# If a solution is found
-			if solve_leaf:
+			if solve_leaf != -1:
 				self.action_queue = paths[solve_leaf] + deque([solve_action])
 				if self.search_graph:
+					leaf_state = self.states[leaves[solve_leaf]]
+					solved_state = Cube.rotate(leaf_state, *Cube.action_space[solve_action])
 					self._complete_graph()
-					self._shorten_action_queue(leaves[solve_leaf])
+					self._shorten_action_queue(self.indices[solved_state.tostring()])
 				return True
 
 			# Find leaves
@@ -259,10 +262,10 @@ class MCTS(DeepSearcher):
 		"""
 		Expands all given states which are given by the indices in leaves_idcs
 		Returns the index of the leaf and the action to solve it
-		Both are 0 if no solution is found
+		Both are -1 if no solution is found
 		"""
 
-		leaf_idx, action_idx = 0, 0
+		leaf_idx, action_idx = -1, -1
 
 		# Ensure space in stacks
 		if len(self) + len(leaves_idcs) * Cube.action_dim + 1 > len(self.states):
@@ -382,30 +385,35 @@ class MCTS(DeepSearcher):
 		Ensures that the graph is complete by expanding around all leaves and updating neighbors
 		"""
 		self.tt.profile("Complete graph")
-		leaves_idcs = np.where(self.leaves[:len(self)+1])[0]
-		actions_taken = np.tile(Cube.action_dim, len(leaves_idcs))
+		leaves_idcs = np.where(self.leaves[:len(self)+1])[0][1:]
+		actions_taken = np.tile(np.arange(Cube.action_dim), len(leaves_idcs))
 		repeated_leaves_idcs = np.repeat(leaves_idcs, Cube.action_dim)
 		substates = Cube.multi_rotate(self.states[repeated_leaves_idcs], *Cube.iter_actions(len(leaves_idcs)))
 		substate_strs = [s.tostring() for s in substates]
-		substate_idcs = np.array([self.indices[s] if s in self.indices else s for s in substate_strs])
+		substate_idcs = np.array([self.indices[s] if s in self.indices else 0 for s in substate_strs])
 		self.neighbors[repeated_leaves_idcs, actions_taken] = substate_idcs
 		self.neighbors[substate_idcs, Cube.rev_actions(actions_taken)] = repeated_leaves_idcs
 		self.tt.end_profile("Complete graph")
 
-	def _shorten_action_queue(self, start_index: int):
-		visited = {start_index}  # Contains indices that have been visited
-		q = deque([start_index])
+	def _shorten_action_queue(self, solved_index: int):
+		if solved_index == 1: return
+		self.action_queue = deque()
+		visited = {1: (None, None)}  # Contains indices that have been visited
+		q = deque([1])
 		while q:
 			v = q.popleft()
 			for i, n in enumerate(self.neighbors[v]):
-				if not n:
+				if not n or n in visited:
 					continue
-				elif n == 1:
-					# TODO: Save paths and break here
+				elif n == solved_index:
+					self.action_queue.appendleft(i)
+					while visited[v][0] is not None:
+						self.action_queue.appendleft(visited[v][1])
+						v = visited[v][0]
 					return
-				visited.add(n)
-				q.append(n)
-
+				else:
+					visited[n] = (v, i)
+					q.append(n)
 
 	@classmethod
 	def from_saved(cls, loc: str, use_best: bool, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):

@@ -157,7 +157,7 @@ class TrainJob:
 		np.save(f"{datapath}/value_losses.npy", train.value_losses)
 		np.save(f"{datapath}/losses.npy", train.train_losses)
 		np.save(f"{datapath}/evaluation_rollouts.npy", train.evaluation_rollouts)
-		np.save(f"{datapath}/evaluations.npy", train.eval_rewards)
+		np.save(f"{datapath}/evaluations.npy", train.sol_percents)
 
 		return train.train_rollouts, train.train_losses
 
