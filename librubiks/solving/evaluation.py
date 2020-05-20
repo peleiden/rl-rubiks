@@ -210,11 +210,11 @@ class Evaluator:
 		highest_y = 0
 		for i in range(len(eval_results)):
 			if stds[i] > 0:
-				x = np.linspace(lower, higher, 200)
+				x = np.linspace(lower, higher, 500)
 				y = normal_pdf(x, mus[i], stds[i])
 				x = x[~np.isnan(y)]
 				y = y[~np.isnan(y)]
-				plt.plot(x, y, color="black", linewidth=10)
+				plt.plot(x, y, color="black", linewidth=9)
 				plt.plot(x, y, color=colours[i], linewidth=5)
 				highest_y = max(highest_y, y.max())
 		ax.set_xlim([lower, higher])
