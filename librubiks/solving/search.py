@@ -126,7 +126,7 @@ class BFS(Searcher):
 
 	def __str__(self):
 		return "Breadth-first search"
-	
+
 	def __len__(self):
 		return len(self.states)
 
@@ -349,7 +349,7 @@ class MCTS(DeepSearcher):
 		elif self.policy_type == "w":
 			Ws = self.W[leaves_idcs].reshape((len(leaves_idcs), Cube.action_dim))
 			self.P[leaves_idcs] = softmax(Ws)
-		
+
 		self.L[...] = 0
 
 		return leaf_idx, action_idx
@@ -653,6 +653,43 @@ class MCTS_(DeepSearcher):
 	def __len__(self):
 		return len(self.indices)
 
+
+class BWAS(DeepSearcher):
+	"""Batch Weighted A* Search
+	As per Agostinelli, McAleer, Shmakov, Baldi:
+	Solving the Rubik's cube with deep reinforcement learning and search.
+
+	Expands the `self.expansions` best nodes at a time according to cost
+	f(node) = `self.lambda_` * g(x) + h(x)
+	where h(x) is given as the negative value (cost-to-go) of the DNN and g(x) is the path cost
+	"""
+	def __init__(self, net: Model, lambda_: float, expansions: int ):
+		"""Init data structure, save params
+
+		:param net: Neural network whose value output is used as heuristic h
+		:param lambda_: The weighting factor in [0,1] that weighs the cost from start node g(x)
+		:param expansions: Number of expansions to perform at a time
+		"""
+		super().__init__(net)
+		self.lambda_ = lambda_
+		self.expansions = expansions
+		#TODO: Data structures G, H init here
+
+	@no_grad
+	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
+		self.tt.tick()
+		self.reset()
+		assert time_limit or max_states
+		time_limit = time_limit or 1e10
+		max_states = max_states or int(1e10)
+
+		if Cube.is_solved(state): return True
+		raise "Tue"
+
+	def reset(self): raise NotImplementedError
+	def __len__(self): raise NotImplementedError
+
+	def __str__(self): return f'BWAS(lambda={self.lambda_}, N={self.expansions})'
 
 class AStar(DeepSearcher):
 
