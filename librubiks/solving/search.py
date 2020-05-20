@@ -652,10 +652,10 @@ class BWAS(DeepSearcher):
 	Solving the Rubik's cube with deep reinforcement learning and search.
 
 	Expands the `self.expansions` best nodes at a time according to cost
-	f(node) = `self.lambda_` * g(x) + h(x)
-	where h(x) is given as the negative value (cost-to-go) of the DNN and g(x) is the path cost
+	f(node) = `self.lambda_` * g(node) + h(node)
+	where h(node) is given as the negative value (cost-to-go) of the DNN and g(x) is the path cost
 	"""
-	def __init__(self, net: Model, lambda_: float, expansions: int ):
+	def __init__(self, net: Model, lambda_: float, expansions: int):
 		"""Init data structure, save params
 
 		:param net: Neural network whose value output is used as heuristic h
@@ -676,9 +676,16 @@ class BWAS(DeepSearcher):
 		max_states = max_states or int(1e10)
 
 		if Cube.is_solved(state): return True
-		raise "Tue"
+		while self.tt.tock() < time_limit and len(self) + Cube.action_dim <= max_states:
+			raise "Tue"
 
 	def reset(self): raise NotImplementedError
+
+	@classmethod
+	def from_saved(cls, loc: str, use_best: bool, lambda_: float, expansions: int):
+		net = Model.load(loc, load_best=use_best).to(gpu)
+		return cls(net, lambda_=lambda_, expansions=expansions)
+
 	def __len__(self): raise NotImplementedError
 
 	def __str__(self): return f'BWAS(lambda={self.lambda_}, N={self.expansions})'
