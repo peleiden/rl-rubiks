@@ -138,14 +138,16 @@ class TrainJob:
 			min_net.save(self.location, True)
 
 		train.plot_training(self.location)
+		analysispath = os.path.join(self.location, "analysis")
 		datapath = os.path.join(self.location, "train-data")
 		os.mkdir(datapath)
+		os.mkdir(analysispath)
 
 		if self.analysis:
-			train.analysis.plot_substate_distributions(self.location)
-			train.analysis.plot_value_targets(self.location)
-			train.analysis.plot_net_changes(self.location)
-			train.analysis.visualize_first_states(self.location)
+			train.analysis.plot_substate_distributions(analysispath)
+			train.analysis.plot_value_targets(analysispath)
+			train.analysis.plot_net_changes(analysispath)
+			train.analysis.visualize_first_states(analysispath)
 			np.save(f"{datapath}/avg_target_values.npy", train.analysis.avg_value_targets)
 			np.save(f"{datapath}/policy_entropies.npy", train.analysis.policy_entropies)
 			np.save(f"{datapath}/substate_val_stds.npy", train.analysis.substate_val_stds)

@@ -6,7 +6,6 @@ from scipy.stats import entropy
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolour
 
-from librubiks import gpu
 from librubiks.cube import Cube
 from librubiks.model import Model
 from librubiks.utils import NullLogger, Logger
@@ -18,9 +17,9 @@ try:
 except ModuleNotFoundError:
 	has_image_tools = False
 
-colours = list(mcolour.BASE_COLORS)
+base_colours = list(mcolour.BASE_COLORS)
 tab_colours = list(mcolour.TABLEAU_COLORS)
-all_colours = colours[:-1] + tab_colours[:-2]
+all_colours = base_colours[:-1] + tab_colours[:-2]
 
 class TrainAnalysis:
 	"""Performs analysis of the training procedure to understand loss and training behaviour"""
@@ -202,17 +201,16 @@ class TrainAnalysis:
 		Returns a boolean vector of length len(self.evaluations) containing whether or not the curve should be in focus
 		"""
 		focus_rollouts = np.zeros(len(self.evaluations), dtype=bool)
-		if len(self.evaluations) > 26:
+		if len(self.evaluations) > 15:
 			early_rollouts = 5
 			late_rollouts = 10
-			early_indices = np.arange(early_rollouts)
-			late_indices = np.unique(np.linspace(early_indices[-1], len(self.evaluations)-1, late_rollouts+1, dtype=int)[1:])
+			early_indices = [0, *np.unique(np.round(np.logspace(0, np.log10(self.extra_evals*2/3), early_rollouts-1)).astype(int))]
+			late_indices = np.unique(np.linspace(self.extra_evals, len(self.evaluations)-1, late_rollouts, dtype=int))
 			focus_rollouts[early_indices] = True
 			focus_rollouts[late_indices] = True
 		else:
-			focus_rollouts[np.unique(np.linspace(0, len(self.evaluations)-1, 15, dtype=int))] = True
+			focus_rollouts[...] = True
 		return focus_rollouts
-
 
 	def plot_value_targets(self, loc: str, show=False):
 		if not len(self.evaluations): return
@@ -224,11 +222,12 @@ class TrainAnalysis:
 		for target, rollout in zip(filter_by_bools(self.avg_value_targets, ~focus_rollouts), filter_by_bools(self.evaluations, ~focus_rollouts)):
 			plt.plot(self.depths + (self.reward_method != "lapanfix"), target, "--", color="grey", alpha=.4)
 		for target, rollout in zip(filter_by_bools(self.avg_value_targets, focus_rollouts), filter_by_bools(self.evaluations, focus_rollouts)):
-			plt.plot(self.depths + (self.reward_method != "lapanfix"), target, linewidth=3, color=next(colours), label=f"{rollout} Rollouts")
+			plt.plot(self.depths + (self.reward_method != "lapanfix"), target, linewidth=3, color=next(colours), label=f"{rollout+1} Rollouts")
 		plt.legend(loc=1)
 		plt.xlim(np.array([-.05, 1.05]) * (self.depths[-1]+1))
 		plt.xlabel("Scrambling depth")
 		plt.ylabel("Average target value")
+		plt.title("Average target value")
 		path = os.path.join(loc, "avg_target_values.png")
 		plt.grid(True)
 		plt.savefig(path)

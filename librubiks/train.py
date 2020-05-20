@@ -64,10 +64,13 @@ class Train:
 		self.reward_method = reward_method
 
 		# Perform evaluation every evaluation_interval and after last rollout
-		self.evaluation_rollouts = np.array(list(range(0, self.rollouts, evaluation_interval)))\
-			if evaluation_interval else np.array([])
-		if evaluation_interval and (self.rollouts-1 not in self.evaluation_rollouts):
-			self.evaluation_rollouts = np.append(self.evaluation_rollouts, self.rollouts-1)
+		if evaluation_interval:
+			self.evaluation_rollouts = np.arange(0, self.rollouts, evaluation_interval)-1
+			self.evaluation_rollouts[0] = 0
+			if self.rollouts-1 != self.evaluation_rollouts[-1]:
+				self.evaluation_rollouts = np.append(self.evaluation_rollouts, self.rollouts-1)
+		else:
+			self.evaluation_rollouts = np.array([])
 		self.agent = agent
 
 		self.tau = tau
@@ -128,7 +131,8 @@ class Train:
 		best_solve = 0
 		best_net = net.clone()
 		self.agent.update_net(net)
-		if self.with_analysis: self.analysis.orig_params = net.get_params()
+		if self.with_analysis:
+			self.analysis.orig_params = net.get_params()
 
 		generator_net = net.clone()
 
