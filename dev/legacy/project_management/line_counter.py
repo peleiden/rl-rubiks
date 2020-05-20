@@ -64,7 +64,7 @@ for i, commit in enumerate(commits):
 					if line and not line.startswith(patterns[ext][1]):
 						n_lines[ext][i+1] += 1
 
-os.system("git checkout master")
+os.system("git checkout develop")
 
 plt.figure(figsize=(15, 10))
 for kw, lines in n_lines.items():
