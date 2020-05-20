@@ -24,7 +24,7 @@ class Train:
 	value_losses: np.ndarray
 	policy_losses: np.ndarray
 	train_losses: np.ndarray
-	eval_rewards = list()
+	sol_percents = list()
 	avg_value_targets = list()
 
 	def __init__(self,
@@ -66,7 +66,10 @@ class Train:
 		# Perform evaluation every evaluation_interval and after last rollout
 		if evaluation_interval:
 			self.evaluation_rollouts = np.arange(0, self.rollouts, evaluation_interval)-1
-			self.evaluation_rollouts[0] = 0
+			if evaluation_interval == 1:
+				self.evaluation_rollouts = self.evaluation_rollouts[1:]
+			else:
+				self.evaluation_rollouts[0] = 0
 			if self.rollouts-1 != self.evaluation_rollouts[-1]:
 				self.evaluation_rollouts = np.append(self.evaluation_rollouts, self.rollouts-1)
 		else:
@@ -142,7 +145,7 @@ class Train:
 		self.policy_losses = np.zeros(self.rollouts)
 		self.value_losses = np.zeros(self.rollouts)
 		self.train_losses = np.empty(self.rollouts)
-		self.eval_rewards, self.avg_value_targets = list(), list()
+		self.sol_percents, self.avg_value_targets = list(), list()
 
 		for rollout in range(self.rollouts):
 			reset_cuda()
@@ -215,7 +218,7 @@ class Train:
 				with unverbose:
 					eval_results = self.evaluator.eval(self.agent)
 				eval_reward = (eval_results != -1).mean()
-				self.eval_rewards.append(eval_reward)
+				self.sol_percents.append(eval_reward)
 				self.tt.end_profile(f"Evaluating using agent {self.agent}")
 
 				if eval_reward > best_solve:
@@ -372,7 +375,7 @@ class Train:
 			reward_ax = loss_ax.twinx()
 			reward_ax.set_ylim(ylim)
 			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
-			reward_ax.plot(self.evaluation_rollouts, self.eval_rewards, "-o", color=color, label="Fraction of cubes solved")
+			reward_ax.plot(self.evaluation_rollouts, self.sol_percents, "-o", color=color, label="Fraction of cubes solved")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 			h2, l2 = reward_ax.get_legend_handles_labels()
 			h1 += h2
