@@ -422,7 +422,7 @@ class MCTS(DeepSearcher):
 		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers, policy_type=policy_type)
 
 	def __str__(self):
-		return f"MCTS {'with' if self.search_graph else 'without'} BFS (c={self.c}, nu={self.nu}, pt={self.policy_type})"
+		return ("BFS" if self.search_graph else "Naive") + f"MCTS (c={self.c})"
 
 	def __len__(self):
 		return len(self.indices)

@@ -174,7 +174,7 @@ class Evaluator:
 		agent_results[agent_results > max_sollength] = max_sollength  # Clips outlier results to prevent skewing plots
 		ylim = np.array([-0.02, 1.02]) * agent_results.max()
 		min_, max_ = used_settings["scrambling_depths"].min(), used_settings["scrambling_depths"].max()
-		xticks = np.arange(min_, max_, max((max_-min_)//10, 1))
+		xticks = np.arange(min_, max_+1, max(np.ceil((max_-min_+1)/8).astype(int), 1))
 		for i, position in enumerate(positions):
 			# Select axes object
 			if len(eval_results) == 1:
@@ -185,13 +185,13 @@ class Evaluator:
 				ax = axes[position] if len(eval_results) > 1 else axes
 			if position[1] == 0:
 				ax.set_ylabel(f"Solution length")
-			if position[0] == height - 1:
+			if position[0] == height - 1 or len(eval_results) <= width:
 				ax.set_xlabel(f"Scrambling depth")
 
 			try:
 				agent, results = agents[i], agent_results[i]
 				used_settings = eval_settings[i]
-				ax.set_title(f'Solution lengths for {agent} in {used_settings["max_time"]:.2f} s')
+				ax.set_title(str(agent))
 				results = [depth[depth != -1] for depth in results]
 				ax.boxplot(results)
 				ax.grid(True)
@@ -199,8 +199,10 @@ class Evaluator:
 				pass
 			ax.set_ylim(ylim)
 			ax.set_xlim([used_settings["scrambling_depths"].min()-1, used_settings["scrambling_depths"].max()+1])
-			
+		
 		plt.setp(axes, xticks=xticks, xticklabels=[str(x) for x in xticks])
+		plt.rcParams.update({"font.size": 22})
+		plt.suptitle("Solution lengths")
 		fig.tight_layout()
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_sollengths.png")
@@ -209,7 +211,6 @@ class Evaluator:
 
 		if show: plt.show()
 		plt.clf()
-		plt.rcParams.update({"font.size": 22})
 
 		# Histograms of S
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
