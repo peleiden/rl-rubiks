@@ -176,7 +176,13 @@ class Evaluator:
 		min_, max_ = used_settings["scrambling_depths"].min(), used_settings["scrambling_depths"].max()
 		xticks = np.arange(min_, max_, max((max_-min_)//10, 1))
 		for i, position in enumerate(positions):
-			ax = axes[position] if len(eval_results) > 1 else axes  # Select axes object. Probably doesn't work for max_width > 3
+			# Select axes object
+			if len(eval_results) == 1:
+				ax = axes
+			elif len(eval_results) <= width:
+				ax = axes[position[0]]
+			else:
+				ax = axes[position] if len(eval_results) > 1 else axes
 			if position[1] == 0:
 				ax.set_ylabel(f"Solution length")
 			if position[0] == height - 1:
