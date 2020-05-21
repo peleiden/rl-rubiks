@@ -202,8 +202,9 @@ class Evaluator:
 		
 		plt.setp(axes, xticks=xticks, xticklabels=[str(x) for x in xticks])
 		plt.rcParams.update({"font.size": 22})
-		plt.suptitle("Solution lengths")
+		fig.suptitle("Solution lengths")
 		fig.tight_layout()
+		fig.subplots_adjust(top=0.88)
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_sollengths.png")
 		plt.savefig(path)
