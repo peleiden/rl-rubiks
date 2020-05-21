@@ -1,3 +1,4 @@
+import heapq
 from collections import deque
 from typing import List
 
@@ -647,6 +648,7 @@ class MCTS_(DeepSearcher):
 
 
 class BWAS(DeepSearcher):
+
 	"""Batch Weighted A* Search
 	As per Agostinelli, McAleer, Shmakov, Baldi:
 	Solving the Rubik's cube with deep reinforcement learning and search.
@@ -654,7 +656,22 @@ class BWAS(DeepSearcher):
 	Expands the `self.expansions` best nodes at a time according to cost
 	f(node) = `self.lambda_` * g(node) + h(node)
 	where h(node) is given as the negative value (cost-to-go) of the DNN and g(x) is the path cost
+
 	"""
+
+
+	open_queue: list  # Min heap: costs (f(n) + g(n)) are values, indices correspond to self.indices
+	closed: set # Set of all expanded node indices
+
+	indices = dict()  # Key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used
+	states: np.ndarray
+	G: np.ndarray
+	H: np.ndarray
+
+	_stack_expand = 1000
+
+	#TODO: BIG THINK
+	# Do we even need to maintain a G, H data structure?
 	def __init__(self, net: Model, lambda_: float, expansions: int):
 		"""Init data structure, save params
 
@@ -665,7 +682,6 @@ class BWAS(DeepSearcher):
 		super().__init__(net)
 		self.lambda_ = lambda_
 		self.expansions = expansions
-		#TODO: Data structures G, H init here
 
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
@@ -679,7 +695,22 @@ class BWAS(DeepSearcher):
 		while self.tt.tock() < time_limit and len(self) + Cube.action_dim <= max_states:
 			raise "Tue"
 
-	def reset(self): raise NotImplementedError
+
+	def reset(self):
+		super().reset()
+		self.indices   = dict()
+		self.open_queue = list()
+		self.closed = set()
+		self.states    = np.empty((self._stack_expand, *Cube.shape()), dtype=Cube.dtype)
+		self.G         = np.empty(self._stack_expand)
+		self.H         = np.empty(self._stack_expand)
+
+	def increase_stack_size(self):
+		expand_size    = len(self.states)
+		self.states	   = np.concatenate([self.states, np.empty((expand_size, *Cube.shape()), dtype=Cube.dtype)])
+		self.G         = np.concatenate([self.G, np.empty(expand_size)])
+		self.H         = np.concatenate([self.H, np.empty(expand_size)])
+
 
 	@classmethod
 	def from_saved(cls, loc: str, use_best: bool, lambda_: float, expansions: int):
