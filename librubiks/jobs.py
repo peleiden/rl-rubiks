@@ -182,6 +182,8 @@ class EvalJob:
 			policy_sample: bool,
 
 			# Currently not set by parser
+			astar_lambda: float = 0.2,
+			astar_expansions: int = 100,
 			verbose: bool = True,
 			in_subfolder: bool = False, # Should be true if there are multiple experiments
 		):
@@ -216,6 +218,10 @@ class EvalJob:
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}
+			elif searcher == search.AStar:
+				assert isinstance(astar_lambda, float) and 0 <= astar_lambda <= 1, "AStar lambda must be float in [0,1]"
+				assert isinstance(astar_expansions, int) and 1 <= astar_expansions, "Expansions must be int" #TODO: max_states-dependant error handling?
+				search_args = {'lambda_': astar_lambda, 'expansions': astar_expansions}
 			else:  # Non-parametric methods go brrrr
 				search_args = {}
 
