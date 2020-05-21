@@ -422,7 +422,7 @@ class MCTS(DeepSearcher):
 		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers, policy_type=policy_type)
 
 	def __str__(self):
-		return ("BFS" if self.search_graph else "Naive") + f"MCTS (c={self.c})"
+		return ("BFS" if self.search_graph else "Naive") + f" MCTS (c={self.c})"
 
 	def __len__(self):
 		return len(self.indices)
@@ -486,34 +486,38 @@ class MCTS_(DeepSearcher):
 		self.indices[state.tostring()] = 1
 		self.states[1] = state
 		if Cube.is_solved(state): return True
+		
+		oh = Cube.as_oh(state)
+		p, v = self.net(oh)
+		self.P[1] = p.softmax(dim=1).cpu().numpy()
+		self.V[1] = v.cpu().numpy()
 
-		path = [1]
+		indices_visited = [1]
 		actions_taken = []
 		while self.tt.tock() < time_limit and len(self) + Cube.action_dim <= max_states:
 			self.tt.profile("Expanding leaves")
-			solve_leaf, solve_action = self.expand_leaf(path, actions_taken)
+			solve_leaf_index, solve_action = self.expand_leaf(indices_visited, actions_taken)
 			self.tt.end_profile("Expanding leaves")
 
 			# If a solution is found
-			if solve_leaf:
-				self.action_queue = path + [solve_action]
+			if solve_leaf_index != -1:
+				self.action_queue = deque(actions_taken) + deque([solve_action])
 				if self.search_graph:
 					self._complete_graph()
-					self._shorten_action_queue(solve_leaf)
+					self._shorten_action_queue(solve_leaf_index)
 				return True
 
 			# Find leaves
-			path, actions_taken = self.find_leaf(time_limit)
+			indices_visited, actions_taken = self.find_leaf(time_limit)
 
-		self.action_queue = path  # Generates a best guess action queue in case of no
+		self.action_queue = deque(indices_visited)  # Generates a best guess action queue in case of no solution
 
 		return False
 
 	def expand_leaf(self, visited_states_idcs: list, actions_taken: list) -> (int, int):
 		"""
 		Expands around the given leaf and updates V and W in all visited_states_idcs
-		Returns the index of the leaf and the action to solve it
-		Both are 0 if no solution is found
+		Returns the action taken to solve the cube. -1 if no solution is found
 		:param visited_states_idcs: List of states that have been visited including the starting node. Length n
 		:param actions_taken: List of actions taken from starting state. Length n-1
 		:return: The index of the leaf that is the solution and the action that must be taken from leaf_index.
@@ -523,6 +527,7 @@ class MCTS_(DeepSearcher):
 			self.increase_stack_size()
 
 		leaf_index = visited_states_idcs[-1]
+		solve_leaf, solve_action = -1, -1
 
 		self.tt.profile("Get substates")
 		state = self.states[leaf_index]
@@ -531,7 +536,7 @@ class MCTS_(DeepSearcher):
 
 		# Check what states have been seen already
 		substate_strs = [s.tostring() for s in substates]  # Unique identifier for each substate
-		get_substate_strs = lambda bools: [s for s, b in zip(substate_strs, bools) if b]
+		get_substate_strs = lambda bools: [s for s, b in zip(substate_strs, bools) if b]  # Shitty way to easily index into list with boolean array
 		seen_substates = np.array([s in self.indices for s in substate_strs])  # States already in the graph
 		unseen_substates = ~seen_substates  # States not already in the graph
 
@@ -540,36 +545,10 @@ class MCTS_(DeepSearcher):
 		new_idcs_dict = { s: i for i, s in zip(new_states_idcs, get_substate_strs(unseen_substates)) }
 		self.indices.update(new_idcs_dict)
 		substate_idcs = np.array([self.indices[s] for s in substate_strs])
-		self.states[substate_idcs] = substates
+		new_substate_idcs = substate_idcs[unseen_substates]
+		new_substates = substates[unseen_substates]
+		self.states[new_substate_idcs] = new_substates
 		self.tt.end_profile("Update indices and states")
-
-		self.tt.profile("Check for solution")
-		solved_substate = np.where(Cube.multi_is_solved(substates))[0]
-		if solved_substate.size:
-			action = solved_substate[0]
-			new_index = len(self.indices) + 1
-			self.indices[substate_strs[action]] = new_index
-			self.states[new_index] = substates[action]
-			self.neighbors[leaf_index, action] = new_index
-			self.neighbors[new_index, Cube.rev_action(action)] = leaf_index
-			return leaf_index, action
-		self.tt.end_profile("Check for solution")
-
-		# Update policy, value, and W
-		self.tt.profile("One-hot encoding")
-		state_oh = Cube.as_oh(state)  # TODO: Consider computing values of substates instead. May save time. Will be necessary with value, if softmax(V/W) is used
-		self.tt.end_profile("One-hot encoding")
-		self.tt.profile("Feedforward")
-		p, v = self.net(state_oh)
-		p, v = p.cpu().softmax(dim=1).numpy().squeeze(), float(v.cpu().squeeze())
-		self.tt.end_profile("Feedforward")
-		self.tt.profile("Update P, V, and W")
-		self.P[leaf_index] = p
-		existing_values = self.V[visited_states_idcs[:-1]]  # TODO: What do they mean by 'backing up the value'?
-		self.V[visited_states_idcs] = v#max(existing_values.max() if existing_values.size else v, v)
-		# W = np.vstack([self.W[visited_states_idcs[:-1], actions_taken], np.ones(len(actions_taken))*self.V[leaf_index]])
-		self.W[visited_states_idcs[:-1], actions_taken] = v#W.max(axis=0)
-		self.tt.end_profile("Update P, V, and W")
 
 		self.tt.profile("Update neigbors and leaf status")
 		actions = np.arange(Cube.action_dim)
@@ -578,13 +557,45 @@ class MCTS_(DeepSearcher):
 		self.leaves[leaf_index] = False
 		self.tt.end_profile("Update neigbors and leaf status")
 
+		self.tt.profile("Check for solution")
+		solved_substate = np.where(Cube.multi_is_solved(substates))[0]
+		if solved_substate.size:
+			solve_action = solved_substate[0]
+			solve_leaf = substate_idcs[solve_action]
+		self.tt.end_profile("Check for solution")
+
+		# Update policy, value, and W
+		self.tt.profile("One-hot encoding")
+		new_substates_oh = Cube.as_oh(new_substates)
+		self.tt.end_profile("One-hot encoding")
+		self.tt.profile("Feedforward")
+		p, v = self.net(new_substates_oh)
+		p, v = p.cpu().softmax(dim=1).numpy().squeeze(), v.cpu().squeeze()
+		self.tt.end_profile("Feedforward")
+		self.tt.profile("Update P, V, and W")
+		# try:
+		self.P[new_substate_idcs] = p
+		# except: breakpoint()
+		self.V[new_substate_idcs] = v
+		self.W[new_substate_idcs] = np.tile(v, (Cube.action_dim, 1)).T
+		# breakpoint()
+		self.W[leaf_index] = self.V[self.neighbors[leaf_index]]
+		assert np.all(self.P[1:len(self)+1])
+		assert np.all(self.V[1:len(self)+1])
+		assert np.all(self.W[1:len(self)+1])
+		# Data structure: First row has all existing W's and second has value of leaf that is expanded from
+		W = np.vstack([self.W[visited_states_idcs[:-1], actions_taken], np.repeat(self.V[leaf_index], len(visited_states_idcs)-1)])
+		self.W[visited_states_idcs[:-1], actions_taken] = W.max(axis=0)
+		self.tt.end_profile("Update P, V, and W")
+
 		# Update N and L
 		self.tt.profile("Update N and L")
 		self.N[visited_states_idcs[:-1], actions_taken] += 1
-		self.L[visited_states_idcs[:-1], actions_taken] += self.nu
+		self.L[visited_states_idcs[:-1], actions_taken] = 0
+		assert not self.L.any()
 		self.tt.end_profile("Update N and L")
 
-		return 0, 0
+		return solve_leaf, solve_action
 
 	def find_leaf(self, time_limit: float) -> (list, list):
 		"""
@@ -592,7 +603,7 @@ class MCTS_(DeepSearcher):
 		Returns a list of visited states (as indices for self.states) and a list of actions taken
 		"""
 		current_index = 1
-		path = [1]
+		indices_visited = [1]
 		actions_taken = []
 		self.tt.profile("Exploring next node")
 		while not self.leaves[current_index] and self.tt.tock() < time_limit:
@@ -605,11 +616,12 @@ class MCTS_(DeepSearcher):
 				U = self.c * self.P[current_index] * sqrtN / (1 + self.N[current_index])
 				Q = self.W[current_index] - self.L[current_index]
 				action = (U + Q).argmax()
+			self.L[current_index, action] += self.nu
 			current_index = self.neighbors[current_index, action]
-			path.append(current_index)
+			indices_visited.append(current_index)
 			actions_taken.append(action)
 		self.tt.end_profile("Exploring next node")
-		return path, actions_taken
+		return indices_visited, actions_taken
 
 	def _complete_graph(self):
 		"""
@@ -653,7 +665,7 @@ class MCTS_(DeepSearcher):
 		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers, policy_type=policy_type)
 
 	def __str__(self):
-		return f"MCTS {'with' if self.search_graph else 'without'} BFS (c={self.c}, nu={self.nu}, pt={self.policy_type})"
+		return ("BFS" if self.search_graph else "Naive") + f" MCTS (c={self.c})"
 
 	def __len__(self):
 		return len(self.indices)

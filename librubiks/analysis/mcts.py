@@ -1,22 +1,23 @@
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 import numpy as np
+np.set_printoptions(precision=4, threshold=np.inf)
 
 from librubiks import gpu, set_is2024
 from librubiks.cube import Cube
 from librubiks.model import Model, ModelConfig
-from librubiks.solving.search import Searcher, MCTS
+from librubiks.solving.search import Searcher, MCTS, MCTS_
 
 from librubiks.utils import seedsetter, Logger, TickTock
 
 tt = TickTock()
 log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
-net = Model.load("data/local_train").eval().to(gpu)
+net = Model.load("data/local_method_comparison/asgerfix").eval().to(gpu)
 
 
-def solve(depth: int, c: float, nu: float, workers: int, time_limit: float):
+def solve(depth: int, c: float, nu: float, workers: int, time_limit: float, policy_type: str):
 	state, f, d = Cube.scramble(depth, True)
-	searcher = MCTS(net, c, nu, False, workers, policy_type="p")
+	searcher = MCTS_(net, c=c, nu=nu, search_graph=False, workers=workers, policy_type=policy_type)
 	is_solved = searcher.search(state, time_limit)
 	assert is_solved == (Cube.get_solved().tostring() in searcher.indices)
 	return is_solved, len(searcher.indices)
@@ -100,31 +101,39 @@ def detailed_time(state, searcher, max_states: int, time_limit: float, c: float,
 
 def W(max_states, time_limit, opts):
 	state, _, _ = Cube.scramble(50)
-	searcher = MCTS.from_saved("data/local_train", search_graph=False, **opts)
-	searcher.search(state, time_limit=time_limit, max_states=max_states)
+	searcher = MCTS_.from_saved("data/local_method_comparison/asgerfix", use_best=False, search_graph=False, **opts)
+	print("Solved", searcher.search(state, time_limit=time_limit, max_states=max_states))
+	print(searcher.W[:20])
+	print()
+	print(searcher.W[len(searcher)-20:len(searcher)+1])
 	log.section("Analyzing W")
-	log(f"Number of states {len(searcher)}")
-	log(f"Share of W = 0: {np.mean(searcher.W==0):.2f}")
+	log(f"Number of states: {len(searcher)}")
+	log(f"Share of W = 0: {np.mean(searcher.W[1:len(searcher)+1]==0):.2f}")
+	plt.plot(searcher.V[1:len(searcher)+1], label="V")
+	plt.plot(searcher.W[1:len(searcher)+1].mean(axis=1), label="W")
+	plt.legend()
+	plt.grid(True)
+	plt.show()
 
 if __name__ == "__main__":
 	# set_repr(False)
-	time_limit = .2
-	n = 200
-	default_vars = { "depth": 8, "c": 1, "nu": 0.005, "workers": 10, "policy_type": "p" }
+	time_limit = .5
+	n = 40
+	default_vars = { "depth": 15, "c": 1, "nu": 100, "workers": 10, "policy_type": "p" }
 	get_other_vars = lambda excl: {kw: v for kw, v in default_vars.items() if kw != excl}
 	seedsetter()
-	#analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
-	#analyze_var(var="depth", values=np.arange(1, 21, 1), other_vars=get_other_vars("depth"))
-	#analyze_var(var="c", values=np.linspace(0, 20, 30), other_vars=get_other_vars("c"))
-	#analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
+	# analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
+	# analyze_var(var="depth", values=np.arange(1, 21, 1), other_vars=get_other_vars("depth"))
+	# analyze_var(var="c", values=np.logspace(-4, 2, 20), other_vars=get_other_vars("c"))
+	# analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
 	n = 40
 	#analyse_time_distribution(25, 0.5, 0.005, 10, "p")
 	#analyse_time_distribution(25, 0.5, 0.005, 100, "p")
 	s = int(1e6)
 	tl = 1
 	state, _, _ = Cube.scramble(50)
-	detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
-	W(None, 1, get_other_vars("depth"))
+	# detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
+	W(None, 5, get_other_vars("depth"))
 
 
 
