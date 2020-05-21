@@ -665,9 +665,8 @@ class BWAS(DeepSearcher):
 
 	indices = dict  # Key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used
 	states: np.ndarray
-	# neighbors: np.ndarray  # n x 12 array of neighbor indices
-	parent_actions: np.darray #parent[i]: index of parent of node with index i
-		# TODO: Change to action-parent to be able to rollback at the end
+	parents: np.ndarray #parents[i] index of lightest parent of state i
+	parent_actions: np.darray #parent_actions[i]: action idx taken FROM the lightest parent to state i
 	G: np.ndarray
 	H: np.ndarray
 	closed: np.ndarray # Boolean vector. closed[i] == True iff. state i is closed (expanded)
@@ -709,7 +708,6 @@ class BWAS(DeepSearcher):
 		self.G[1], self.H[1] = 0, 0
 		heapq.heappush( self.open_queue, (self.cost(1), 1) )
 			#TODO: Why do they do this in the paper? self.closed[1] = True
-
 		open_size = 1
 		while self.tt.tock() < time_limit and len(self) + self.expansions <= max_states:
 			self.tt.profile("Remove nodes from open priority queue")
@@ -730,19 +728,25 @@ class BWAS(DeepSearcher):
 				# as we don't have just as much focus on the solution length and are probably
 				# more interested in running time/solve percentage.
 
-
-			solved_idx = self.expand_batch(expand_idcs)
-			if solved_idx:
-				raise Exception("🦀🦀🦀WE DID IT BOIS🦀🦀🦀")  #TODO: Generate action queue by following parents
+			i = self.expand_batch(expand_idcs)
+			if i: #🦀🦀🦀WE DID IT BOIS🦀🦀🦀
+				while i != 1:
+					self.action_queue.appendleft(
+						Cube.rev_action(self.parent_actions[i])
+					)
+					i = self.parents[i]
+				return True
+		return False
 
 	def expand_batch(self, expand_idcs: np.ndarray) -> int:
 		"""
 		Expands to the neighbors of each of the states in
 		:param expand_idcs:
-		Pseudo code:
+		:return: 0 if solution not found here, else: the index of the winning state
+		(Very loose) pseudo code:
 		```
 		1. Calculate substates for all the batch bois
-		2. Check which substates are seen and not seen
+		2. Check which substates are won, seen and not seen
 		3. FOR the unseen
 			Set the state as their parent and set their G
 			Calculate their H and add to open-list with correct cost
@@ -754,52 +758,83 @@ class BWAS(DeepSearcher):
 		```
 		"""
 		expand_states = self.states[expand_idcs]
+		expand_size = len(expand_idcs)
 
-		while len(self) + expand_states.shape[0] * Cube.action_dim > len(self.states):
+		while len(self) + expand_size * Cube.action_dim > len(self.states):
 			self.increase_stack_size()
 
-		self.tt.profile("#1: Calculate substates")
-			#TODO FIXME FIXME FIXME
-		substates = Cube.multi_rotate(Cube.repeat_state(None), *Cube.iter_actions())
-			#TODO FIXME FIXME FIXME
-		self.tt.end_profile("#1: Calculate substates")
+		self.tt.profile("Calculate substates")
+		parent_idcs = np.repeat(expand_idcs, Cube.action_dim, axis=0)
+		substates = Cube.multi_rotate(
+			expand_states[parent_idcs],
+			*Cube.iter_actions(expand_size)
+		)
+		actions_taken = np.tile(np.arange(Cube.action_dim), expand_size)
+		self.tt.end_profile("Calculate substates")
 
-		self.tt.profile("#2: Check if substates are seen")
+		self.tt.profile("Find new substates")
 		substate_strs = [s.tostring() for s in substates]
 		get_substate_strs = lambda bools: [s for s, b in zip(substate_strs, bools) if b]
 		seen_substates = np.array([s in self.indices for s in substate_strs])
 		unseen_substates = ~seen_substates
-		self.tt.end_profile("#2: Check if substates are seen")
+			# Handle duplicates
+		last_occurences		= np.array([s not in substate_strs[i+1:] for i, s in enumerate(substate_strs)])
+		last_seen		= last_occurences & seen_substates
+		last_unseen		= last_occurences & unseen_substates
+		self.tt.end_profile("Find new substates")
 
-		self.tt.profile("#3: Unseen: Add and forward pass")
-		# Add the unseen states
-		new_states_idcs = len(self) + np.arange(unseen_substates.sum()) + 1
-		new_idcs_dict = { s: i for i, s in zip(new_states_idcs, get_substate_strs(unseen_substates)) }
+		self.tt.profile("Add substates to data structure")
+		new_states		= substates[last_unseen]
+		new_states_idcs		= len(self) + np.arange(last_unseen.sum()) + 1
+		new_idcs_dict		= { s: i for i, s in zip(new_states_idcs, get_substate_strs(last_unseen)) }
+		substate_idcs		= np.array([self.indices[s] for s in substate_strs])
+		old_states_idcs		= substate_idcs[last_seen]
+
 		self.indices.update(new_idcs_dict)
+		self.states[new_states_idcs] = substates[last_unseen]
+		self.tt.end_profile("Add substates to data structur")
 
-		# Update the unseen parents and G
-		# Parents can be found by integer division as multi_rotate flattened the substates
-			# TODO: Test these lines: Is my numpy-fu up to the game?
-		new_parents = [ self.indices[ i // Cube.action_dim ] for i in np.where(unseen_substates) ]
-		self.parents[new_states_idcs] = new_parents
-		self.G[new_states_idcs] = self.G[new_parents] + 1
-
+		self.tt.profile("Check whether won") #TODO: Consider the location of this "won" check. See comment in search
 		solved_substate = np.where(Cube.multi_is_solved(substates[new_states_idcs]))[0]
-		if solved_substate.size: #TODO: Consider the location of this "won" check. See comment in search
+		if solved_substate.size:
 			return solved_substate
+		self.tt.end_profile("Check whether won")
 
-		self.tt.profile("Forward pass")
-		self.H[new_states_idcs] = self.batched_H(substates[unseen_substates])
-		self.tt.end_profile("Forward pass")
+		self.tt.profile("Forward pass new states")
+		self.H[new_states_idcs] = self.batched_H(new_states)
+		self.tt.end_profile("Forward pass new states")
 
-		# Add the new states to "open" priority queue
-		for i in new_states_idcs:
-			heapq.heappush( self.open_queue, (self.cost(i), i) )
+
+		self.tt.profile("Update new state values") # TODO: Test these lines: Is my numpy-fu up to the game?
+		new_parent_idcs = parent_idcs[new_states_idcs]
+		self.G[new_states_idcs] = self.G[new_parent_idcs] + 1
+		self.parent_actions[new_states_idcs] = actions_taken[last_unseen]
+		self.parents[new_states_idcs] = new_parent_idcs
+			# Add the new states to "open" priority queue
+		for i in new_states_idcs: heapq.heappush( self.open_queue, (self.cost(i), i) )
 		self.open_[new_states_idcs] = True
-		self.tt.end_profile("#3: Unseen: Add and forward pass")
+		self.tt.end_profile("Update new state values")
 
-		self.tt.profile("#4: Already seen: Update parents and G")
-		self.tt.end_profile("#4: Already seen: Update parents and G")
+		# TODO: Test this section
+		# Need to especially test the parent stuff and that I have made no weird indexing errors.
+		# Also: Have I understood the algorithm cases correctly?
+
+		self.tt.profile("Old states: Update parents and G")
+
+		old_parent_idcs = parent_idcs[old_states_idcs]
+			# Update for the cases where the substate is a new shortcut to its parent
+		shortcuts = (self.G[old_states_idcs] + 1 < self.G[old_parent_idcs]) & self.closed[old_states_idcs]
+		self.G[ old_parent_idcs[shortcuts] ] = self.G[ old_states_idcs[shortcuts] ] + 1
+		self.parent_actions[ old_parent_idcs[shortcuts] ] = Cube.rev_actions( actions_taken[ last_unseen[shortcuts] ] )
+		self.parents[ old_parent_idcs[shortcuts] ] = old_states_idcs[shortcuts]
+
+			# Update for the cases where a faster way has been found to the substate
+		new_ways =  (self.G[old_parent_idcs] + 1 < self.G[old_states_idcs] ) & self.open_[old_states_idcs]
+		self.G[ old_states_idcs[new_ways] ] = self.G[ old_parent_idcs[new_ways] ] + 1
+		self.parent_actions[ old_states_idcs[new_ways] ] = actions_taken[ last_unseen[new_ways] ]
+		self.parents[ old_states_idcs[new_ways] ] = old_parent_idcs[new_ways]
+
+		self.tt.end_profile("Old states: Update parents and G")
 
 		return 0
 
@@ -810,7 +845,7 @@ class BWAS(DeepSearcher):
 	@no_grad
 	def batched_H(self, states: np.ndarray):
 		"""Heuristics calculater.
-		Uses the value neural network. -value is regarded as the heuristic of
+		Uses the value neural network. -value is regarded as the distance heuristic
 		:param states: (batch size, *(cube_dimensions)) of states
 		"""
 		states_oh = Cube.as_oh(states)
@@ -823,9 +858,8 @@ class BWAS(DeepSearcher):
 		self.indices   = dict()
 
 		self.states    = np.empty((self._stack_expand, *Cube.shape()), dtype=Cube.dtype)
-		# self.neighbors = np.zeros((self._stack_expand, Cube.action_dim), dtype=int)
-		self.parents = np.zeros(self._stack_expand, dtype=int)
-
+		self.parents = np.empty(self._stack_expand, dtype=int)
+		self.parent_actions = np.zeros(self._stack_expand, dtype=int)
 		self.G         = np.empty(self._stack_expand)
 		self.H         = np.empty(self._stack_expand)
 		self.closed    = np.zeros(self._stack_expand, dtype=bool)
@@ -835,9 +869,8 @@ class BWAS(DeepSearcher):
 		expand_size    = len(self.states)
 
 		self.states	   = np.concatenate([self.states, np.empty((expand_size, *Cube.shape()), dtype=Cube.dtype)])
-		# self.neighbors = np.concatenate([self.neighbors, np.zeros((expand_size, Cube.action_dim), dtype=int)])
 		self.parents   = np.concatenate([self.parents, np.zeros(expand_size, dtype=int)])
-
+		self.parent_actions   = np.concatenate([self.parent_actions, np.zeros(expand_size, dtype=int)])
 		self.G         = np.concatenate([self.G, np.empty(expand_size)])
 		self.H         = np.concatenate([self.H, np.empty(expand_size)])
 		self.closed    = np.concatenate([self.closed, np.zeros(expand_size, dtype=bool)])
