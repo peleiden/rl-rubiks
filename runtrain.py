@@ -111,8 +111,7 @@ def clean_dir(loc: str):
 		content = f.read()
 	rmtree(loc)
 	os.mkdir(loc)
-	with open(f"{loc}/train_config.ini", "w") as f:
-		f.write(content)
+	return content
 
 if __name__ == "__main__":
 	description = r"""
@@ -134,6 +133,8 @@ on the Rubik's Cube using config or CLI arguments.
 
 	parser = Parser(options, description=description, name='train')
 	jobs = [TrainJob(**settings) for settings in  parser.parse()]
-	clean_dir(parser.save_location)
+	cfg_content = clean_dir(parser.save_location)
 	for job in jobs:
 		job.execute()
+	with open(f"{parser.save_location}/train_config.ini", "w") as f:
+		f.write(cfg_content)
