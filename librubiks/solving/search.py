@@ -647,7 +647,7 @@ class MCTS_(DeepSearcher):
 		return len(self.indices)
 
 
-class BWAS(DeepSearcher):
+class AStar(DeepSearcher):
 	"""Batch Weighted A* Search
 	As per Agostinelli, McAleer, Shmakov, Baldi:
 	"Solving the Rubik's cube with deep reinforcement learning and search".
@@ -666,7 +666,7 @@ class BWAS(DeepSearcher):
 	indices = dict  # Key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used
 	states: np.ndarray
 	parents: np.ndarray #parents[i] index of lightest parent of state i
-	parent_actions: np.darray #parent_actions[i]: action idx taken FROM the lightest parent to state i
+	parent_actions: np.ndarray #parent_actions[i]: action idx taken FROM the lightest parent to state i
 	G: np.ndarray
 	H: np.ndarray
 	closed: np.ndarray # Boolean vector. closed[i] == True iff. state i is closed (expanded)
@@ -708,16 +708,14 @@ class BWAS(DeepSearcher):
 		self.G[1], self.H[1] = 0, 0
 		heapq.heappush( self.open_queue, (self.cost(1), 1) )
 			#TODO: Why do they do this in the paper? self.closed[1] = True
-		open_size = 1
 		while self.tt.tock() < time_limit and len(self) + self.expansions <= max_states:
 			self.tt.profile("Remove nodes from open priority queue")
-			n_remove = min( open_size, self.expansions )
-			expand_idcs = np.array([ heapq.heappop()[0] for _ in range(n_remove) ])
+			n_remove = min( len(self.open_queue), self.expansions )
+			expand_idcs = np.array([ heapq.heappop(self.open_queue)[1] for _ in range(n_remove) ], dtype=int)
+
 			self.open_[expand_idcs] = False
-			open_size -= n_remove
 			self.closed[expand_idcs] = True
 			self.tt.end_profile("Remove nodes from open priority queue")
-
 			#TODO:
 				# A decision to be made: Where do we check for solved?
 				# In A* normally and in the paper it seems to be done on the expanded nodes
@@ -759,14 +757,13 @@ class BWAS(DeepSearcher):
 		"""
 		expand_states = self.states[expand_idcs]
 		expand_size = len(expand_idcs)
-
 		while len(self) + expand_size * Cube.action_dim > len(self.states):
 			self.increase_stack_size()
 
 		self.tt.profile("Calculate substates")
 		parent_idcs = np.repeat(expand_idcs, Cube.action_dim, axis=0)
 		substates = Cube.multi_rotate(
-			expand_states[parent_idcs],
+			self.states[parent_idcs],
 			*Cube.iter_actions(expand_size)
 		)
 		actions_taken = np.tile(np.arange(Cube.action_dim), expand_size)
@@ -787,33 +784,33 @@ class BWAS(DeepSearcher):
 		new_states		= substates[last_unseen]
 		new_states_idcs		= len(self) + np.arange(last_unseen.sum()) + 1
 		new_idcs_dict		= { s: i for i, s in zip(new_states_idcs, get_substate_strs(last_unseen)) }
+		self.indices.update(new_idcs_dict)
 		substate_idcs		= np.array([self.indices[s] for s in substate_strs])
 		old_states_idcs		= substate_idcs[last_seen]
 
-		self.indices.update(new_idcs_dict)
 		self.states[new_states_idcs] = substates[last_unseen]
-		self.tt.end_profile("Add substates to data structur")
-
-		self.tt.profile("Check whether won") #TODO: Consider the location of this "won" check. See comment in search
-		solved_substate = np.where(Cube.multi_is_solved(substates[new_states_idcs]))[0]
-		if solved_substate.size:
-			return solved_substate
-		self.tt.end_profile("Check whether won")
+		self.tt.end_profile("Add substates to data structure")
 
 		self.tt.profile("Forward pass new states")
 		self.H[new_states_idcs] = self.batched_H(new_states)
 		self.tt.end_profile("Forward pass new states")
 
-
 		self.tt.profile("Update new state values") # TODO: Test these lines: Is my numpy-fu up to the game?
-		new_parent_idcs = parent_idcs[new_states_idcs]
+		new_parent_idcs = parent_idcs[last_unseen]
 		self.G[new_states_idcs] = self.G[new_parent_idcs] + 1
 		self.parent_actions[new_states_idcs] = actions_taken[last_unseen]
 		self.parents[new_states_idcs] = new_parent_idcs
 			# Add the new states to "open" priority queue
-		for i in new_states_idcs: heapq.heappush( self.open_queue, (self.cost(i), i) )
+		for i in new_states_idcs:
+			heapq.heappush( self.open_queue, (self.cost(i), i) )
 		self.open_[new_states_idcs] = True
 		self.tt.end_profile("Update new state values")
+
+		self.tt.profile("Check whether won") #TODO: Consider the location of this "won" check. See comment in search
+		solved_substates = Cube.multi_is_solved(new_states)
+		if solved_substates.any(): #TODO: Test whether this is right
+			return self.indices[ Cube.get_solved().tostring() ]
+		self.tt.end_profile("Check whether won")
 
 		# TODO: Test this section
 		# Need to especially test the parent stuff and that I have made no weird indexing errors.
@@ -821,17 +818,18 @@ class BWAS(DeepSearcher):
 
 		self.tt.profile("Old states: Update parents and G")
 
-		old_parent_idcs = parent_idcs[old_states_idcs]
+		local_old_idcs = np.arange(len(substates))[last_seen] #Old idcs corresponding to last_seen
+		old_parent_idcs = parent_idcs[local_old_idcs]
 			# Update for the cases where the substate is a new shortcut to its parent
 		shortcuts = (self.G[old_states_idcs] + 1 < self.G[old_parent_idcs]) & self.closed[old_states_idcs]
 		self.G[ old_parent_idcs[shortcuts] ] = self.G[ old_states_idcs[shortcuts] ] + 1
-		self.parent_actions[ old_parent_idcs[shortcuts] ] = Cube.rev_actions( actions_taken[ last_unseen[shortcuts] ] )
+		self.parent_actions[ old_parent_idcs[shortcuts] ] = Cube.rev_actions( actions_taken[ local_old_idcs[shortcuts] ] )
 		self.parents[ old_parent_idcs[shortcuts] ] = old_states_idcs[shortcuts]
 
 			# Update for the cases where a faster way has been found to the substate
 		new_ways =  (self.G[old_parent_idcs] + 1 < self.G[old_states_idcs] ) & self.open_[old_states_idcs]
 		self.G[ old_states_idcs[new_ways] ] = self.G[ old_parent_idcs[new_ways] ] + 1
-		self.parent_actions[ old_states_idcs[new_ways] ] = actions_taken[ last_unseen[new_ways] ]
+		self.parent_actions[ old_states_idcs[new_ways] ] = actions_taken[ local_old_idcs[new_ways] ]
 		self.parents[ old_states_idcs[new_ways] ] = old_parent_idcs[new_ways]
 
 		self.tt.end_profile("Old states: Update parents and G")
@@ -848,7 +846,7 @@ class BWAS(DeepSearcher):
 		Uses the value neural network. -value is regarded as the distance heuristic
 		:param states: (batch size, *(cube_dimensions)) of states
 		"""
-		states_oh = Cube.as_oh(states)
+		states = Cube.as_oh(states)
 		J = -self.net(states, value=True, policy=False)
 		return J.cpu().squeeze().detach().numpy()
 
@@ -883,81 +881,7 @@ class BWAS(DeepSearcher):
 
 	def __len__(self): return len(self.indices)
 
-	def __str__(self): return f'BWAS(lambda={self.lambda_}, N={self.expansions})'
-
-class AStar(DeepSearcher):
-
-	def __init__(self, net: Model):
-		super().__init__(net)
-		self.net = net
-		self.open = dict()
-		self.closed = dict()
-
-	@no_grad
-	def search(self, state: np.ndarray, time_limit: float) -> bool:
-		# initializing/resetting stuff
-		self.tt.tick()
-		self.reset()
-		self.open = {}
-		if Cube.is_solved(state): return True
-
-		oh = Cube.as_oh(state)
-		p, v = self.net(oh)  # Policy and value
-		self.open[state.tostring()] = {'g_cost': 0, 'h_cost': -float(v.cpu()), 'parent': 'Starting node'}
-		del p, v
-
-		# explore leaves
-		while self.tt.tock() < time_limit:
-			if len(self.open) == 0: # FIXME: bug
-				print('AStar open was empty.')
-				return False
-			# choose current node as the node in open with the lowest f cost
-			idx = np.argmin([self.open[node]['g_cost'] + self.open[node]['h_cost'] for node in self.open])
-			current = list(self.open)[idx]
-			# add to closed and remove from open
-			self.closed[current] = self.open[current]
-			del self.open[current]
-			if self.closed[current]['h_cost'] == 0: return True
-			neighbors = self.get_neighbors(current)
-			for neighbor in neighbors:
-				if neighbor not in self.closed:
-					g_cost = self.get_g_cost(current)
-					h_cost = self.get_h_cost(neighbor)
-					if neighbor not in self.open or g_cost+h_cost < self.open[neighbor]['g_cost']+self.open[neighbor]['h_cost']:
-						self.open[neighbor] = {'g_cost': g_cost, 'h_cost': h_cost, 'parent': current}
-		return False
-
-	def get_neighbors(self, node: str):
-		neighbors = [None] * Cube.action_dim
-		node = np.fromstring(node, dtype=Cube.dtype)
-		for i in range(Cube.action_dim):
-			neighbor = Cube.rotate(node, *Cube.action_space[i])
-			neighbors[i] = neighbor.tostring()
-		return neighbors
-
-	def get_g_cost(self, node: str):
-		return self.closed[node]['g_cost'] + 1
-
-	def get_h_cost(self, node: str):
-		node = np.fromstring(node, dtype=Cube.dtype)
-		if Cube.is_solved(node):
-			return 0
-		else:
-			oh = Cube.as_oh(node)
-			p, v = self.net(oh)
-			return -float(v.cpu())
-
-	def __str__(self):
-		return f"AStar search"
-
-	def __len__(self):
-		node = list(self.closed)[-1]
-		count = 0
-		while True:
-			node = self.closed[node]['parent']
-			if node == 'Starting node': return count
-			count += 1
-
+	def __str__(self): return f'AStar(lambda={self.lambda_}, N={self.expansions})'
 
 class DankSearch(DeepSearcher):
 
