@@ -658,15 +658,16 @@ class BWAS(DeepSearcher):
 	"""
 
 	# Queue data structure
-	# Min heap. An element contains tuple of (cost, index)
-	# This priority queue uses Pythons heapq which is based on the python list.
-	# We should maybe consider whether this could be done faster if we build our own implementation.
+		# Min heap. An element contains tuple of (cost, index)
+		# This priority queue uses python std. lib heapq which is based on the python list.
+		# We should maybe consider whether this could be done faster if we build our own implementation.
 	open_queue: list
 
 	indices = dict  # Key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used
 	states: np.ndarray
-	neighbors: np.ndarray  # n x 12 array of neighbor indices
-	parents: np.darray #parents[i]: index of parent of node with index i
+	# neighbors: np.ndarray  # n x 12 array of neighbor indices
+	parent_actions: np.darray #parent[i]: index of parent of node with index i
+		# TODO: Change to action-parent to be able to rollback at the end
 	G: np.ndarray
 	H: np.ndarray
 	closed: np.ndarray # Boolean vector. closed[i] == True iff. state i is closed (expanded)
@@ -675,13 +676,12 @@ class BWAS(DeepSearcher):
 	open_: np.ndarray
 
 	_stack_expand = 1000
-
-	#TODO: BIG THINK
-	# Do we even need to maintain a  H data structure?
-	# Could we calculate cost once and save directly in heap?
-	# This would make implementation simpler and less memory intensive
-	# but maybe this would be a problem when revisiting nodes through another
-	# path.
+		#TODO: BIG THINK
+		# Do we even need to maintain a  H data structure?
+		# Could we calculate cost once and save directly in heap?
+		# This would make implementation simpler and less memory intensive
+		# but maybe this would be a problem when revisiting nodes through another
+		# path? No, I don't think this is a problem actually.
 	def __init__(self, net: Model, lambda_: float, expansions: int):
 		"""Init data structure, save params
 
@@ -708,59 +708,114 @@ class BWAS(DeepSearcher):
 		# First node given cost 0: Should not matter; just to avoid np.empty weirdness
 		self.G[1], self.H[1] = 0, 0
 		heapq.heappush( self.open_queue, (self.cost(1), 1) )
-		#TODO: Why do they do this in the paper? self.closed[1] = True
+			#TODO: Why do they do this in the paper? self.closed[1] = True
 
 		open_size = 1
 		while self.tt.tock() < time_limit and len(self) + self.expansions <= max_states:
 			self.tt.profile("Remove nodes from open priority queue")
 			n_remove = min( open_size, self.expansions )
 			expand_idcs = np.array([ heapq.heappop()[0] for _ in range(n_remove) ])
-			open_size -= n_remove
 			self.open_[expand_idcs] = False
+			open_size -= n_remove
 			self.closed[expand_idcs] = True
 			self.tt.end_profile("Remove nodes from open priority queue")
 
-			self.tt.profile("Check if solved")
-			solved = Cube.multi_is_solved(self.states[expand_idcs])
-			if solved.any(): raise Exception("🦀🦀🦀WE DID IT BOIS🦀🦀🦀") #TODO: Generate action queue by following parents
-			self.tt.end_profile("Check if solved")
+			#TODO:
+				# A decision to be made: Where do we check for solved?
+				# In A* normally and in the paper it seems to be done on the expanded nodes
+				# and thus not on their substates. (Thus it waits at least 1 iteration after discovering the node to terminate)
+				# This surely helps finding the shortest path in some (small) problems,
+				# but seems wasteful and not greedy enough on this problem.
+				# Right now, I'm going with checking this already when adding the substates
+				# as we don't have just as much focus on the solution length and are probably
+				# more interested in running time/solve percentage.
 
-			self.expand_batch(expand_idcs)
 
-	def expand_batch(self, expand_idcs: np.ndarray):
+			solved_idx = self.expand_batch(expand_idcs)
+			if solved_idx:
+				raise Exception("🦀🦀🦀WE DID IT BOIS🦀🦀🦀")  #TODO: Generate action queue by following parents
+
+	def expand_batch(self, expand_idcs: np.ndarray) -> int:
+		"""
+		Expands to the neighbors of each of the states in
+		:param expand_idcs:
+		Pseudo code:
+		```
+		1. Calculate substates for all the batch bois
+		2. Check which substates are seen and not seen
+		3. FOR the unseen
+			Set the state as their parent and set their G
+			Calculate their H and add to open-list with correct cost
+		4. FOR the seen
+			IF substate is closed AND its's G is lower than state's G:
+				Update state's G and set the substate as it's parent
+			ELSE IF substate is open AND state's G is lower than substate's G
+				Update substate's G and set state as it's parent
+		```
+		"""
 		expand_states = self.states[expand_idcs]
 
 		while len(self) + expand_states.shape[0] * Cube.action_dim > len(self.states):
 			self.increase_stack_size()
 
-		#TODO: Consider the benefits of this extra dimension, and: should I do it more numpy-like?
-		substates = [
-			Cube.multi_rotate(Cube.repeat_state(s), *Cube.iter_actions()) for s in expand_states
-		]
-		# TODO:
-		# 1. Check which substates have been seen and update indices and states as in MCTS
-		# 2. The unseen substates:
-		#   2a. Set their G and parent: G is parent + 1
-		#   2b. Calculate their H: Here, it is happening!!!
-		#   2c. Add to open
-		# 3. The seen substates:
-		#   3a. If substate's G is lower than state that generated it AND substate is closed:
-		#	    Update G value for the generator state
-		#	    Substate is now parent of generator state
-		#   3b.	Elif generator state's G is lower AND substate is in open
-		#	    Update G value for the substate
-		#	    Change substates neighbour to the generator state
+		self.tt.profile("#1: Calculate substates")
+			#TODO FIXME FIXME FIXME
+		substates = Cube.multi_rotate(Cube.repeat_state(None), *Cube.iter_actions())
+			#TODO FIXME FIXME FIXME
+		self.tt.end_profile("#1: Calculate substates")
 
+		self.tt.profile("#2: Check if substates are seen")
+		substate_strs = [s.tostring() for s in substates]
+		get_substate_strs = lambda bools: [s for s, b in zip(substate_strs, bools) if b]
+		seen_substates = np.array([s in self.indices for s in substate_strs])
+		unseen_substates = ~seen_substates
+		self.tt.end_profile("#2: Check if substates are seen")
+
+		self.tt.profile("#3: Unseen: Add and forward pass")
+		# Add the unseen states
+		new_states_idcs = len(self) + np.arange(unseen_substates.sum()) + 1
+		new_idcs_dict = { s: i for i, s in zip(new_states_idcs, get_substate_strs(unseen_substates)) }
+		self.indices.update(new_idcs_dict)
+
+		# Update the unseen parents and G
+		# Parents can be found by integer division as multi_rotate flattened the substates
+			# TODO: Test these lines: Is my numpy-fu up to the game?
+		new_parents = [ self.indices[ i // Cube.action_dim ] for i in np.where(unseen_substates) ]
+		self.parents[new_states_idcs] = new_parents
+		self.G[new_states_idcs] = self.G[new_parents] + 1
+
+		solved_substate = np.where(Cube.multi_is_solved(substates[new_states_idcs]))[0]
+		if solved_substate.size: #TODO: Consider the location of this "won" check. See comment in search
+			return solved_substate
+
+		self.tt.profile("Forward pass")
+		self.H[new_states_idcs] = self.batched_H(substates[unseen_substates])
+		self.tt.end_profile("Forward pass")
+
+		# Add the new states to "open" priority queue
+		for i in new_states_idcs:
+			heapq.heappush( self.open_queue, (self.cost(i), i) )
+		self.open_[new_states_idcs] = True
+		self.tt.end_profile("#3: Unseen: Add and forward pass")
+
+		self.tt.profile("#4: Already seen: Update parents and G")
+		self.tt.end_profile("#4: Already seen: Update parents and G")
+
+		return 0
 
 	def cost(self, i: np.ndarray):
 		"""The A star costs of the states saved in the indeces corresponding to the vector i"""
 		return self.lambda_ * self.H[i] + self.G[i]
 
+	@no_grad
 	def batched_H(self, states: np.ndarray):
 		"""Heuristics calculater.
+		Uses the value neural network. -value is regarded as the heuristic of
 		:param states: (batch size, *(cube_dimensions)) of states
 		"""
-		raise NotImplementedError
+		states_oh = Cube.as_oh(states)
+		J = -self.net(states, value=True, policy=False)
+		return J.cpu().squeeze().detach().numpy()
 
 	def reset(self):
 		super().reset()
@@ -768,7 +823,7 @@ class BWAS(DeepSearcher):
 		self.indices   = dict()
 
 		self.states    = np.empty((self._stack_expand, *Cube.shape()), dtype=Cube.dtype)
-		self.neighbors = np.zeros((self._stack_expand, Cube.action_dim), dtype=int)
+		# self.neighbors = np.zeros((self._stack_expand, Cube.action_dim), dtype=int)
 		self.parents = np.zeros(self._stack_expand, dtype=int)
 
 		self.G         = np.empty(self._stack_expand)
@@ -780,7 +835,7 @@ class BWAS(DeepSearcher):
 		expand_size    = len(self.states)
 
 		self.states	   = np.concatenate([self.states, np.empty((expand_size, *Cube.shape()), dtype=Cube.dtype)])
-		self.neighbors = np.concatenate([self.neighbors, np.zeros((expand_size, Cube.action_dim), dtype=int)])
+		# self.neighbors = np.concatenate([self.neighbors, np.zeros((expand_size, Cube.action_dim), dtype=int)])
 		self.parents   = np.concatenate([self.parents, np.zeros(expand_size, dtype=int)])
 
 		self.G         = np.concatenate([self.G, np.empty(expand_size)])
