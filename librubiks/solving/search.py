@@ -648,30 +648,40 @@ class MCTS_(DeepSearcher):
 
 
 class BWAS(DeepSearcher):
-
 	"""Batch Weighted A* Search
 	As per Agostinelli, McAleer, Shmakov, Baldi:
-	Solving the Rubik's cube with deep reinforcement learning and search.
+	"Solving the Rubik's cube with deep reinforcement learning and search".
 
 	Expands the `self.expansions` best nodes at a time according to cost
 	f(node) = `self.lambda_` * g(node) + h(node)
 	where h(node) is given as the negative value (cost-to-go) of the DNN and g(x) is the path cost
-
 	"""
 
+	# Queue data structure
+	# Min heap. An element contains tuple of (cost, index)
+	# This priority queue uses Pythons heapq which is based on the python list.
+	# We should maybe consider whether this could be done faster if we build our own implementation.
+	open_queue: list
 
-	open_queue: list  # Min heap: costs (f(n) + g(n)) are values, indices correspond to self.indices
-	closed: set # Set of all expanded node indices
-
-	indices = dict()  # Key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used
+	indices = dict  # Key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used
 	states: np.ndarray
+	neighbors: np.ndarray  # n x 12 array of neighbor indices
+	parents: np.darray #parents[i]: index of parent of node with index i
 	G: np.ndarray
 	H: np.ndarray
+	closed: np.ndarray # Boolean vector. closed[i] == True iff. state i is closed (expanded)
+	# Boolean vector. open_[i] == True iff. state i in open_queue closed.
+	# Yes, we have two data structures for this: open_queue has sort, this has random access.
+	open_: np.ndarray
 
 	_stack_expand = 1000
 
 	#TODO: BIG THINK
-	# Do we even need to maintain a G, H data structure?
+	# Do we even need to maintain a  H data structure?
+	# Could we calculate cost once and save directly in heap?
+	# This would make implementation simpler and less memory intensive
+	# but maybe this would be a problem when revisiting nodes through another
+	# path.
 	def __init__(self, net: Model, lambda_: float, expansions: int):
 		"""Init data structure, save params
 
@@ -687,37 +697,103 @@ class BWAS(DeepSearcher):
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
 		self.tt.tick()
 		self.reset()
+		self.net.eval()
 		assert time_limit or max_states
 		time_limit = time_limit or 1e10
 		max_states = max_states or int(1e10)
 
+		self.indices[state.tostring()] = 1
+		self.states[1] = state
 		if Cube.is_solved(state): return True
-		while self.tt.tock() < time_limit and len(self) + Cube.action_dim <= max_states:
-			raise "Tue"
+		# First node given cost 0: Should not matter; just to avoid np.empty weirdness
+		self.G[1], self.H[1] = 0, 0
+		heapq.heappush( self.open_queue, (self.cost(1), 1) )
+		#TODO: Why do they do this in the paper? self.closed[1] = True
 
+		open_size = 1
+		while self.tt.tock() < time_limit and len(self) + self.expansions <= max_states:
+			self.tt.profile("Remove nodes from open priority queue")
+			n_remove = min( open_size, self.expansions )
+			expand_idcs = np.array([ heapq.heappop()[0] for _ in range(n_remove) ])
+			open_size -= n_remove
+			self.open_[expand_idcs] = False
+			self.closed[expand_idcs] = True
+			self.tt.end_profile("Remove nodes from open priority queue")
+
+			self.tt.profile("Check if solved")
+			solved = Cube.multi_is_solved(self.states[expand_idcs])
+			if solved.any(): raise Exception("🦀🦀🦀WE DID IT BOIS🦀🦀🦀") #TODO: Generate action queue by following parents
+			self.tt.end_profile("Check if solved")
+
+			self.expand_batch(expand_idcs)
+
+	def expand_batch(self, expand_idcs: np.ndarray):
+		expand_states = self.states[expand_idcs]
+
+		while len(self) + expand_states.shape[0] * Cube.action_dim > len(self.states):
+			self.increase_stack_size()
+
+		#TODO: Consider the benefits of this extra dimension, and: should I do it more numpy-like?
+		substates = [
+			Cube.multi_rotate(Cube.repeat_state(s), *Cube.iter_actions()) for s in expand_states
+		]
+		# TODO:
+		# 1. Check which substates have been seen and update indices and states as in MCTS
+		# 2. The unseen substates:
+		#   2a. Set their G and parent: G is parent + 1
+		#   2b. Calculate their H: Here, it is happening!!!
+		#   2c. Add to open
+		# 3. The seen substates:
+		#   3a. If substate's G is lower than state that generated it AND substate is closed:
+		#	    Update G value for the generator state
+		#	    Substate is now parent of generator state
+		#   3b.	Elif generator state's G is lower AND substate is in open
+		#	    Update G value for the substate
+		#	    Change substates neighbour to the generator state
+
+
+	def cost(self, i: np.ndarray):
+		"""The A star costs of the states saved in the indeces corresponding to the vector i"""
+		return self.lambda_ * self.H[i] + self.G[i]
+
+	def batched_H(self, states: np.ndarray):
+		"""Heuristics calculater.
+		:param states: (batch size, *(cube_dimensions)) of states
+		"""
+		raise NotImplementedError
 
 	def reset(self):
 		super().reset()
-		self.indices   = dict()
 		self.open_queue = list()
-		self.closed = set()
+		self.indices   = dict()
+
 		self.states    = np.empty((self._stack_expand, *Cube.shape()), dtype=Cube.dtype)
+		self.neighbors = np.zeros((self._stack_expand, Cube.action_dim), dtype=int)
+		self.parents = np.zeros(self._stack_expand, dtype=int)
+
 		self.G         = np.empty(self._stack_expand)
 		self.H         = np.empty(self._stack_expand)
+		self.closed    = np.zeros(self._stack_expand, dtype=bool)
+		self.open_     = np.zeros(self._stack_expand, dtype=bool)
 
 	def increase_stack_size(self):
 		expand_size    = len(self.states)
+
 		self.states	   = np.concatenate([self.states, np.empty((expand_size, *Cube.shape()), dtype=Cube.dtype)])
+		self.neighbors = np.concatenate([self.neighbors, np.zeros((expand_size, Cube.action_dim), dtype=int)])
+		self.parents   = np.concatenate([self.parents, np.zeros(expand_size, dtype=int)])
+
 		self.G         = np.concatenate([self.G, np.empty(expand_size)])
 		self.H         = np.concatenate([self.H, np.empty(expand_size)])
-
+		self.closed    = np.concatenate([self.closed, np.zeros(expand_size, dtype=bool)])
+		self.open_     = np.concatenate([self.open_, np.zeros(expand_size, dtype=bool)])
 
 	@classmethod
 	def from_saved(cls, loc: str, use_best: bool, lambda_: float, expansions: int):
 		net = Model.load(loc, load_best=use_best).to(gpu)
 		return cls(net, lambda_=lambda_, expansions=expansions)
 
-	def __len__(self): raise NotImplementedError
+	def __len__(self): return len(self.indices)
 
 	def __str__(self): return f'BWAS(lambda={self.lambda_}, N={self.expansions})'
 
