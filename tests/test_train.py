@@ -22,8 +22,8 @@ class TestTrain(MainTest):
 		# Current
 		net, min_net = train.train(net)
 
-		train.plot_training("local_tests/local_train_test")
-		assert os.path.exists("local_tests/local_train_test/training.png")
+		train.plot_training("local_tests/local_train_test", "test")
+		assert os.path.exists("local_tests/local_train_test/training_test.png")
 
 		# optim = torch.optim.Adam
 		# policy_loss = torch.nn.CrossEntropyLoss

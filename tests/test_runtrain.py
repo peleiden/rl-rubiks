@@ -15,7 +15,7 @@ class TestRuntrain(MainTest):
 		subprocess.check_call(args)  # Raises error on problems in call
 
 		#TODO Add all files
-		expected_files = ['model.pt', 'train.log',  'config.json',  'model-best.pt', 'training.png']
+		expected_files = ['model.pt', 'train.log',  'config.json',  'model-best.pt']
 		expected_train_data_files = ['rollouts.npy','losses.npy']
 		print(os.listdir(location))
 		print(os.listdir(os.path.join(location, 'train-data')))
@@ -23,7 +23,4 @@ class TestRuntrain(MainTest):
 			assert fname in os.listdir(location)
 		for fname in expected_train_data_files:
 			assert fname in os.listdir(os.path.join(location, 'train-data'))
-
-
-
 

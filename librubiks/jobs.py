@@ -110,7 +110,7 @@ class TrainJob:
 		os.makedirs(self.location)
 
 		# Sets representation
-		self.logger(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
+		self.logger.section(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
 
 		train = Train(self.rollouts,
 					  batch_size			= self.batch_size,
@@ -137,7 +137,7 @@ class TrainJob:
 		if self.evaluation_interval:
 			min_net.save(self.location, True)
 
-		train.plot_training(self.location)
+		train.plot_training(self.location, name=self.name)
 		analysispath = os.path.join(self.location, "analysis")
 		datapath = os.path.join(self.location, "train-data")
 		os.mkdir(datapath)

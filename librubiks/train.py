@@ -92,7 +92,7 @@ class Train:
 			"Created trainer",
 			f"Alpha update: {self.alpha_update:.2f}"
 			f"Learning rate and gamma: {self.lr} and {self.gamma}",
-			f"Learning rate and alpha will update every {self.update_interval} rollouts: lr <- {self.gamma:.2f} * lr and alpha += {self.alpha_update:.2f}"\
+			f"Learning rate and alpha will update every {self.update_interval} rollouts: lr <- {self.gamma:.4f} * lr and alpha += {self.alpha_update:.4f}"\
 				if self.update_interval else "Learning rate and alpha will not be updated during training",
 			f"Optimizer:      {self.optim}",
 			f"Policy and value criteria: {self.policy_criterion} and {self.value_criterion}",
@@ -352,7 +352,7 @@ class Train:
 		self.tt.end_profile("Creating generator network")
 		return generator_net.to(gpu)
 		
-	def plot_training(self, save_dir: str, title="", semi_logy=False, show=False):
+	def plot_training(self, save_dir: str, name: str, semi_logy=False, show=False):
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot
 		"""
@@ -374,7 +374,7 @@ class Train:
 			color = 'blue'
 			reward_ax = loss_ax.twinx()
 			reward_ax.set_ylim(ylim)
-			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depths {self.evaluator.scrambling_depths} in {self.evaluator.max_time} seconds", color=color)
+			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depth {self.evaluator.scrambling_depths[0]} in {self.evaluator.max_time:.2f} seconds", color=color)
 			reward_ax.plot(self.evaluation_rollouts, self.sol_percents, "-o", color=color, label="Fraction of cubes solved")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 			h2, l2 = reward_ax.get_legend_handles_labels()
@@ -383,12 +383,12 @@ class Train:
 		loss_ax.legend(h1, l1, loc=1)
 
 		fig.tight_layout()
-		plt.title(title if title else f"Training - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*12)} states")
+		plt.title(f"Training of {name} - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*Cube.action_dim)} states")
 		if semi_logy: plt.semilogy()
 		plt.grid(True)
 
 		os.makedirs(save_dir, exist_ok=True)
-		path = os.path.join(save_dir, "training.png")
+		path = os.path.join(save_dir, f"training_{name}.png")
 		plt.savefig(path)
 		self.log(f"Saved loss and evaluation plot to {path}")
 
