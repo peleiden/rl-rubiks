@@ -9,7 +9,7 @@ from collections import deque, defaultdict
 import time
 
 def exclude(d: str):
-	exclude_patterns = ["local", "node_modules", "dist", ".idea", "__pycache__", ".git", ".pytest_cache", ".vscode"]
+	exclude_patterns = ["local", "node_modules", "dist", ".idea", "__pycache__", ".git", ".pytest_cache", ".vscode", "legacy"]
 	for pattern in exclude_patterns:
 		if pattern in d or f"/{pattern}" in d:
 			return True

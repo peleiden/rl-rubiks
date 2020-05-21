@@ -229,7 +229,7 @@ class EvalJob:
 
 				set_is2024(cfg["is2024"])
 				searcher = searcher.from_saved(folder, use_best=use_best, **search_args)
-				key = f'{str(searcher)} {"" if folder==search_location else os.path.basename(folder.rstrip(os.sep))}'
+				key = f'{str(searcher)}{"" if folder==search_location else " " + os.path.basename(folder.rstrip(os.sep))}'
 
 				self.reps[key] = cfg["is2024"]
 				self.agents[key] = DeepAgent(searcher)
@@ -245,7 +245,7 @@ class EvalJob:
 			self.reps = {searcher: True}
 
 		self.agent_results = {}
-		self.logger.log(f"Initialized {self.name} with agents {' '.join(str(agent) for agent in self.agents)}")
+		self.logger.log(f"Initialized {self.name} with agents {', '.join(str(agent) for agent in self.agents)}")
 		self.logger.log(f"TIME ESTIMATE: {len(self.agents)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
 
 	def execute(self):

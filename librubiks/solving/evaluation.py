@@ -60,8 +60,6 @@ class Evaluator:
 		for i, d in enumerate(self.scrambling_depths):
 			for _ in range(self.n_games):
 				cfgs.append((agent, self.max_time, d))
-		depths = np.repeat(self.scrambling_depths, self.n_games)
-		assert np.all(depths==np.array([x[2] for x in cfgs]))  # TODO: Remove after confidence
 		res = []
 		for i, cfg in enumerate(cfgs):
 			self.tt.profile(f"Evaluation of {agent}. Depth {cfg[2]}")
@@ -163,25 +161,40 @@ class Evaluator:
 		plt.clf()
 
 		# solution length boxplots
+		plt.rcParams.update({"font.size": 18})
+		max_width = 2
+		width = min(len(eval_results), max_width)
+		height = (len(eval_results)+1) // width if width == max_width else 1
+		positions = [(i, j) for i in range(width) for j in range(height)]
+		fig, axes = plt.subplots(height, width, figsize=(width*10, height*6))
+		
+		max_sollength = 50
+		agents, agent_results = list(zip(*eval_results.items()))
+		agent_results = np.array(agent_results).copy()
+		agent_results[agent_results > max_sollength] = max_sollength  # Clips outlier results to prevent skewing plots
+		ylim = np.array([-0.02, 1.02]) * agent_results.max()
+		min_, max_ = used_settings["scrambling_depths"].min(), used_settings["scrambling_depths"].max()
+		xticks = np.arange(min_, max_, max((max_-min_)//10, 1))
+		for i, position in enumerate(positions):
+			ax = axes[position] if len(eval_results) > 1 else axes  # Select axes object. Probably doesn't work for max_width > 3
+			if position[1] == 0:
+				ax.set_ylabel(f"Solution length")
+			if position[0] == height - 1:
+				ax.set_xlabel(f"Scrambling depth")
 
-		fig, axes = plt.subplots(len(eval_results), 1, figsize=(19.2, 10.8))
-
-		for i, (agent, results) in enumerate(eval_results.items()):
-			used_settings = eval_settings[i]
-
-			ax = axes[i] if len(eval_results) > 1 else axes
-			ax.set_title(f'Solution lengths for {agent} in {used_settings["max_time"]:.2f} s')
-
-			ax.set_ylabel(f"Solution length")
-			ax.set_xlabel(f"Scrambling depth")
-
-			#Handling that some might not even win any games
-			plotables = (results != -1).any(axis=1)
-			results = [depth[depth != -1] for depth in results[plotables]]
-			depths = [used_settings['scrambling_depths'][i] for i  in range(len(plotables)) if plotables[i]]
-			if len(depths): ax.boxplot(results, labels=depths)
-			ax.grid(True)
-
+			try:
+				agent, results = agents[i], agent_results[i]
+				used_settings = eval_settings[i]
+				ax.set_title(f'Solution lengths for {agent} in {used_settings["max_time"]:.2f} s')
+				results = [depth[depth != -1] for depth in results]
+				ax.boxplot(results)
+				ax.grid(True)
+			except IndexError:
+				pass
+			ax.set_ylim(ylim)
+			ax.set_xlim([used_settings["scrambling_depths"].min()-1, used_settings["scrambling_depths"].max()+1])
+			
+		plt.setp(axes, xticks=xticks, xticklabels=[str(x) for x in xticks])
 		fig.tight_layout()
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_sollengths.png")
@@ -190,6 +203,7 @@ class Evaluator:
 
 		if show: plt.show()
 		plt.clf()
+		plt.rcParams.update({"font.size": 22})
 
 		# Histograms of S
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
@@ -206,7 +220,7 @@ class Evaluator:
 				edgecolor	= "black",
 				linewidth	= 2,
 				align		= "left",
-				label		= [f"{agent}- S = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
+				label		= [f"{agent}: S = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
 		highest_y = 0
 		for i in range(len(eval_results)):
 			if stds[i] > 0:
