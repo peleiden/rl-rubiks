@@ -146,16 +146,13 @@ def MCTS_optimize():
 
 	params = {
 		'c': (0.1, 1),
-		'nu': (0, 0.01),
-		'workers': (1, 200),
-
 	}
-	def prepper(params): params['workers'] = int(params['workers'])
+	def prepper(params): pass
 
 	persistent_params = {
 		'net' : Model.load(args.location),
-		'search_graph': False,
 		'policy_type': args.policy_type,
+		'search_graph': False,
 	}
 
 	logger = Logger(os.path.join(args.location, 'optimizer.log'), 'Optimization')
@@ -167,5 +164,3 @@ def MCTS_optimize():
 
 if __name__ == '__main__':
 	MCTS_optimize()
-
-

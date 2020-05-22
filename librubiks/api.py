@@ -21,7 +21,7 @@ net_loc = os.path.join(
 	'hpc-20-04-12'
 )
 agents = [
-	{ "name": "DeepCube", "agent": DeepAgent(MCTS.from_saved(net_loc, 0.6, 0.005, True, 10)) },
+	{ "name": "DeepCube", "agent": DeepAgent(MCTS.from_saved(net_loc, c=0.6, policy_type="p", search_graph=True)) },
 	{ "name": "Greedy policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
 	{ "name": "BFS", "agent": Agent(BFS()) },
 	{ "name": "Random actions", "agent": Agent(RandomDFS()) },

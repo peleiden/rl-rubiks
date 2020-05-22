@@ -175,10 +175,8 @@ class EvalJob:
 			max_states: int,
 			scrambling: str,
 			mcts_c: float,
-			mcts_nu: float,
-			mcts_graph_search: bool,
-			mcts_workers: int,
 			mcts_policy_type: str,
+			mcts_graph_search: bool,
 			policy_sample: bool,
 			astar_lambda: float,
 			astar_expansions: int,
@@ -211,10 +209,8 @@ class EvalJob:
 
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
-				assert mcts_c >= 0 and mcts_nu >= 0\
-					and isinstance(mcts_workers, int) and mcts_workers > 0\
-					and mcts_policy_type in ["p", "v", "w"]
-				search_args = {'c': mcts_c, 'nu': mcts_nu,  'search_graph': mcts_graph_search, 'workers': mcts_workers, 'policy_type': mcts_policy_type}
+				assert mcts_c >= 0 and mcts_policy_type in ["p", "v", "w"]
+				search_args = {'c': mcts_c, 'policy_type': mcts_policy_type, 'search_graph': mcts_graph_search}
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}

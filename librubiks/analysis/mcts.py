@@ -17,7 +17,7 @@ net = Model.load("data/local_method_comparison/asgerfix").eval().to(gpu)
 
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float, policy_type: str):
 	state, f, d = Cube.scramble(depth, True)
-	searcher = MCTS_(net, c=c, nu=nu, search_graph=False, workers=workers, policy_type=policy_type)
+	searcher = MCTS(net, c=c, policy_type=policy_type, search_graph=False)
 	is_solved = searcher.search(state, time_limit)
 	assert is_solved == (Cube.get_solved().tostring() in searcher.indices)
 	return is_solved, len(searcher.indices)
@@ -60,7 +60,7 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int, pol
 	time_limits = np.linspace(.1, 2, 10)
 	expand = np.zeros_like(time_limits)
 	explore = np.zeros_like(time_limits)
-	searcher = MCTS(net, c=c, nu=nu, search_graph=False, workers=workers, policy_type=policy_type)
+	searcher = MCTS(net, c=c, policy_type=policy_type, search_graph=False)
 	log.section(f"Analyzing time distribution at depth {depth}\nExpected max time <~ {TickTock.stringify_time(sum(time_limits*n), 'm')}")
 	for i, tl in enumerate(time_limits):
 		log(f"Analyzing with time limit of {tl:.2f} s")

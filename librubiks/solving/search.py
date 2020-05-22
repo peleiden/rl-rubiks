@@ -186,13 +186,12 @@ class MCTS(DeepSearcher):
 	W: np.ndarray
 	L: np.ndarray
 
-	def __init__(self, net: Model, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
+	def __init__(self, net: Model, c: float, policy_type: str, search_graph: bool):
 		super().__init__(net)
 		self.c = c
-		self.nu = nu
-		self.search_graph = search_graph
-		self.workers = workers
 		self.policy_type = policy_type
+		self.search_graph = search_graph
+		self.nu = 100
 
 		self.expand_nodes = 1000
 
@@ -397,10 +396,10 @@ class MCTS(DeepSearcher):
 		self.tt.end_profile("BFS")
 
 	@classmethod
-	def from_saved(cls, loc: str, use_best: bool, c: float, nu: float, search_graph: bool, workers: int, policy_type: str):
+	def from_saved(cls, loc: str, use_best: bool, c: float, policy_type: str, search_graph: bool):
 		net = Model.load(loc, load_best=use_best)
 		net.to(gpu)
-		return cls(net, c=c, nu=nu, search_graph=search_graph, workers=workers, policy_type=policy_type)
+		return cls(net, c=c, policy_type=policy_type, search_graph=search_graph)
 
 	def __str__(self):
 		return ("BFS" if self.search_graph else "Naive") + f" MCTS (c={self.c})"

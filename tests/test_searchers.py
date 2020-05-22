@@ -27,7 +27,7 @@ class TestMCTS(MainTest):
 		_action_queue_test(state, searcher, sol_found)
 
 	def _mcts_test(self, state: np.ndarray, search_graph: bool):
-		searcher = MCTS.from_saved("data/hpc-20-04-12", False, c=1, nu=.001, search_graph=search_graph, workers=10, policy_type="p")
+		searcher = MCTS.from_saved("data/hpc-20-04-12", False, c=1, policy_type="p", search_graph=search_graph)
 		solved = searcher.search(state, .2)
 
 		# Indices
@@ -69,15 +69,7 @@ class TestMCTS(MainTest):
 			assert np.all(searcher.neighbors.all(axis=1) != searcher.leaves)
 
 		# W
-		for i in used_idcs:
-			neighs = searcher.neighbors[i]
-			supposed_Ws = np.zeros(Cube.action_dim)
-			for j, neighbor_index in enumerate(neighs):
-				if neighbor_index == 0: continue
-				neighbor_neighbor_indices = searcher.neighbors[neighbor_index]
-				if np.all(neighbor_neighbor_indices):
-					supposed_Ws[j] = np.max(searcher.V[neighbor_neighbor_indices])
-			assert np.all(supposed_Ws == searcher.W[i])
+		assert searcher.W[used_idcs].all()
 
 		return searcher, solved
 
