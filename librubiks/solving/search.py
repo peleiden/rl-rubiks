@@ -739,7 +739,7 @@ class AStar(DeepSearcher):
 				i = self.indices[ Cube.get_solved().tostring() ]
 				while i != 1:
 					self.action_queue.appendleft(
-						Cube.rev_action(self.parent_actions[i])
+						self.parent_actions[i]
 					)
 					i = self.parents[i]
 				return True
@@ -824,7 +824,6 @@ class AStar(DeepSearcher):
 		# TODO: Test this section
 		# Need to especially test the parent stuff and that I have made no weird indexing errors.
 		# Also: Have I understood the algorithm cases correctly?
-
 		self.tt.profile("Old states: Update parents and G")
 
 		local_old_idcs = np.arange(len(substates))[last_seen] #Old idcs corresponding to last_seen
