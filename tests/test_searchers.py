@@ -78,14 +78,58 @@ class TestMCTS(MainTest):
 				if np.all(neighbor_neighbor_indices):
 					supposed_Ws[j] = np.max(searcher.V[neighbor_neighbor_indices])
 			assert np.all(supposed_Ws == searcher.W[i])
-		
+
 		return searcher, solved
 
 class TestAStar(MainTest):
 
-	def test_neighbors(self):
+	#TODO: More indepth testing: Especially of updating of parents
+
+	def test_search(self):
+		test_params = {
+			(0, 10),
+			# (0.5, 2),
+			# (1, 1),
+		}
 		net = Model.create(ModelConfig()).to(gpu).eval()
-		state, _, _ = Cube.scramble(50)
-		searcher = AStar(net)
-		neighbors = searcher.get_neighbors(state)
-		assert len(neighbors) == 12
+		for params in test_params:
+			searcher = AStar(net, *params)
+			self._can_win_all_easy_games(searcher)
+			searcher.reset()
+			assert not len(searcher.indices)
+			assert not len(searcher.open_queue)
+			assert not searcher.open_.any()
+
+	def _can_win_all_easy_games(self, searcher):
+		state, i, j = Cube.scramble(2, force_not_solved=True)
+		is_solved = searcher.search(state, time_limit=1)
+		if is_solved:
+			for action in searcher.action_queue:
+				state = Cube.rotate(state, *Cube.action_space[action])
+			assert Cube.is_solved(state)
+
+	def test_expansion(self):
+		net = Model.create(ModelConfig()).to(gpu).eval()
+		init_state, _, _ = Cube.scramble(3)
+		searcher = AStar(net, lambda_=0.1, expansions=5)
+		searcher.search(init_state, time_limit=1)
+		init_idx = searcher.indices[init_state.tostring()]
+		assert init_idx == 1
+		assert searcher.G[init_idx]  == 0
+		assert searcher.closed[init_idx]
+		for action in Cube.action_space:
+			substate = Cube.rotate(init_state, *action)
+			idx = searcher.indices[substate.tostring()]
+			assert searcher.G[idx] == 1
+			assert searcher.parents[idx] == init_idx
+			assert searcher.cost(idx) is not None
+	def test_batched_H(self):
+		net = Model.create(ModelConfig()).to(gpu).eval()
+		games = 5
+		states, _ = Cube.sequence_scrambler(games, 1, True)
+		searcher = AStar(net, lambda_=1, expansions=2)
+		J = searcher.batched_H(states)
+		assert J.shape == (games,)
+
+
+
