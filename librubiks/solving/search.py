@@ -487,7 +487,7 @@ class MCTS_(DeepSearcher):
 		self.indices[state.tostring()] = 1
 		self.states[1] = state
 		if Cube.is_solved(state): return True
-		
+
 		oh = Cube.as_oh(state)
 		p, v = self.net(oh)
 		self.P[1] = p.softmax(dim=1).cpu().numpy()
@@ -703,9 +703,8 @@ class AStar(DeepSearcher):
 		#TODO: BIG THINK
 		# Do we even need to maintain a  H data structure?
 		# Could we calculate cost once and save directly in heap?
-		# This would make implementation simpler and less memory intensive
-		# but maybe this would be a problem when revisiting nodes through another
-		# path? No, I don't think this is a problem actually.
+		# Yes we could and maybe should. Would make implementation
+		# less memory intensive. Maybe nice to have it for debugging?
 	def __init__(self, net: Model, lambda_: float, expansions: int):
 		"""Init data structure, save params
 
@@ -732,7 +731,6 @@ class AStar(DeepSearcher):
 		# First node given cost 0: Should not matter; just to avoid np.empty weirdness
 		self.G[1], self.H[1] = 0, 0
 		heapq.heappush( self.open_queue, (self.cost(1), 1) )
-			#TODO: Why do they do this in the paper? self.closed[1] = True
 		while self.tt.tock() < time_limit and len(self) + self.expansions <= max_states:
 			self.tt.profile("Remove nodes from open priority queue")
 			n_remove = min( len(self.open_queue), self.expansions )
@@ -834,7 +832,7 @@ class AStar(DeepSearcher):
 
 		self.tt.profile("Check whether won") #TODO: Consider the location of this "won" check. See comment in search
 		solved_substates = Cube.multi_is_solved(new_states)
-		if solved_substates.any(): #TODO: Test whether this is right
+		if solved_substates.any():
 			return True
 		self.tt.end_profile("Check whether won")
 
