@@ -96,7 +96,7 @@ options = {
 	},
 	'analysis': {
 		'default':  False,
-		'help':    'If true, analysis of model changes, value and loss behaviour is done in each rollout and ADI pass',
+		'help':     'If true, analysis of model changes, value and loss behaviour is done in each rollout and ADI pass',
 		'type':     literal_eval,
 		'choices':  [True, False],
 	},
