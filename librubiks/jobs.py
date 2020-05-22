@@ -46,11 +46,10 @@ class TrainJob:
 				 reward_method: str,
 
 				 # Currently not set by argparser/configparser
-				 agent = DeepAgent(PolicySearch(net=None, sample_policy=False)),
-				 scrambling_depths: tuple = (8,),
-
+				 agent = DeepAgent(PolicySearch(net=None)),
+				 scrambling_depths: tuple = (10,),
 				 verbose: bool = True,
-				 ):
+			 ):
 
 		self.name = name
 		assert isinstance(self.name, str)
@@ -120,7 +119,7 @@ class TrainJob:
 					  alpha_update			= self.alpha_update,
 					  lr					= self.lr,
 					  gamma					= self.gamma,
-					  tau				= self.tau,
+					  tau					= self.tau,
 					  reward_method			= self.reward_method,
 					  update_interval		= self.update_interval,
 					  agent					= self.agent,
@@ -175,7 +174,6 @@ class EvalJob:
 			max_states: int,
 			scrambling: str,
 			mcts_c: float,
-			mcts_policy_type: str,
 			mcts_graph_search: bool,
 			policy_sample: bool,
 			astar_lambda: float,
@@ -209,8 +207,8 @@ class EvalJob:
 
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
-				assert mcts_c >= 0 and mcts_policy_type in ["p", "w"]
-				search_args = {'c': mcts_c, 'policy_type': mcts_policy_type, 'search_graph': mcts_graph_search}
+				assert mcts_c >= 0, f"Exploration parameter c must be 0 or larger, not {mcts_c}"
+				search_args = {'c': mcts_c, 'search_graph': mcts_graph_search}
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
 				search_args = {'sample_policy': policy_sample}

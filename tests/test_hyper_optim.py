@@ -21,7 +21,7 @@ class TestOptimizer(MainTest):
 		net = Model(ModelConfig())
 		net.save(location)
 
-		run_settings = { 'location': location, 'iterations': 1, 'eval_games': 1, 'policy_type': 'w' }
+		run_settings = { 'location': location, 'iterations': 1, 'eval_games': 1 }
 		args = [sys.executable, run_path,]
 		for k,v in run_settings.items(): args.extend([f'--{k}', str(v)])
 		subprocess.check_call(args) #Raises error on problems in call

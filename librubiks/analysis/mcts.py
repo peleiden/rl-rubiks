@@ -17,7 +17,7 @@ net = Model.load("data/local_method_comparison/asgerfix").eval().to(gpu)
 
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float, policy_type: str):
 	state, f, d = Cube.scramble(depth, True)
-	searcher = MCTS(net, c=c, policy_type=policy_type, search_graph=False)
+	searcher = MCTS(net, c=c, search_graph=False)
 	is_solved = searcher.search(state, time_limit)
 	assert is_solved == (Cube.get_solved().tostring() in searcher.indices)
 	return is_solved, len(searcher.indices)
@@ -56,11 +56,11 @@ def analyze_var(var: str, values: np.ndarray, other_vars: dict):
 	# plt.show()
 	plt.clf()
 
-def analyse_time_distribution(depth: int, c: float, nu: float, workers: int, policy_type: str):
+def analyse_time_distribution(depth: int, c: float):
 	time_limits = np.linspace(.1, 2, 10)
 	expand = np.zeros_like(time_limits)
 	explore = np.zeros_like(time_limits)
-	searcher = MCTS(net, c=c, policy_type=policy_type, search_graph=False)
+	searcher = MCTS(net, c=c, search_graph=False)
 	log.section(f"Analyzing time distribution at depth {depth}\nExpected max time <~ {TickTock.stringify_time(sum(time_limits*n), 'm')}")
 	for i, tl in enumerate(time_limits):
 		log(f"Analyzing with time limit of {tl:.2f} s")
@@ -87,12 +87,12 @@ def analyse_time_distribution(depth: int, c: float, nu: float, workers: int, pol
 	plt.ylim([-0.05, 1.05])
 	# plt.semilogx()
 	plt.grid(True)
-	plt.savefig(f"data/local_analyses/mcts_time_w={workers}.png")
+	plt.savefig(f"data/local_analyses/mcts_time.png")
 	# plt.show()
 	plt.clf()
 
-def detailed_time(state, searcher, max_states: int, time_limit: float, c: float, nu: float, workers: int, policy_type: str):
-	searcher = searcher(Model.load("data/local_train"), c=c, nu=nu, search_graph=False, workers=workers, policy_type=policy_type)
+def detailed_time(state, searcher, max_states: int, time_limit: float, c: float):
+	searcher = searcher(Model.load("data/local_train"), c=c, search_graph=False)
 	log.section(f"Detailed time analysis: {searcher}")
 	sol_found = searcher.search(state, time_limit, max_states)
 	log("Solved found" if sol_found else "Solved not found")
@@ -160,7 +160,7 @@ if __name__ == "__main__":
 	# set_repr(False)
 	time_limit = 5
 	n = 100
-	default_vars = { "depth": 15, "c": 5, "nu": 100, "workers": 10, "policy_type": "p" }
+	default_vars = { "depth": 15, "c": 5 }
 	get_other_vars = lambda excl: {kw: v for kw, v in default_vars.items() if kw != excl}
 	# seedsetter()
 	# analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
@@ -175,7 +175,4 @@ if __name__ == "__main__":
 	# state, _, _ = Cube.scramble(50)
 	# detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
 	W(None, 10, get_other_vars("depth"))
-
-
-
 

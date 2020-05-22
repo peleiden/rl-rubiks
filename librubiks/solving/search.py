@@ -186,10 +186,9 @@ class MCTS(DeepSearcher):
 	W: np.ndarray
 	L: np.ndarray
 
-	def __init__(self, net: Model, c: float, policy_type: str, search_graph: bool):
+	def __init__(self, net: Model, c: float, search_graph: bool):
 		super().__init__(net)
 		self.c = c
-		self.policy_type = policy_type
 		self.search_graph = search_graph
 		self.nu = 100
 
@@ -232,9 +231,8 @@ class MCTS(DeepSearcher):
 
 		oh = Cube.as_oh(state)
 		p, v = self.net(oh)
-		self.P[1] = p.softmax(dim=1).cpu().numpy()
 		self.V[1] = v.cpu().numpy()
-
+		self.P[1] = p.softmax(dim=1).cpu().numpy()
 		indices_visited = [1]
 		actions_taken = []
 		while self.tt.tock() < time_limit and len(self) + Cube.action_dim <= max_states:
@@ -312,23 +310,18 @@ class MCTS(DeepSearcher):
 		new_substates_oh = Cube.as_oh(new_substates)
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
-		if self.policy_type == "p":
-			p, v = self.net(new_substates_oh)
-			p, v = p.cpu().softmax(dim=1).numpy(), v.cpu().numpy().squeeze()
-		else:
-			v = self.net(new_substates_oh, policy=False).cpu().squeeze()
+		p, v = self.net(new_substates_oh)
+		p, v = p.cpu().softmax(dim=1).numpy(), v.cpu().numpy().squeeze()
 		self.tt.end_profile("Feedforward")
 		
 		self.tt.profile("Update P, V, and W")
-		self.W[new_substate_idcs] = np.tile(v, (Cube.action_dim, 1)).T
+		self.P[new_substate_idcs] = p
 		self.V[new_substate_idcs] = v
+		self.W[new_substate_idcs] = np.tile(v, (Cube.action_dim, 1)).T
 		self.W[leaf_index] = self.V[self.neighbors[leaf_index]]
 		# Data structure: First row has all existing W's and second has value of leaf that is expanded from
 		W = np.vstack([self.W[visited_states_idcs[:-1], actions_taken], np.repeat(self.V[leaf_index], len(visited_states_idcs)-1)])
 		self.W[visited_states_idcs[:-1], actions_taken] = W.max(axis=0)
-		if self.policy_type == "w":
-			p = softmax(self.W[new_substate_idcs], axis=1 if len(v.shape) > 1 else 0)
-		self.P[new_substate_idcs] = p
 		self.tt.end_profile("Update P, V, and W")
 
 		# Update N and L
@@ -401,10 +394,10 @@ class MCTS(DeepSearcher):
 		self.tt.end_profile("BFS")
 
 	@classmethod
-	def from_saved(cls, loc: str, use_best: bool, c: float, policy_type: str, search_graph: bool):
+	def from_saved(cls, loc: str, use_best: bool, c: float, search_graph: bool):
 		net = Model.load(loc, load_best=use_best)
 		net.to(gpu)
-		return cls(net, c=c, policy_type=policy_type, search_graph=search_graph)
+		return cls(net, c=c, search_graph=search_graph)
 
 	def __str__(self):
 		return ("BFS" if self.search_graph else "Naive") + f" MCTS (c={self.c})"

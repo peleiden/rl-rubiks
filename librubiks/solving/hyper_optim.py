@@ -137,8 +137,6 @@ def MCTS_optimize():
 		type=str, default=model_path)
 	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
 		type=int, default=25)
-	parser.add_argument('--policy_type', help='How the policy is calculated in MCTS. p for softmax(policy), v for softmax(v), or w for softmax(w)',
-			type = str, choices = ['p', 'v', 'w'], default='p')
 
 	parser.add_argument('--eval_games', help='Number of games to evaluate at each depth in [12,20[',
 			type = int, default='20')
@@ -151,7 +149,6 @@ def MCTS_optimize():
 
 	persistent_params = {
 		'net' : Model.load(args.location),
-		'policy_type': args.policy_type,
 		'search_graph': False,
 	}
 

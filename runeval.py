@@ -65,12 +65,6 @@ options = {
 		'help':     'Exploration parameter c for MCTS',
 		'type':     float,
 	},
-	'mcts_policy_type': {
-		'default':  'p',
-		'help':     'How the policy is calculated in MCTS. p for softmax(policy) or w for softmax(w)',
-		'type':     str,
-		'choices':  ["p", "w"],
-	},
 	'mcts_graph_search': {
 		'default':  False,
 		'help':     'Whether or not graph search should be applied to MCTS to find the shortest path',

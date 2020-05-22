@@ -156,8 +156,8 @@ class Train:
 			training_data, policy_targets, value_targets, loss_weights = self.ADI_traindata(generator_net, alpha)
 			self.tt.profile("To cuda")
 			training_data = training_data.to(gpu)
-			value_targets = value_targets.to(gpu)
 			policy_targets = policy_targets.to(gpu)
+			value_targets = value_targets.to(gpu)
 			loss_weights = loss_weights.to(gpu)
 			self.tt.end_profile("To cuda")
 			self.tt.end_profile("ADI training data")
@@ -384,7 +384,7 @@ class Train:
 
 		fig.tight_layout()
 		title = (f"Training of {name}" if name != "train" else "Training") +\
-				f" - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*Cube.action_dim)} states"
+		         f" - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*Cube.action_dim)} states"
 		plt.title(title)
 		if semi_logy: plt.semilogy()
 		plt.grid(True)

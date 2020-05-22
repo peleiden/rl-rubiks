@@ -27,7 +27,7 @@ class TestMCTS(MainTest):
 		_action_queue_test(state, searcher, sol_found)
 
 	def _mcts_test(self, state: np.ndarray, search_graph: bool):
-		searcher = MCTS.from_saved("data/hpc-20-04-12", False, c=1, policy_type="p", search_graph=search_graph)
+		searcher = MCTS.from_saved("data/hpc-20-04-12", False, c=1, search_graph=search_graph)
 		solved = searcher.search(state, .2)
 
 		# Indices

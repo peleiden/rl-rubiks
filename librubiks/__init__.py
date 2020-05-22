@@ -50,4 +50,4 @@ def no_grad(fun):
 
 def softmax(x: np.ndarray, axis=0):
 	e = np.exp(x)
-	return e / e.sum(axis=axis)
+	return (e.T / e.sum(axis=axis)).T if axis else e / e.sum(axis=axis)
