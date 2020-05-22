@@ -209,7 +209,7 @@ class EvalJob:
 
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
-				assert mcts_c >= 0 and mcts_policy_type in ["p", "v", "w"]
+				assert mcts_c >= 0 and mcts_policy_type in ["p", "w"]
 				search_args = {'c': mcts_c, 'policy_type': mcts_policy_type, 'search_graph': mcts_graph_search}
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)

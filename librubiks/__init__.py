@@ -1,4 +1,5 @@
 import functools
+import numpy as np
 import torch
 
 cpu = torch.device("cpu")
@@ -46,3 +47,7 @@ def no_grad(fun):
 			return fun(*args, **kwargs)
 	return wrapper
 
+
+def softmax(x: np.ndarray, axis=0):
+	e = np.exp(x)
+	return e / e.sum(axis=axis)

@@ -7,7 +7,7 @@ import torch
 
 from librubiks.utils import TickTock
 
-from librubiks import gpu, no_grad
+from librubiks import gpu, no_grad, softmax
 from librubiks.model import Model, ModelConfig
 from librubiks.cube import Cube
 
@@ -312,18 +312,23 @@ class MCTS(DeepSearcher):
 		new_substates_oh = Cube.as_oh(new_substates)
 		self.tt.end_profile("One-hot encoding")
 		self.tt.profile("Feedforward")
-		p, v = self.net(new_substates_oh)
-		p, v = p.cpu().softmax(dim=1).numpy().squeeze(), v.cpu().squeeze()
+		if self.policy_type == "p":
+			p, v = self.net(new_substates_oh)
+			p, v = p.cpu().softmax(dim=1).numpy(), v.cpu().numpy().squeeze()
+		else:
+			v = self.net(new_substates_oh, policy=False).cpu().squeeze()
 		self.tt.end_profile("Feedforward")
 		
 		self.tt.profile("Update P, V, and W")
-		self.P[new_substate_idcs] = p
-		self.V[new_substate_idcs] = v
 		self.W[new_substate_idcs] = np.tile(v, (Cube.action_dim, 1)).T
+		self.V[new_substate_idcs] = v
 		self.W[leaf_index] = self.V[self.neighbors[leaf_index]]
 		# Data structure: First row has all existing W's and second has value of leaf that is expanded from
 		W = np.vstack([self.W[visited_states_idcs[:-1], actions_taken], np.repeat(self.V[leaf_index], len(visited_states_idcs)-1)])
 		self.W[visited_states_idcs[:-1], actions_taken] = W.max(axis=0)
+		if self.policy_type == "w":
+			p = softmax(self.W[new_substate_idcs], axis=1 if len(v.shape) > 1 else 0)
+		self.P[new_substate_idcs] = p
 		self.tt.end_profile("Update P, V, and W")
 
 		# Update N and L

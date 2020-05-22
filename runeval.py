@@ -67,9 +67,9 @@ options = {
 	},
 	'mcts_policy_type': {
 		'default':	'p',
-		'help':		'How the policy is calculated in MCTS. p for softmax(policy), v for softmax(v), or w for softmax(w)',
+		'help':		'How the policy is calculated in MCTS. p for softmax(policy) or w for softmax(w)',
 		'type':		str,
-		'choices':	["p", "v", "w"],
+		'choices':	["p", "w"],
 	},
 	'mcts_graph_search': {
 		'default':	False,
