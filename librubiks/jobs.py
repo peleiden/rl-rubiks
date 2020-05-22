@@ -210,7 +210,7 @@ class EvalJob:
 			self.agents, self.reps, search_args = {}, {}, {}
 
 			#DeepSearchers need specific arguments
-			if searcher == search.MCTS or searcher == search.MCTS_:
+			if searcher == search.MCTS:
 				assert mcts_c >= 0 and mcts_nu >= 0\
 					and isinstance(mcts_workers, int) and mcts_workers > 0\
 					and mcts_policy_type in ["p", "v", "w"]
