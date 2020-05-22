@@ -38,6 +38,16 @@ options = {
 		'help':	    'Max searching time for agent',
 		'type':	    float,
 	},
+	'astar_lambda' : {
+		'default':  0.2,
+		'help':	    'The A* search lambda parameter: How much to weight the distance from start to nodes in search',
+		'type':	    float,
+	},
+	'astar_expansions' : {
+		'default':  100,
+		'help':	    'The A* expansions parameter: How many nodes to expand to at a time. Can be thought of as a batch size: Higher is much faster but lower should be a bit more precise.',
+		'type':	    int,
+	},
 	'max_states': {
 		'default':  0,
 		'help':	    'Max number of searched states for agent per configuration. 0 for unlimited',
