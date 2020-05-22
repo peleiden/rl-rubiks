@@ -602,8 +602,8 @@ class MCTS_(DeepSearcher):
 		Searches the tree starting from starting state
 		Returns a list of visited states (as indices for self.states) and a list of actions taken
 		"""
-		current_index = 1
-		indices_visited = [1]
+		current_index = np.argmax(self.V[1:len(self)+1])+1
+		indices_visited = [current_index]
 		actions_taken = []
 		self.tt.profile("Exploring next node")
 		while not self.leaves[current_index] and self.tt.tock() < time_limit:
