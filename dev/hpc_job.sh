@@ -12,6 +12,6 @@
 #BSUB -N
 
 echo "Running job"
-python3 runtrain.py --config data/configs/hpc_train.ini
-python3 runeval.py --config data/configs/hpc_eval.ini
+python3 runtrain.py --config data/hpc_train.ini
+python3 runeval.py --config data/hpc_eval.ini
 
