@@ -734,8 +734,9 @@ class AStar(DeepSearcher):
 				# as we don't have just as much focus on the solution length and are probably
 				# more interested in running time/solve percentage.
 
-			i = self.expand_batch(expand_idcs)
-			if i: #🦀🦀🦀WE DID IT BOIS🦀🦀🦀
+			is_won = self.expand_batch(expand_idcs)
+			if is_won: #🦀🦀🦀WE DID IT BOIS🦀🦀🦀
+				i = self.indices[ Cube.get_solved().tostring() ]
 				while i != 1:
 					self.action_queue.appendleft(
 						Cube.rev_action(self.parent_actions[i])
@@ -744,11 +745,11 @@ class AStar(DeepSearcher):
 				return True
 		return False
 
-	def expand_batch(self, expand_idcs: np.ndarray) -> int:
+	def expand_batch(self, expand_idcs: np.ndarray) -> True:
 		"""
 		Expands to the neighbors of each of the states in
 		:param expand_idcs:
-		:return: 0 if solution not found here, else: the index of the winning state
+		:return: True iff. solution was found in this expansion
 		(Very loose) pseudo code:
 		```
 		1. Calculate substates for all the batch bois
@@ -817,7 +818,7 @@ class AStar(DeepSearcher):
 		self.tt.profile("Check whether won") #TODO: Consider the location of this "won" check. See comment in search
 		solved_substates = Cube.multi_is_solved(new_states)
 		if solved_substates.any(): #TODO: Test whether this is right
-			return self.indices[ Cube.get_solved().tostring() ]
+			return True
 		self.tt.end_profile("Check whether won")
 
 		# TODO: Test this section
@@ -842,11 +843,11 @@ class AStar(DeepSearcher):
 
 		self.tt.end_profile("Old states: Update parents and G")
 
-		return 0
+		return False
 
 	def cost(self, i: np.ndarray):
 		"""The A star costs of the states saved in the indeces corresponding to the vector i"""
-		return self.lambda_ * self.H[i] + self.G[i]
+		return self.H[i] + self.lambda_ * self.G[i]
 
 	@no_grad
 	def batched_H(self, states: np.ndarray):
