@@ -6,7 +6,7 @@ np.set_printoptions(precision=4, threshold=np.inf)
 from librubiks import gpu, set_is2024
 from librubiks.cube import Cube
 from librubiks.model import Model, ModelConfig
-from librubiks.solving.search import Searcher, MCTS, MCTS_, PolicySearch, BFS, ValueSearch
+from librubiks.solving.search import Searcher, MCTS, PolicySearch, BFS, ValueSearch
 
 from librubiks.utils import seedsetter, Logger, TickTock
 
@@ -99,37 +99,33 @@ def detailed_time(state, searcher, max_states: int, time_limit: float, c: float,
 	log(f"States explored: {len(searcher)}")
 	log(searcher.tt)
 
-def _attempt_solve(state):
-	searcher = BFS()#ValueSearch.from_saved("data/local_method_comparison/asgerfix", use_best=False)
-	print("Second solve attempt:", searcher.search(state, 10))
-	print("States:", len(searcher))
-
 def W(max_states, time_limit, opts):
-	# state = np.array("14  0  3  8 23 15 18 11  4  9  2  6 17 10 12  1 15 18 20 22".split(), dtype=Cube.dtype)
+	# state = np.array("8 18 12  2  5 17 22 11 14 22 12 11 17  2  7  4 21  9 19  0".split(), dtype=Cube.dtype)
 	# state = np.array("11  3 23  6  2 15 18 14  6  2  4 15  1 10 12 17  9 18 20 22".split(), dtype=Cube.dtype)
-	state, f, d = Cube.scramble(30)
-	searcher = MCTS_.from_saved("data/local_method_comparison/asgerfix", use_best=False, search_graph=False, **opts)
+	state, f, d = Cube.scramble(50)
+	log("State:", state)
+	searcher = MCTS.from_saved("data/local_method_comparison/asgerfix", use_best=False, search_graph=False, **opts)
 	log.section("Analyzing W")
-	print("Solved", searcher.search(state, time_limit=time_limit, max_states=max_states))
+	log("Solved", searcher.search(state, time_limit=time_limit, max_states=max_states))
 	log(f"Number of states: {len(searcher)}")
 	log(f"Share of W = 0: {np.mean(searcher.W[1:len(searcher)+1]==0):.2f}")
-	print("Share of L = 0", np.mean(searcher.L==0))
-	print("Share of all N = 0", np.mean((searcher.N==0).all(axis=1)))
+	log("Share of L = 0", np.mean(searcher.L==0))
+	log("Share of all N = 0", np.mean((searcher.N==0).all(axis=1)))
 	best_index = searcher.V[1:len(searcher)+1].argmax() + 1
 	searcher._complete_graph()
 	searcher._shorten_action_queue(best_index)
-	print(Cube.rev_actions(f+d*6)[::-1])
-	print(searcher.action_queue)
-	print("Best value", searcher.V[best_index])
-	print("State at best index", searcher.states[best_index])
-	print(Cube.stringify(searcher.states[best_index]))
+	log("Best value", searcher.V[best_index], "at index", best_index)
+	log("State at best index", searcher.states[best_index])
+	# log(Cube.stringify(searcher.states[best_index]))
 	
-	samples = np.arange(1, len(searcher)+1, len(searcher)//1000)
+	print(searcher.tt)
+	
+	samples = np.arange(1, len(searcher)+1, )#len(searcher)//1000)
 	plt.figure(figsize=(15, 15))
 	plt.subplot(311)
 	plt.scatter(samples, searcher.V[samples], s=2, label="V")
 	plt.scatter(samples, searcher.W[samples].mean(axis=1), s=2, label="W")
-	plt.legend()
+	plt.legend(loc=4)
 	plt.grid(True)
 	
 	plt.subplot(312)
@@ -138,8 +134,8 @@ def W(max_states, time_limit, opts):
 	n = searcher.N.max(axis=1)/searcher.N.sum(axis=1)
 	n[np.isnan(n)] = 0
 	plt.scatter(samples, p[samples], s=2,  label="P")
-	plt.scatter(samples, n[samples], s=2, label="N")
-	plt.legend()
+	plt.scatter(samples, n[samples], s=3, label="N")
+	plt.legend(loc=4)
 	plt.grid(True)
 	
 	plt.subplot(313)
@@ -151,27 +147,25 @@ def W(max_states, time_limit, opts):
 	states = np.array(states, dtype=Cube.dtype)
 	oh_states = Cube.as_oh(states)
 	values = net(oh_states, policy=False).detach().cpu().squeeze().numpy()
-	assert np.isclose(values[-1], searcher.V[best_index])
+	assert np.isclose(values[-1], searcher.V[best_index], atol=1e-5)
 	plt.plot(values)
 	plt.axvline(len(f))
 	plt.grid(True)
 	
 	plt.savefig("data/local_analyses/mcts_W.png")
 	plt.clf()
-	
-	_attempt_solve(searcher.states[best_index])
 
 
 if __name__ == "__main__":
 	# set_repr(False)
-	time_limit = .5
-	n = 40
-	default_vars = { "depth": 15, "c": 10, "nu": 100, "workers": 10, "policy_type": "p" }
+	time_limit = 5
+	n = 100
+	default_vars = { "depth": 15, "c": 5, "nu": 100, "workers": 10, "policy_type": "p" }
 	get_other_vars = lambda excl: {kw: v for kw, v in default_vars.items() if kw != excl}
-	seedsetter()
+	# seedsetter()
 	# analyze_var(var="nu", values=np.linspace(0, 0.06, 30), other_vars=get_other_vars("nu"))
 	# analyze_var(var="depth", values=np.arange(1, 21, 1), other_vars=get_other_vars("depth"))
-	# analyze_var(var="c", values=np.logspace(-4, 2, 20), other_vars=get_other_vars("c"))
+	# analyze_var(var="c", values=np.logspace(-2, 2, 10), other_vars=get_other_vars("c"))
 	# analyze_var(var="workers", values=np.unique(np.logspace(0, 1.7, 30).astype(int)), other_vars=get_other_vars("workers"))
 	n = 40
 	#analyse_time_distribution(25, 0.5, 0.005, 10, "p")
@@ -180,7 +174,7 @@ if __name__ == "__main__":
 	tl = 1
 	# state, _, _ = Cube.scramble(50)
 	# detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
-	W(None, 5, get_other_vars("depth"))
+	W(None, 10, get_other_vars("depth"))
 
 
 

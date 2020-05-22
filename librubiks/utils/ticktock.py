@@ -12,7 +12,7 @@ class Profile:
 		return sum(self.hits)
 
 	def mean(self):
-		return self.sum() / len(self.hits)
+		return self.sum() / len(self.hits) if self.hits else 0
 
 	def __len__(self):
 		return len(self.hits)
