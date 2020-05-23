@@ -178,6 +178,9 @@ class EvalJob:
 			policy_sample: bool,
 			astar_lambda: float,
 			astar_expansions: int,
+			egvm_epsilon: float,
+			egvm_workers: int,
+			egvm_depth: int,
 
 			# Currently not set by parser
 			verbose: bool = True,
@@ -208,23 +211,25 @@ class EvalJob:
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
 				assert mcts_c >= 0, f"Exploration parameter c must be 0 or larger, not {mcts_c}"
-				search_args = {'c': mcts_c, 'search_graph': mcts_graph_search}
+				search_args = { 'c': mcts_c, 'search_graph': mcts_graph_search }
 			elif searcher == search.PolicySearch:
 				assert isinstance(policy_sample, bool)
-				search_args = {'sample_policy': policy_sample}
+				search_args = { 'sample_policy': policy_sample }
 			elif searcher == search.AStar:
-				assert isinstance(astar_lambda, float) and 0 <= astar_lambda <= 1, "AStar lambda must be float in [0,1]"
+				assert isinstance(astar_lambda, float) and 0 <= astar_lambda <= 1, "AStar lambda must be float in [0, 1]"
 				assert isinstance(astar_expansions, int) and  astar_expansions >= 1 and (not max_states or astar_expansions < max_states) , "Expansions must be int < max states"
-				search_args = {'lambda_': astar_lambda, 'expansions': astar_expansions}
+				search_args = { 'lambda_': astar_lambda, 'expansions': astar_expansions }
 			elif searcher == search.DankSearch:
-				# TODO: Allow setting argument
-				search_args = {'epsilon': 0.01, 'workers': 10, 'depth': 100}
+				assert isinstance(egvm_epsilon, float) and 0 <= egvm_epsilon <= 1, "EGVM epsilon must be float in [0, 1]"
+				assert isinstance(egvm_workers, int) and egvm_workers >= 1, "Number of EGWM workers must a natural number"
+				assert isinstance(egvm_depth, int) and egvm_depth >= 1, "EGWM depth must be a natural number"
+				search_args = { 'epsilon': egvm_epsilon, 'workers': egvm_workers, 'depth': egvm_depth }
 			else:  # Non-parametric methods go brrrr
 				search_args = {}
 
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
 			# DeepSearchers might have to test multiple NN's
-			for folder in glob(f"{search_location}/*/")+[search_location]:
+			for folder in glob(f"{search_location}/*/") + [search_location]:
 				if not os.path.isfile(os.path.join(folder, 'model.pt')): continue
 				store_repr()
 				with open(f"{folder}/config.json") as f:

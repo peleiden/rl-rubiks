@@ -77,6 +77,21 @@ options = {
 		'type':     literal_eval,
 		'choices':  [True, False],
 	},
+	'egvm_epsilon': {
+		'default':  0.01,
+		'help':     'Epsilon for epsilon greedy policy search in Epsilon Greedy Value Maximization',
+		'type':     float,
+	},
+	'egvm_workers': {
+		'default':  10,
+		'help':     'Number of sequential workers in Epsilon Greedy Value Maximization',
+		'type':     int,
+	},
+	'egvm_depth': {
+		'default':  100,
+		'help':     'Exploration depth for each iteration of Epsilon Greedy Value Maximization',
+		'type':     int,
+	},
 }
 
 if __name__ == "__main__":
