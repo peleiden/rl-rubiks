@@ -659,16 +659,16 @@ class DankSearch(DeepSearcher):
 		if Cube.is_solved(state):
 			return True
 
-		states = Cube.repeat_state(state, self.workers)
 		while self.tt.tock() < time_limit and len(self) + self.workers * self.depth <= max_states:
-			paths, states, states_oh, solved = self.expand(states)
+			paths, states, states_oh, solved = self.expand(state)
 			if solved != (-1, -1):
 				self.action_queue += deque(paths[solved[0]][:solved[1]])
 				return True
 			assert torch.all(Cube.as_oh(states)==states_oh)
 			v = self.net(states_oh, policy=False).cpu().squeeze()
-			best_value_state_index = int(v.argmax())
-			worker, depth = best_value_state_index // self.depth, best_value_state_index % self.depth
+			best_value_index = int(v.argmax())
+			state = states[best_value_index]
+			worker, depth = best_value_index // self.depth, best_value_index % self.depth
 			self.action_queue += deque(paths[worker][:depth])  # TODO: Problably bug with depth = 0
 
 		return False
@@ -676,7 +676,8 @@ class DankSearch(DeepSearcher):
 	def _get_indices(self, depth: int) -> np.ndarray:
 		return np.arange(self.workers) * self.depth + depth
 
-	def expand(self, states: np.ndarray) -> (list, np.ndarray, torch.tensor, tuple):
+	def expand(self, state: np.ndarray) -> (list, np.ndarray, torch.tensor, tuple):
+		states = Cube.repeat_state(state, self.workers)
 		paths = [[] for _ in range(self.workers)]
 		new_states = np.empty((self.workers * self.depth, *Cube.shape()), dtype=Cube.dtype)
 		new_states_oh = torch.empty(self.workers * self.depth, Cube.get_oh_shape(), dtype=torch.float)
@@ -690,15 +691,24 @@ class DankSearch(DeepSearcher):
 			actions[use_policy] = p.argmax(axis=1)
 			[path.append(a) for path, a in zip(paths, actions)]
 
-			faces, dirs = actions % 6, actions // 6
+			faces, dirs = Cube.indices_to_actions(actions)
 			states = Cube.multi_rotate(states, faces, dirs)
 			solved_states = Cube.multi_is_solved(states)
 			if np.any(solved_states):
+				self._explored_states += (d+1) * self.workers
 				w = np.where(solved_states)[0][0]
 				return paths, None, None, (w, d)
 			new_states[self._get_indices(d)] = states
-			new_states_oh[self._get_indices(d)] = Cube.as_oh(states)  # Don't waste time like this
+			new_states_oh[self._get_indices(d)] = Cube.as_oh(states)  # FIXME: Don't waste time like this
 		self._explored_states += len(new_states)
 
 		return paths, new_states, new_states_oh, (-1, -1)
+
+	@classmethod
+	def from_saved(cls, loc: str, use_best: bool, epsilon: float, workers: int, depth: int):
+		net = Model.load(loc, load_best=use_best).to(gpu)
+		return cls(net, epsilon=epsilon, workers=workers, depth=depth)
+	
+	def __str__(self):
+		return f"EGVM (e={self.epsilon}, w={self.workers}, d={self.depth})"
 

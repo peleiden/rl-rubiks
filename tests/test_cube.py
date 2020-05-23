@@ -118,7 +118,7 @@ class TestRubiksCube(MainTest):
 	def test_iter_actions(self):
 		actions = np.array([
 			[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5] * 2,
-			[True, False, True, False, True, False, True, False, True, False, True, False] * 2,
+			[False, True, False, True, False, True, False, True, False, True, False, True] * 2,
 		], dtype=np.uint8)
 		assert np.all(actions==Cube.iter_actions(2))
 

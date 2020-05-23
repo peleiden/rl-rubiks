@@ -44,7 +44,7 @@ class Cube:
 		return method(state, face, pos_rev)
 
 	@classmethod
-	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_rev: np.ndarray):
+	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_rev: np.ndarray) -> np.ndarray:
 		# Performs action (faces[i], pos_revs[i]) on states[i]
 		method = _Cube2024.multi_rotate if get_is2024() else _Cube686.multi_rotate
 		return method(states, faces, pos_rev)
@@ -56,9 +56,18 @@ class Cube:
 		Practical for use with multi_rotate, e.g. Cube.multi_rotate(states, *Cube.iter_actions())
 		"""
 		return np.array(list(zip(*cls.action_space*n)), dtype=np.uint8)
+	
+	@classmethod
+	def indices_to_actions(cls, indices: np.ndarray) -> (np.ndarray, np.ndarray):
+		"""
+		Converts an array of action indices [0, 12[ to arrays of corresponding faces and dirs
+		"""
+		faces = indices // 2
+		dirs = ~(indices % 2) + 2
+		return faces, dirs
 
 	@classmethod
-	def scramble(cls, n: int, force_not_solved=False):
+	def scramble(cls, n: int, force_not_solved=False) -> (np.ndarray, np.ndarray, np.ndarray):
 		faces = np.random.randint(6, size=(n,))
 		dirs = np.random.randint(2, size=(n,)).astype(bool)
 		state = cls.get_solved()
@@ -76,7 +85,7 @@ class Cube:
 		return _Cube686.pad(oh, pad_size)
 
 	@classmethod
-	def sequence_scrambler(cls, games: int, depth: int, with_solved: bool):
+	def sequence_scrambler(cls, games: int, depth: int, with_solved: bool) -> (np.ndarray, torch.tensor):
 		"""
 		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
 		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
@@ -95,13 +104,13 @@ class Cube:
 		return states, oh_states
 
 	@classmethod
-	def get_solved_instance(cls):
+	def get_solved_instance(cls) -> np.ndarray:
 		# Careful, Ned, careful now - this method returns the instance - not a copy - so the output is readonly
 		# If speed is not critical, use get_solved()
 		return cls._solved2024 if get_is2024() else cls._solved686
 
 	@classmethod
-	def get_solved(cls):
+	def get_solved(cls) -> np.ndarray:
 		return cls.get_solved_instance().copy()
 
 	@classmethod
@@ -124,7 +133,7 @@ class Cube:
 
 	@classmethod
 	def as_correct(cls, t: torch.tensor) -> torch.tensor:
-		assert not get_is2024()
+		assert not get_is2024(), "Correctness representation is only implemented for 20x24 representation"
 		return _Cube686.as_correct(t)
 
 	@staticmethod

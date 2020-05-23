@@ -216,6 +216,9 @@ class EvalJob:
 				assert isinstance(astar_lambda, float) and 0 <= astar_lambda <= 1, "AStar lambda must be float in [0,1]"
 				assert isinstance(astar_expansions, int) and  astar_expansions >= 1 and (not max_states or astar_expansions < max_states) , "Expansions must be int < max states"
 				search_args = {'lambda_': astar_lambda, 'expansions': astar_expansions}
+			elif searcher == search.DankSearch:
+				# TODO: Allow setting argument
+				search_args = {'epsilon': 0.01, 'workers': 10, 'depth': 100}
 			else:  # Non-parametric methods go brrrr
 				search_args = {}
 
