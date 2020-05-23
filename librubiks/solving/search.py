@@ -664,7 +664,6 @@ class DankSearch(DeepSearcher):
 			if solved != (-1, -1):
 				self.action_queue += deque(paths[solved[0]][:solved[1]])
 				return True
-			assert torch.all(Cube.as_oh(states)==states_oh)
 			v = self.net(states_oh, policy=False).cpu().squeeze()
 			best_value_index = int(v.argmax())
 			state = states[best_value_index]
