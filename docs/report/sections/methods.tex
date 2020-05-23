@@ -223,16 +223,51 @@ hvor $N_s(a)$ er antallet af gange a er blevet taget fra s, $W_s(a)$ er den maks
   
 
 \section{Eksperimenter}
-Der blev trænet to forskellige agenter. Én, hvor dybden af tilfældige træk i autodidaktisk iteration \(K\) var 10 og én hvor dybden var 100. 
+Én agent blev trænet og præsenteres som hovedresultatet i rapporten.
+Derudover blev en række sammenlignende eksperimenter gennemført for at undersøge nogle af detaljerne i læringsmetoden, netværksarkitektur og løsningsmetoden.
 
-For hver af disse agenter blev gennemført to evalueringseksperimenter:
-\begin{itemize}
-	\item \textbf{Terningedybde}:
-	Afsøgningstiden med MCTS blev holdt konstant på 10 minutter og for hver dybde \(d\in \{1,2,...,20\}\) blev der spillet 100 spil, som hver blev generet ved \(d\) tilfældige træk.
-	Der blev så gemt andelen af spil, der blev løst på denne tid samt længden af løsningerne.
-	\item \textbf{Afsøgningstid}:
-	Antallet af tilfældige træk blev holdt konstant \(d=10\) og for hver tidsgrænse \(t\in \{2\unit{min}, 4\unit{min}, ..., 10\unit{min}\}\) blev der spillet 100 spil, hvor MCTS blev afbrudt efter \(t\) og andelen af løste spil og længden af løsningerne blev gemt.
-\end{itemize}
+I alle træninger blev der spillet \(N=1000\) spil for hver politik-udrulning. 
+Hvert spil blev ekspanderet til dybde \(K=50\) og der blev i alt foretaget \(3000\) udrulninger, inden træningen terminerede.
+Læringsraten blev sat til \(1\ctp{-4}\) og blev sænket løbende med \(\gamma = 0,99\).
 
+Alle løsningsevalueringer blev gennemført med en tidsgrænse på 5 sekunder.
+Alle \(A^*\)-søgninger blev gennemført med vægtning på \(\lambda=0,2\) og ekspansionsstørrelse på 50.
+\paragraph{Hovedagent} 
+En agent blev gennemført ved at bruge det fuldt-forbundne DNN på \(20\times24\)-repæsentationen og træne ved at bruge konvergensfixet ved at sætte den løste tilstand til værdi 0.
+Den adaptive dybdevægtning blev brugt med \(\alpha=something\). 
+Løsningsagenten med \(A^*\)-søgning blev gennemført og evalueret.
+\paragraph{Sammenligning af træningsmetoder}
+Netværket blev fastholdt til at være det fuldt-forbundne DNN på \(20\times24\)-repæsentationen. 
+Det blev derefter trænet på fire forskellige måder
+\begin{enumerate}
+	\item Træning, som den er beskrevet i \cite{HumansBeGone} hvor der ikke gennemføres konvergensfix, så den løste tilstands værdi ikke fastholdes. 
+		Der bruges dybdevægtning.
+	\item Træning, som den er beskrevet i \cite{RubiksMedium} hvor konvergensfixet indføres og der bruges dybdevægtning.
+	\item Træning, hvor der ikke bruges dybdevægtning, men bruges konvergensfix.
+	\item Træning, hvor der bruges adaptiv dybdevægtning med \(\alpha=sumthang\) og konvergensfix. 
+\end{enumerate}
+For de fire resulterende netværk blev \(A^*\)-løsningsagenten evalueret.
 
+\paragraph{Sammenligning af netværksarkitekturer og terningerepræsentationer}
+Træningsmetoden blev fastholdt til at være med konvergensfix og adaptiv dybdevægtning med \(\alpha=sumthang\).
+Fem forskellige kombinationer af terningerepræsentation og neuralt netværk blev trænet.
+\begin{enumerate}
+	\item Fuldt-forbundet DNN på \(20\times24\)-repræsentationen.
+	\item Fuldt-forbundet DNN på \(6\times8\times6\)-repræsentation.
+	\item Residualt DNN på \(20\times24\)-repræsentationen
+	\item Residuelt DNN på \(6\times8\times6\)-repræsentationen.
+	\item Konvolutionelt neuralt netværk på \(6\times8\times6\)-repræsentationen.
+\end{enumerate}
+For disse fem netværk blev \(A^*\)-løsningsagenten evalueret.
+
+\paragraph{Sammenligning af løsningsmetoder}
+Det fuldt-forbundne DNN blev trænet med konvergensfixet og adaptiv dybdevægtning med \(alpha=sumdang\). 
+Ud fra dette blev fem forskellige løsningsalgoritmer evalueret.
+\begin{enumerate}
+	\item Simpel bredde-først søgning, der inkluderes som baseline.
+	\item Politik-søgning: Direkte at følge politik-outputtet fra DNN.
+	\item Grådig søgning: At evaluere værdien for de 12 mulige undertilstande og træffe den handling, der svarer til den højeste værdi heraf.
+	\item Monte Carlo-træsøgning: Gennemføre Monte Carlo-træsøgning med \(c=0,6\).
+	\item \(A^*\): Gennemføre \(A^*\)-søgning med \(\lambda=0,2\) og ekspansionsstørrelse på 50.
+\end{enumerate}
 \end{document}
