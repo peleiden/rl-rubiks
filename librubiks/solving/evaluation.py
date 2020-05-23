@@ -165,7 +165,7 @@ class Evaluator:
 		max_width = 2
 		width = min(len(eval_results), max_width)
 		height = (len(eval_results)+1) // width if width == max_width else 1
-		positions = [(i, j) for i in range(width) for j in range(height)]
+		positions = [(i, j) for i in range(height) for j in range(width)]
 		fig, axes = plt.subplots(height, width, figsize=(width*10, height*6))
 		
 		max_sollength = 50
