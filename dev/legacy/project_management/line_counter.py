@@ -44,8 +44,7 @@ commits = list(reversed(list(repo.iter_commits())))
 patterns = {
 	".py": (".py", "#"),
 	".ts": (".ts", "//"),
-	".tex": (".tex", "%"),
-	".md": (".md", "None"*10),
+	".html": (".html", "<!--"),
 }
 times = []
 n_lines = {kw: np.zeros(len(commits)+1) for kw in patterns}
