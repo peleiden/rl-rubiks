@@ -109,7 +109,7 @@ Evaluate Rubiks agents using config or CLI arguments. If no location
 is given, data/local_train with newest name is used. If the location
 contains multiple neural networks, the deepsearchers are evalued for
 each of them.
- """
+"""
 	# SET SEED
 	seedsetter()
 

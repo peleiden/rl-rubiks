@@ -679,7 +679,7 @@ class DankSearch(DeepSearcher):
 		states = Cube.repeat_state(state, self.workers)
 		paths = [[] for _ in range(self.workers)]
 		new_states = np.empty((self.workers * self.depth, *Cube.shape()), dtype=Cube.dtype)
-		new_states_oh = torch.empty(self.workers * self.depth, Cube.get_oh_shape(), dtype=torch.float)
+		new_states_oh = torch.empty(self.workers * self.depth, Cube.get_oh_shape(), dtype=torch.float, device=gpu)
 		for d in range(self.depth):
 			use_random = np.random.choice(2, self.workers, p=[1-self.epsilon, self.epsilon]).astype(bool)
 			use_policy = ~use_random
