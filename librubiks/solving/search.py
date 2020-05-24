@@ -660,15 +660,18 @@ class DankSearch(DeepSearcher):
 			return True
 
 		while self.tt.tock() < time_limit and len(self) + self.workers * self.depth <= max_states:
+			# Expand from current best state
 			paths, states, states_oh, solved = self.expand(state)
+			# Break if solution is found
 			if solved != (-1, -1):
 				self.action_queue += deque(paths[solved[0]][:solved[1]])
 				return True
+			# Update state with the high ground
 			v = self.net(states_oh, policy=False).cpu().squeeze()
 			best_value_index = int(v.argmax())
 			state = states[best_value_index]
 			worker, depth = best_value_index // self.depth, best_value_index % self.depth
-			self.action_queue += deque(paths[worker][:depth])  # TODO: Problably bug with depth = 0
+			self.action_queue += deque(paths[worker][:depth])
 
 		return False
 
@@ -676,29 +679,37 @@ class DankSearch(DeepSearcher):
 		return np.arange(self.workers) * self.depth + depth
 
 	def expand(self, state: np.ndarray) -> (list, np.ndarray, torch.tensor, tuple):
+		# Initialize needed data structures
 		states = Cube.repeat_state(state, self.workers)
+		states_oh = Cube.as_oh(states)
 		paths = [[] for _ in range(self.workers)]
 		new_states = np.empty((self.workers * self.depth, *Cube.shape()), dtype=Cube.dtype)
 		new_states_oh = torch.empty(self.workers * self.depth, Cube.get_oh_shape(), dtype=torch.float, device=gpu)
+		# Expand for self.depth iterations
 		for d in range(self.depth):
+			# Use epsilon-greedy to decide where to use policy and random actions
 			use_random = np.random.choice(2, self.workers, p=[1-self.epsilon, self.epsilon]).astype(bool)
 			use_policy = ~use_random
 			actions = np.empty(self.workers, dtype=int)
+			# Random actions
 			actions[use_random] = np.random.randint(0, Cube.action_dim, use_random.sum())
-			states_oh = Cube.as_oh(states[use_policy])
-			p = self.net(states_oh, value=False).cpu().numpy()
+			# Policy actions
+			p = self.net(states_oh[use_policy], value=False).cpu().numpy()
 			actions[use_policy] = p.argmax(axis=1)
+			# Update paths
 			[path.append(a) for path, a in zip(paths, actions)]
 
+			# Expand using selected actions
 			faces, dirs = Cube.indices_to_actions(actions)
 			states = Cube.multi_rotate(states, faces, dirs)
+			states_oh = Cube.as_oh(states)
 			solved_states = Cube.multi_is_solved(states)
 			if np.any(solved_states):
 				self._explored_states += (d+1) * self.workers
 				w = np.where(solved_states)[0][0]
 				return paths, None, None, (w, d)
 			new_states[self._get_indices(d)] = states
-			new_states_oh[self._get_indices(d)] = Cube.as_oh(states)  # FIXME: Don't waste time like this
+			new_states_oh[self._get_indices(d)] = states_oh
 		self._explored_states += len(new_states)
 
 		return paths, new_states, new_states_oh, (-1, -1)
