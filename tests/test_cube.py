@@ -118,9 +118,15 @@ class TestRubiksCube(MainTest):
 	def test_iter_actions(self):
 		actions = np.array([
 			[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5] * 2,
-			[False, True, False, True, False, True, False, True, False, True, False, True] * 2,
+			[True, False, True, False, True, False, True, False, True, False, True, False] * 2,
 		], dtype=np.uint8)
 		assert np.all(actions==Cube.iter_actions(2))
+	
+	def test_indices_to_actions(self):
+		actions = np.arange(Cube.action_dim)
+		faces, dirs = Cube.indices_to_actions(actions)
+		assert np.all(faces == np.array([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]))
+		assert np.all(dirs == np.array([1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]))
 
 	def test_as_oh(self):
 		state = Cube.get_solved()

@@ -67,22 +67,17 @@ class Cube:
 		return faces, dirs
 
 	@classmethod
-	def scramble(cls, n: int, force_not_solved=False) -> (np.ndarray, np.ndarray, np.ndarray):
-		faces = np.random.randint(6, size=(n,))
-		dirs = np.random.randint(2, size=(n,)).astype(bool)
+	def scramble(cls, depth: int, force_not_solved=False) -> (np.ndarray, np.ndarray, np.ndarray):
+		faces = np.random.randint(6, size=(depth,))
+		dirs = np.random.randint(2, size=(depth,)).astype(bool)
 		state = cls.get_solved()
 		for face, d in zip(faces, dirs):
 			state = cls.rotate(state, face, d)
 
-		if force_not_solved and cls.is_solved(state):
-			return cls.scramble(n, True)
+		if force_not_solved and cls.is_solved(state) and depth != 0:
+			return cls.scramble(depth, True)
 
 		return state, faces, dirs
-
-	@classmethod
-	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
-		assert not get_is2024()
-		return _Cube686.pad(oh, pad_size)
 
 	@classmethod
 	def sequence_scrambler(cls, games: int, depth: int, with_solved: bool) -> (np.ndarray, torch.tensor):
@@ -130,6 +125,11 @@ class Cube:
 		# Takes in n states and returns an n x 480 one-hot tensor
 		method = _Cube2024.as_oh if get_is2024() else _Cube686.as_oh
 		return method(states)
+
+	@classmethod
+	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
+		assert not get_is2024(), "Padding is only implemented for 20x24 representation"
+		return _Cube686.pad(oh, pad_size)
 
 	@classmethod
 	def as_correct(cls, t: torch.tensor) -> torch.tensor:
