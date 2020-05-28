@@ -707,7 +707,7 @@ class DankSearch(DeepSearcher):
 			if np.any(solved_states):
 				self._explored_states += (d+1) * self.workers
 				w = np.where(solved_states)[0][0]
-				return paths, None, None, (w, d)
+				return paths, None, None, (w, d+1)
 			new_states[self._get_indices(d)] = states
 			new_states_oh[self._get_indices(d)] = states_oh
 		self._explored_states += len(new_states)

@@ -262,7 +262,6 @@ class EvalJob:
 			self.is2024 = representation
 			self.agent_results[name] = self._single_exec(name, agent)
 
-
 	@with_used_repr
 	def _single_exec(self, name, agent):
 		self.logger.section(f'Evaluationg agent {name}')
@@ -275,7 +274,7 @@ class EvalJob:
 		results, settings = dict(), list()
 		for job in jobs:
 			for agent, result in job.agent_results.items():
-				key = agent if len(jobs) == 1 else f"{job.name} {agent}"
+				key = agent if len(jobs) == 1 else f"{job.name} - {agent}"
 				results[key] = result
 				settings.append(
 					{

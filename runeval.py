@@ -117,6 +117,7 @@ each of them.
 	run_settings = parser.parse()
 	jobs = [EvalJob(**settings, in_subfolder=len(run_settings)>1) for settings in run_settings]
 
-	for job in jobs: job.execute()
+	for job in jobs:
+		job.execute()
 	EvalJob.plot_all_jobs(jobs, parser.save_location)
 
