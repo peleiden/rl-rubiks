@@ -6,7 +6,7 @@ import torch
 from tests import MainTest
 
 from librubiks.cube import Cube
-
+from librubiks.model import Model, ModelConfig
 from librubiks.solving.agents import Agent, DeepAgent
 from librubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS
 from librubiks import gpu
@@ -14,13 +14,13 @@ from librubiks import gpu
 class TestAgent(MainTest):
 	def test_agents(self):
 
-		path =  os.path.join("data", "hpc-20-04-12")
+		net = Model.create(ModelConfig())
 		agents = [
 			Agent(RandomDFS()),
 			Agent(BFS()),
-			DeepAgent(PolicySearch.from_saved(path, False)),
-			DeepAgent(PolicySearch.from_saved(path, True)),
-			DeepAgent(MCTS.from_saved(path, use_best=False, c=1, search_graph=True))
+			DeepAgent(PolicySearch(net, sample_policy=False)),
+			DeepAgent(PolicySearch(net, sample_policy=True)),
+			DeepAgent(MCTS(net, c=1, search_graph=False))
 		]
 		for agent in agents:
 			self._test_agent(agent)
