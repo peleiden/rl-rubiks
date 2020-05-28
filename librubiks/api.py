@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from librubiks.solving.agents import Agent, DeepAgent
-from librubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS
+from librubiks.solving.search import RandomDFS, BFS, PolicySearch, MCTS, AStar, DankSearch
 from librubiks.cube import Cube
 
 app = Flask(__name__)
@@ -21,11 +21,12 @@ net_loc = os.path.join(
 	'hpc-20-04-12'
 )
 agents = [
-	{ "name": "DeepCube", "agent": DeepAgent(MCTS.from_saved(net_loc, c=0.6, policy_type="p", search_graph=True)) },
-	{ "name": "Greedy policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, False)) },
+	{ "name": "MCTS", "agent": DeepAgent(MCTS.from_saved(net_loc, use_best=False, c=0.6, search_graph=True)) },
+	{ "name": "AStar", "agent": DeepAgent(AStar.from_saved(net_loc, use_best=False, lambda_=0.2, expansions=50)) },
+	{ "name": "Greedy policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, use_best=False)) },
 	{ "name": "BFS", "agent": Agent(BFS()) },
 	{ "name": "Random actions", "agent": Agent(RandomDFS()) },
-	{ "name": "Stochastic policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, True)) },
+	{ "name": "Stochastic policy", "agent": DeepAgent(PolicySearch.from_saved(net_loc, use_best=True)) },
 ]
 
 def as69(state: np.ndarray):
