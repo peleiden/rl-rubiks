@@ -3,7 +3,7 @@
 ###### Second year project at the bachelor in Artificial Intelligence and Data, Technical University of Denmark.
 ![pytest_master](https://github.com/asgerius/rl-rubiks/workflows/pytest_master/badge.svg?branch=master)
 
-[REPORT REPO](https://gitlab.gbar.dtu.dk/s183911/professorpatruljen)
+[Repository for report](https://gitlab.gbar.dtu.dk/s183911/professorpatruljen)
 
 ## Demo
 Visit the [Demo page](https://asgerius.github.io/rl-rubiks/) to see the trained Reinforcement Learning agents in action.
