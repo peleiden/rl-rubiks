@@ -105,12 +105,14 @@ def get_side_pos(pos: int, orientation: int):
 	return pos * 2 + orientation
 
 def get_tensor_map(dtype):
-	# Returns two maps
-	# The first is positive revolution, second is negative
-	# Each is a six long list containg 2x24 mapping tensors
-	# Order is F, B, T, D, L, R
-	# Row one for corners [:8] and row two for sides [8:]
-	# Value at index i should be added to i in state representation
+	"""
+	Returns two maps
+	The first is positive revolution, second is negative
+	Each is a six long list containg 2x24 mapping tensors
+	Order is F, B, T, D, L, R
+	Row one for corners [:8] and row two for sides [8:]
+	Value at index i in a mapping should be added to i in state representation
+	"""
 	actions = [Actions.F, Actions.B, Actions.T, Actions.D, Actions.L, Actions.R]
 	map_pos = list()
 	map_neg = list()
@@ -141,7 +143,8 @@ def get_tensor_map(dtype):
 	return map_pos, map_neg
 
 if __name__ == "__main__":
-	map_pos, map_neg = get_tensor_map()
+	# Pretty print of tensor maps
+	map_pos, map_neg = get_tensor_map(np.int8)
 	for pos, neg in zip(map_pos, map_neg):
 		print("".join([f"{x: 4}" for x in pos[0]]))
 		print("".join([f"{x: 4}" for x in pos[1]]))
