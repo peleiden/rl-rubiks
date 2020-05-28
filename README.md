@@ -56,5 +56,6 @@ python runeval.py --config data/configs/eval_ex.ini
 ```
 
 ## Experiments
+[Experiment and model repo here](https://github.com/asgerius/rubiks-models)
 
-Informal overview of experiments <a href="https://docs.google.com/document/d/11RW35kaqo7_1dTyI9hc72tIbGdYEPxpnW15EcO1B0Y0/edit?usp=sharing">here</a>.
+[Informal overview of experiments here](https://docs.google.com/document/d/11RW35kaqo7_1dTyI9hc72tIbGdYEPxpnW15EcO1B0Y0/edit?usp=sharing)
