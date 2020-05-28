@@ -14,7 +14,7 @@ from librubiks.solving.agents import Agent
 
 class Evaluator:
 	def __init__(self,
-			n_games,  # Nice
+			n_games,
 			scrambling_depths: range or list,
 			max_time = None,  # Max time to completion per game
 			max_states = None,
@@ -103,9 +103,9 @@ class Evaluator:
 	@staticmethod
 	def S_confidence(S_dist: np.ndarray, alpha=0.05):
 		"""
-		Calculates mean and double sided confidence interval on a distribution of S values as given by Evaluator.S_dist
+		Calculates mean and confidence interval on a distribution of S values as given by Evaluator.S_dist
 		:param S_dist: numpy array of S values
-		:param alpha: Double sided confidence interval
+		:param alpha: confidence interval
 		:return: mean and z * sigma
 		"""
 		mu = np.mean(S_dist)
@@ -124,7 +124,7 @@ class Evaluator:
 		self.log(f"Saved evaluation plots to {save_paths}")
 
 	@staticmethod
-	def plot_evaluators(eval_results: dict, save_dir: str,  eval_settings: list, show: bool=False, title: str=''):
+	def plot_evaluators(eval_results: dict, save_dir: str, eval_settings: list, show: bool=False, title: str=''):
 		"""
 		{agent: results from eval}
 		"""
@@ -176,22 +176,23 @@ class Evaluator:
 		min_, max_ = used_settings["scrambling_depths"].min(), used_settings["scrambling_depths"].max()
 		xticks = np.arange(min_, max_+1, max(np.ceil((max_-min_+1)/8).astype(int), 1))
 		for i, position in enumerate(positions):
+			# Make sure axes are stored in a matrix, so they are easire to work with
 			# Select axes object
 			if len(eval_results) == 1:
-				ax = axes
-			elif len(eval_results) <= width:
-				ax = axes[position[0]]
-			else:
-				ax = axes[position] if len(eval_results) > 1 else axes
+				axes = np.array([[axes]])
+			elif len(eval_results) <= width and i == 0:
+				axes = np.expand_dims(axes, 0)
+			ax = axes[position]
 			if position[1] == 0:
 				ax.set_ylabel(f"Solution length")
 			if position[0] == height - 1 or len(eval_results) <= width:
 				ax.set_xlabel(f"Scrambling depth")
+			ax.locator_params(axis="y", integer=True, tight=True)
 
 			try:
 				agent, results = agents[i], agent_results[i]
 				used_settings = eval_settings[i]
-				ax.set_title(str(agent))
+				ax.set_title(str(agent) if axes.size > 1 else "Solution lengths for " + str(agent))
 				results = [depth[depth != -1] for depth in results]
 				ax.boxplot(results)
 				ax.grid(True)
@@ -202,7 +203,8 @@ class Evaluator:
 		
 		plt.setp(axes, xticks=xticks, xticklabels=[str(x) for x in xticks])
 		plt.rcParams.update({"font.size": 22})
-		fig.suptitle("Solution lengths")
+		if axes.size > 1:
+			fig.suptitle("Solution lengths")
 		fig.tight_layout()
 		fig.subplots_adjust(top=0.88)
 		os.makedirs(save_dir, exist_ok=True)

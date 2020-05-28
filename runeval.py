@@ -16,17 +16,18 @@ options = {
 		'help':     "Location to search for model and save results.\nMust use location/<run_name>/model.pt structure.",
 		'type':     str,
 	},
-	'use_best': {
-		'default':  False,
-		'help':     "Set to True to use model-best.pt instead of model.pt.",
-		'type':     literal_eval,
-		'choices':  [True, False],
-	},
 	'searcher': {
 		'default':  'MCTS',
 		'help':     'Name of searcher for agent corresponding to searcher class in librubiks.solving.search',
 		'type':     str,
 		'choices':  ['MCTS', 'PolicySearch','BFS', 'RandomDFS', 'AStar',],
+	},
+	'scrambling': {
+		'default':  '10 25',
+		'help':     'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 25")\n'
+		            'Denoting interval of number of scramblings to be run.',
+		# Ugly way to define list of two numbers
+		'type':     lambda args: [int(args.split()[0]), int(args.split()[1])],
 	},
 	'games': {
 		'default':  10,
@@ -35,30 +36,29 @@ options = {
 	},
 	'max_time': {
 		'default':  30,
-		'help':     'Max searching time for agent',
+		'help':     'Max searching time for agent. Evaluation is terminated when either max_time or max_states is reached.',
 		'type':     float,
+	},
+	'max_states': {
+		'default':  0,
+		'help':     'Max number of searched states for agent per configuration. 0 for unlimited. Evaluation is terminated when either max_time or max_states is reached.  ',
+		'type':     lambda arg: int(float(arg)),
+	},
+	'use_best': {
+		'default':  False,
+		'help':     "Set to True to use model-best.pt instead of model.pt.",
+		'type':     literal_eval,
+		'choices':  [True, False],
 	},
 	'astar_lambda' : {
 		'default':  0.2,
-		'help':     'The A* search lambda parameter: How much to weight the distance from start to nodes in search',
+		'help':     'The A* search lambda parameter: How much to weight the distance from start to nodes in cost calculation',
 		'type':     float,
 	},
 	'astar_expansions' : {
 		'default':  100,
 		'help':     'The A* expansions parameter: How many nodes to expand to at a time. Can be thought of as a batch size: Higher is much faster but lower should be a bit more precise.',
 		'type':     int,
-	},
-	'max_states': {
-		'default':  0,
-		'help':     'Max number of searched states for agent per configuration. 0 for unlimited',
-		'type':     lambda arg: int(float(arg)),
-	},
-	'scrambling': {
-		'default':  '10 25',
-		'help':     'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 25")\n'
-		            'Denoting interval of number of scramblings to be run.',
-		# Ugly way to define list of two numbers
-		'type':     lambda args: [int(args.split()[0]), int(args.split()[1])],
 	},
 	'mcts_c': {
 		'default':  0.6,
@@ -113,10 +113,11 @@ each of them.
 	# SET SEED
 	seedsetter()
 
-	parser = Parser(options, description=description, name='eval')
+	parser = Parser(options, description=description, name='eval', description_last='Tue')
 	run_settings = parser.parse()
 	jobs = [EvalJob(**settings, in_subfolder=len(run_settings)>1) for settings in run_settings]
 
-	for job in jobs: job.execute()
+	for job in jobs:
+		job.execute()
 	EvalJob.plot_all_jobs(jobs, parser.save_location)
 

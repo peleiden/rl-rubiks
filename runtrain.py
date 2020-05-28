@@ -16,42 +16,29 @@ options = {
 	},
 	'rollouts': {
 		'default':  500,
-		'help':     'Number of passes of ADI+parameter update',
+		'help':     'Number of complete rollouts each consisting of simulating play through the Auto Didactic method AND performing minibatch learning on the resulting ',
 		'type':     int,
 	},
 	'rollout_games': {
 		'default':  100,
-		'help':     'Number of games in ADI in each rollout',
+		'help':     'Number of simulated games, using the Auto Didactic method, in each rollout',
 		'type':     int,
 	},
 	'rollout_depth': {
 		'default':  50,
-		'help':     'Number of scramblings applied to each game in ADI',
+		'help':     'Number of random rotations applied to each game in the Auto Didactic simulation',
 		"type":     int,
 	},
-	'batch_size': {
-		'default':  50,
-		'help':     'Number of training examples to be used in each parameter update',
-		'type':     int
+	'arch': {
+		'default':  'fc',
+		'help':     'Network architecture. fc for fully connected, res for fully connected with residual blocks, and conv for convolutional blocks',
+		'type':     str,
+		'choices':  ['fc', 'res', 'conv'],
 	},
 	'alpha_update': {
 		'default':  0,
-		'help':     'alpha is set to alpha + alpha_update 100 times during training, though never more than 1. 0 for weighted and 1 for unweighted',
-		'type':     float,
-	},
-	'lr': {
-		'default':  1e-5,
-		'help':     'Learning rate of parameter update',
-		'type':     float,
-	},
-	'gamma': {
-		'default':  1,
-		'help':     'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr 100 times during training',
-		'type':     float,
-	},
-	'tau': {
-		'default':  1,
-		'help':     'Network change parameter for generating training data. If tau=1, use newest network for ADI ',
+		'help': 'alpha is set to max{ alpha + alpha_update, 1} update_interval times during training. 0 for weighted and 1 for unweighted.\n'+
+		'alpha is a parameter that interpolates between no weighting of training examples (alpha=1) and weighting training examples by 1/depth (alpha=0).',
 		'type':     float,
 	},
 	'update_interval': {
@@ -67,15 +54,36 @@ options = {
 		'type':     str,
 		'choices':  ['paper', 'lapanfix', 'schultzfix', 'reward0'],
 	},
+	'batch_size': {
+		'default':  50,
+		'help':     'Number of training examples to be used in each parameter update, e.g. minibatch size for gradient descent' +
+			    'Note: Training is done on rollout_games*rollout_depth examples, so batch_size must be <= this',
+		'type':     int
+	},
 	'optim_fn': {
 		'default':  'RMSprop',
 		'help':     'Name of optimization function corresponding to class in torch.optim',
 		'type':     str,
 	},
+	'lr': {
+		'default':  1e-5,
+		'help':     'Learning rate of parameter update',
+		'type':     float,
+	},
+	'gamma': {
+		'default':  1,
+		'help':     'Learning rate reduction parameter. Learning rate is set updated as lr <- gamma * lr 100 times during training',
+		'type':     float,
+	},
 	'evaluation_interval': {
 		'default':  100,
 		'help':     'An evaluation is performed every evaluation_interval rollouts. Set to 0 for never',
 		'type':     int,
+	},
+	'tau': {
+		'default':  1,
+		'help':     'Network change parameter for generating training data. If tau=1, use newest network for ADI',
+		'type':     float,
 	},
 	'nn_init': {
 		'default':  'glorot',
@@ -87,12 +95,6 @@ options = {
 		'help':     'True for 20x24 Rubiks representation and False for 6x8x6',
 		'type':     literal_eval,
 		'choices':  [True, False],
-	},
-	'arch': {
-		'default':  'fc',
-		'help':     'Network architecture. fc for fully connected, res for fully connected with residual blocks, and conv for convolutional blocks',
-		'type':     str,
-		'choices':  ['fc', 'res', 'conv'],
 	},
 	'analysis': {
 		'default':  False,
@@ -131,7 +133,7 @@ on the Rubik's Cube using config or CLI arguments.
 	# SET SEED
 	seedsetter()
 
-	parser = Parser(options, description=description, name='train')
+	parser = Parser(options, description=description, name='train', description_last=True)
 	jobs = [TrainJob(**settings) for settings in  parser.parse()]
 	cfg_content = clean_dir(parser.save_location)
 	for job in jobs:
