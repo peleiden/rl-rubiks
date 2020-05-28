@@ -45,7 +45,13 @@ class Parser:
 	```
 
 	"""
-	def __init__(self, options: dict, name: str = "Experiment",  description: str = "Run experiments with following options", show_defaults: bool = True):
+	def __init__(self,
+			options: dict,
+			name: str = "Experiment",
+			description: str = "Run experiments with these options",
+			show_defaults: bool = True,
+			description_last: bool = False,
+		):
 		self.options = options
 		self.defaults = dict()
 		self.save_location = ''
@@ -56,8 +62,14 @@ class Parser:
 		self.config_receiver.add_argument('--config', help="Location of configuration file to use (if any). Config file should follow .ini format.", metavar='FILE')
 
 		#Main parser for CLI arguments
-		self.argparser = ArgumentParser(description = description, formatter_class = RawTextHelpFormatter, parents = [self.config_receiver])
-
+		self.argparser = ArgumentParser(
+			description=description,
+			formatter_class=RawTextHelpFormatter,
+			parents=[self.config_receiver]
+		)
+		if description_last:
+			self.argparser.epilog = description
+			self.argparser.description = None
 		for argname, settings in self.options.items():
 			self.defaults[argname] = settings.pop('default')
 
@@ -68,7 +80,7 @@ class Parser:
 
 		self.configparser = ConfigParser()
 
-	def parse(self, document = True, clear = True) -> (list, str):
+	def parse(self, document = True) -> list:
 		conf_arg, args = self.config_receiver.parse_known_args()
 
 		experiments, with_config = self._read_config(conf_arg, args)
@@ -84,7 +96,7 @@ class Parser:
 
 		return experiments
 
-	def _read_config(self, conf_arg, args):
+	def _read_config(self, conf_arg, args) -> (list, bool):
 		experiments = list()
 		with_config = False
 
