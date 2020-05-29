@@ -13,6 +13,7 @@ from librubiks import gpu
 from librubiks.utils import NullLogger
 
 
+
 @dataclass
 class ModelConfig:
 	activation_function: torch.nn.functional = torch.nn.ELU()
@@ -145,7 +146,7 @@ class Model(nn.Module):
 		for i in range(len(thiccness)-1):
 			l = nn.Linear(thiccness[i], thiccness[i+1])
 			if self.config.init == 'glorot': torch.nn.init.xavier_uniform_(l.weight)
-			elif self.config.init == 'he': torch.nn.init.kaiming_uniform(l.weight)
+			elif self.config.init == 'he': torch.nn.init.kaiming_uniform_(l.weight)
 			else: torch.nn.init.constant_(l.weight, float(self.config.init))
 			layers.append(l)
 
