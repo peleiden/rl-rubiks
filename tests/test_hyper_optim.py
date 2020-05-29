@@ -3,10 +3,10 @@ import os, sys
 
 from tests import MainTest
 
-from librubiks.solving.hyper_optim import Optimizer, BayesianOptimizer, MCTS_optimize
+from librubiks.solving.hyper_optim import Optimizer, BayesianOptimizer
 from librubiks.model import ModelConfig, Model
 class TestOptimizer(MainTest):
-	# def test_BO(self):
+	# def test_BO(self): #TODO: Find out why this fails with weird arraycheck error in GH actions
 		# def f(params): return -params['x']+42
 #
 		# bo = BayesianOptimizer(f, {'x': (0, 42)},  n_restarts=2)
@@ -14,19 +14,20 @@ class TestOptimizer(MainTest):
 		# assert len(bo.score_history) == 2
 		# assert bo.highscore >= bo.score_history[0]
 
-	def test_MCTS_optim(self):
-		run_path = os.path.join( os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'librubiks', 'solving', 'hyper_optim.py' )
-		location = 'local_tests/optim'
+	def test_searcher_optim(self):
+		for searcher in ['MCTS', 'AStar']:
+			run_path = os.path.join( os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'librubiks', 'solving', 'hyper_optim.py' )
+			location = 'local_tests/optim'
 
-		net = Model(ModelConfig())
-		net.save(location)
+			net = Model(ModelConfig())
+			net.save(location)
 
-		run_settings = { 'location': location, 'iterations': 1, 'eval_games': 1 }
-		args = [sys.executable, run_path,]
-		for k,v in run_settings.items(): args.extend([f'--{k}', str(v)])
-		subprocess.check_call(args) #Raises error on problems in call
+			run_settings = { 'location': location, 'searcher': searcher, 'iterations': 1, 'eval_games': 1, 'depth': 2 }
+			args = [sys.executable, run_path,]
+			for k,v in run_settings.items(): args.extend([f'--{k}', str(v)])
+			subprocess.check_call(args) #Raises error on problems in call
 
-		expected_files = ['optimizer.log']
+			expected_files = ['optimizer.log']
 
-		for fname in expected_files:
-			assert fname in os.listdir(location)
+			for fname in expected_files:
+				assert fname in os.listdir(location)

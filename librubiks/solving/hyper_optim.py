@@ -13,7 +13,7 @@ from librubiks.utils import Logger, NullLogger
 from librubiks.solving.evaluation import Evaluator
 from librubiks.solving.agents import DeepAgent
 
-from librubiks.solving.search import MCTS
+import librubiks.solving.search as search
 from librubiks.model import Model
 
 class Optimizer:
@@ -45,7 +45,7 @@ class Optimizer:
 	def optimize(self, iterations: int):
 		raise NotImplementedError("To be implemented in child class")
 
-	def objective_from_evaluator(self, evaluator: Evaluator, searcher_class, persistent_searcher_params: dict, param_prepper: Callable=lambda x: x,  agent_class = DeepAgent):
+	def objective_from_evaluator(self, evaluator: Evaluator, searcher_class, persistent_searcher_params: dict, param_prepper: Callable=lambda x: None,  agent_class = DeepAgent):
 		self.evaluator = evaluator
 		self.searcher_class = searcher_class
 		self.agent_class = agent_class
@@ -121,7 +121,7 @@ class BayesianOptimizer(Optimizer):
 	def __str__(self):
 		return f"BayesianOptimizer()"
 
-def MCTS_optimize():
+def searcher_optimize():
 	#Lot of overhead just for default argument niceness: latest model is latest
 	from runeval import train_folders
 
@@ -137,27 +137,46 @@ def MCTS_optimize():
 		type=str, default=model_path)
 	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
 		type=int, default=25)
-
-	parser.add_argument('--eval_games', help='Number of games to evaluate at each depth in [12,20[',
+	parser.add_argument('--searcher', help='Name of searcher for agent corresponding to searcher class in librubiks.solving.search',
+		type=str, default='AStar', choices = ['MCTS', 'AStar'])
+	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test',
+		type=int, default=50)
+	parser.add_argument('--eval_games', help='Number of games to evaluate at depth 50',
 			type = int, default='20')
 	args = parser.parse_args()
 
-	params = {
-		'c': (0.1, 1),
-	}
-	def prepper(params): pass
+	searcher = args.searcher
+	if searcher == 'MCTS':
+		params = {
+			'c': (0.1, 1),
+		}
+		def prepper(params): pass
 
-	persistent_params = {
-		'net' : Model.load(args.location),
-		'search_graph': False,
-	}
+		persistent_params = {
+			'net' : Model.load(args.location),
+			'search_graph': False,
+		}
+	elif searcher == 'AStar':
+		params = {
+			'lambda_': (0.1, 1),
+			'expansions': (1, 250),
+		}
+		def prepper(params): params['expansions'] = int(params['expansions'])
+
+		persistent_params = {
+			'net' : Model.load(args.location),
+		}
+	else: raise NameError(f"{searcher} does not correspond to a known searcher, please pick either AStar og MCTS")
 
 	logger = Logger(os.path.join(args.location, 'optimizer.log'), 'Optimization')
-	logger.log(f"MCTS optimization. Loaded network from {model_path}.")
-	evaluator = Evaluator(n_games=args.eval_games, max_time=1, scrambling_depths=range(12, 20))
+	logger.log(f"{searcher} optimization. Using network from {model_path}.")
+
+	searcher = getattr(search, searcher)
+
+	evaluator = Evaluator(n_games=args.eval_games, max_time=1, scrambling_depths=[args.depth])
 	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
-	optimizer.objective_from_evaluator(evaluator, MCTS, persistent_params, param_prepper=prepper)
+	optimizer.objective_from_evaluator(evaluator, searcher, persistent_params, param_prepper=prepper)
 	optimizer.optimize(args.iterations)
 
 if __name__ == '__main__':
-	MCTS_optimize()
+	searcher_optimize()
