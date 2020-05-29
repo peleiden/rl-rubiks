@@ -21,7 +21,7 @@ cd rl-rubiks
 ```
 pip install -r rlrequirements.txt
 ```
-There are also some optional dependencies: `GitPython` for saving commits in logs and `networkx` and `imageio` for visualizing values of initial states over time when running with `--analysis=True`.
+There are also some optional dependencies: `GitPython` for saving commits in logs and `networkx` and `imageio` for visualizing values of initial states over time when running with `--analysis True`.
 
 
 3) (Only needed if you get `ImportError`) For the modules to work, you *might* need to add the main repo folder to your PYTHONPATH. 
@@ -42,7 +42,7 @@ python runtrain.py --help
 ```
 for help on options. In many cases, using the parameters from a configuration file is preferable. An example of using this to run two trainings, can be seen be running
 ```
-python runtrain.py --config data/configs/train_ex.ini
+python runtrain.py --config configs/train_ex.ini
 ```
 ### Evaluation of agents
 
@@ -52,7 +52,7 @@ python runeval.py --help
 ```
 for help on options. This also works with configuration files; an example of which can be seen be running
 ```
-python runeval.py --config data/configs/eval_ex.ini
+python runeval.py --config configs/eval_ex.ini
 ```
 
 ## Experiments
