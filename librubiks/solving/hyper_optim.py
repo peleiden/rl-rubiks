@@ -2,6 +2,7 @@ import os
 from glob import glob as glob # glob
 from dataclasses import dataclass, field
 from typing import Callable, List
+from ast import literal_eval
 import argparse
 import json # For print
 
@@ -122,6 +123,23 @@ class BayesianOptimizer(Optimizer):
 		return f"BayesianOptimizer()"
 
 def searcher_optimize():
+	"""
+	Main way to run optimization. Hard coded to run optimization at 1 sec per game, but other behaviour can be set with CLI arguments seen by
+	running `python librubiks/solving/hyper_optim.py --help`.
+	Does not support config arguments.
+	NB: The path here is different to the one in runeval and runtrain:
+	It needs to be to folder containing model.pt! It doesen't work with parent folder.
+
+	Can work with runeval through
+	```
+	python librubiks/solving/hyper_optim.py --location example/net1/
+	python runeval.py --location example/ --optimized_params True
+	```
+
+
+	"""
+
+
 	#Lot of overhead just for default argument niceness: latest model is latest
 	from runeval import train_folders
 
@@ -143,20 +161,26 @@ def searcher_optimize():
 		type=int, default=50)
 	parser.add_argument('--eval_games', help='Number of games to evaluate at depth 50',
 			type = int, default='20')
-	args = parser.parse_args()
+	parser.add_argument('--save_optimal', help='If Tue, saves a JSON of optimal hyperparameters usable for runeval',
+			type=literal_eval, default=True, choices = [True, False])
+	parser.add_argument('--use_best', help="Set to True to use model-best.pt instead of model.pt.", type=literal_eval, default=False,
+			choices = [True, False])
 
-	searcher = args.searcher
-	if searcher == 'MCTS':
+	args = parser.parse_args()
+	assert args.save_optimal or not args.save_optimal # that is the question
+
+	searcher_name = args.searcher
+	if searcher_name == 'MCTS':
 		params = {
 			'c': (0.1, 1),
 		}
 		def prepper(params): pass
 
 		persistent_params = {
-			'net' : Model.load(args.location),
+			'net' : Model.load(args.location, load_best=args.use_best),
 			'search_graph': False,
 		}
-	elif searcher == 'AStar':
+	elif searcher_name == 'AStar':
 		params = {
 			'lambda_': (0.1, 1),
 			'expansions': (1, 250),
@@ -164,19 +188,23 @@ def searcher_optimize():
 		def prepper(params): params['expansions'] = int(params['expansions'])
 
 		persistent_params = {
-			'net' : Model.load(args.location),
+			'net' : Model.load(args.location, load_best=args.use_best),
 		}
-	else: raise NameError(f"{searcher} does not correspond to a known searcher, please pick either AStar og MCTS")
+	else: raise NameError(f"{searcher_name} does not correspond to a known searcher, please pick either AStar og MCTS")
 
-	logger = Logger(os.path.join(args.location, 'optimizer.log'), 'Optimization')
-	logger.log(f"{searcher} optimization. Using network from {model_path}.")
+	logger = Logger(os.path.join(args.location, f'{searcher_name}_optimization.log'), 'Optimization')
+	logger.log(f"{searcher_name} optimization. Using network from {model_path}.")
 
-	searcher = getattr(search, searcher)
+	searcher = getattr(search, searcher_name)
 
 	evaluator = Evaluator(n_games=args.eval_games, max_time=1, scrambling_depths=[args.depth])
 	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
 	optimizer.objective_from_evaluator(evaluator, searcher, persistent_params, param_prepper=prepper)
 	optimizer.optimize(args.iterations)
+
+	if args.save_optimal:
+		with open(os.path.join(args.location, f'{searcher_name}_params.json'), 'w') as outfile:
+			json.dump(optimizer.optimal, outfile)
 
 if __name__ == '__main__':
 	searcher_optimize()

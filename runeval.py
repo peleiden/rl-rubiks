@@ -50,6 +50,12 @@ options = {
 		'type':     literal_eval,
 		'choices':  [True, False],
 	},
+	'optimized_params' : {
+		'default':  False,
+		'help':     "Set to True to overwrite searcher params with the ones in corresponding JSON created by hyper_optim, if it exists.",
+		'type':     literal_eval,
+		'choices':  [True, False],
+	},
 	'astar_lambda' : {
 		'default':  0.2,
 		'help':     'The A* search lambda parameter: How much to weight the distance from start to nodes in cost calculation',

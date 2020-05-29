@@ -173,6 +173,7 @@ class EvalJob:
 			max_time: float,
 			max_states: int,
 			scrambling: str,
+			optimized_params: bool,
 			mcts_c: float,
 			mcts_graph_search: bool,
 			policy_sample: bool,
@@ -196,13 +197,15 @@ class EvalJob:
 		assert max_time or max_states
 		scrambling = range(*scrambling)
 		assert scrambling[0] #dirty check for iter and not starting with 0 :)
+		assert isinstance(optimized_params, bool)
 
 		#Create evaluator
 		self.logger = Logger(f"{self.location}/{self.name}.log", name, verbose) #Already creates logger at init to test whether path works
 		self.evaluator = Evaluator(n_games=games, max_time=max_time, max_states=max_states, scrambling_depths=scrambling, logger=self.logger)
 
 		#Create agents
-		searcher = getattr(search, searcher)
+		searcher_string = searcher
+		searcher = getattr(search, searcher_string)
 		assert issubclass(searcher, search.Searcher)
 
 		if issubclass(searcher, search.DeepSearcher):
@@ -218,6 +221,7 @@ class EvalJob:
 			elif searcher == search.AStar:
 				assert isinstance(astar_lambda, float) and 0 <= astar_lambda <= 1, "AStar lambda must be float in [0, 1]"
 				assert isinstance(astar_expansions, int) and  astar_expansions >= 1 and (not max_states or astar_expansions < max_states) , "Expansions must be int < max states"
+
 				search_args = { 'lambda_': astar_lambda, 'expansions': astar_expansions }
 			elif searcher == search.DankSearch:
 				assert isinstance(egvm_epsilon, float) and 0 <= egvm_epsilon <= 1, "EGVM epsilon must be float in [0, 1]"
@@ -234,6 +238,14 @@ class EvalJob:
 				store_repr()
 				with open(f"{folder}/config.json") as f:
 					cfg = json.load(f)
+				if optimized_params and searcher in [search.MCTS, search. AStar]:
+					parampath = os.path.join(folder, f'{searcher_string}_params.json')
+					if os.path.isfile(parampath):
+						with open(parampath, 'r') as paramfile:
+							search_args = json.load(paramfile)
+							if searcher == search.MCTS: search_args['search_graph'] = mcts_graph_search
+					else:
+						self.logger.log(f"Optimized params was set to true, but no file {parampath} was found, proceding with arguments for this {searcher_string}.")
 
 				set_is2024(cfg["is2024"])
 				searcher = searcher.from_saved(folder, use_best=use_best, **search_args)
