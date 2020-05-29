@@ -1,19 +1,19 @@
 # Solving Rubik's cube using Deep Reinforcement Learning
 
 ###### Second year project at the bachelor in Artificial Intelligence and Data, Technical University of Denmark.
-![pytest_master](https://github.com/asgerius/rl-rubiks/workflows/pytest_master/badge.svg?branch=master)
+![pytest_master](https://github.com/peleiden/rl-rubiks/workflows/pytest_master/badge.svg?branch=master)
 
 [REPORT REPO](https://gitlab.gbar.dtu.dk/s183911/professorpatruljen)
 
 ## Demo
-Visit the [Demo page](https://asgerius.github.io/rl-rubiks/) to see the trained Reinforcement Learning agents in action.
+Visit the [Demo page](https://peleiden.github.io/rl-rubiks/) to see the trained Reinforcement Learning agents in action.
 
 ## Reproducing the results 
 
 ### Setup
 1) Clone the repo:
 ```
-git clone https://github.com/asgerius/rl-rubiks
+git clone https://github.com/peleiden/rl-rubiks
 cd rl-rubiks
 ```
 
