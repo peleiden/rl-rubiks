@@ -99,14 +99,14 @@ class TestAStar(MainTest):
 	def test_search(self):
 		test_params = {
 			(0, 10),
-			# (0.5, 2),
-			# (1, 1),
+			(0.5, 2),
+			(1, 1),
 		}
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		for params in test_params:
 			searcher = AStar(net, *params)
 			self._can_win_all_easy_games(searcher)
-			searcher.reset()
+			searcher.reset("Tue", "Herlau")
 			assert not len(searcher.indices)
 			assert not len(searcher.open_queue)
 			assert not searcher.open_.any()

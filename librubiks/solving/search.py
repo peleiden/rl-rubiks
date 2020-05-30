@@ -24,11 +24,8 @@ class Searcher:
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
 		# Returns whether a path was found and generates action queue
 		# Implement _step method for searchers that look one step ahead, otherwise overwrite this method
-		self.reset()
+		time_limit, max_states = self.reset(time_limit, max_states)
 		self.tt.tick()
-		assert time_limit or max_states
-		time_limit = time_limit or 1e10
-		max_states = max_states or int(1e10)
 
 		if cube.is_solved(state): return True
 		while self.tt.tock() < time_limit and len(self) < max_states:
@@ -41,6 +38,7 @@ class Searcher:
 		self._explored_states = len(self.action_queue)
 		return False
 
+
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		"""
 		Takes a step given a stae
@@ -49,11 +47,15 @@ class Searcher:
 		"""
 		raise NotImplementedError
 
-	def reset(self):
+	def reset(self, time_limit: float, max_states: int):
 		self._explored_states = 0
 		self.action_queue = deque()
 		self.tt.reset()
 		if hasattr(self, "net"): self.net.eval()
+		assert time_limit or max_states
+		time_limit = time_limit or 1e10
+		max_states = max_states or int(1e10)
+		return time_limit, max_states
 
 	def action(self)->(int, bool):
 		return cube.action_space[self.action_queue.popleft()]
@@ -99,11 +101,8 @@ class BFS(Searcher):
 	states = dict()
 
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> (np.ndarray, bool):
-		self.reset()
+		time_limit, max_states = self.reset(time_limit, max_states)
 		self.tt.tick()
-		assert time_limit or max_states
-		time_limit = time_limit or 1e10
-		max_states = max_states or int(1e10)
 
 		if cube.is_solved(state): return True
 
@@ -199,8 +198,8 @@ class MCTS(DeepSearcher):
 
 		self.expand_nodes = 1000
 
-	def reset(self):
-		super().reset()
+	def reset(self, time_limit: float, max_states: int):
+		time_limit, max_states = super().reset(time_limit, max_states)
 		self.indices   = dict()
 		self.states    = np.empty((self.expand_nodes, *cube.shape()), dtype=cube.dtype)
 		self.neighbors = np.zeros((self.expand_nodes, cube.action_dim), dtype=int)
@@ -210,6 +209,7 @@ class MCTS(DeepSearcher):
 		self.N         = np.zeros((self.expand_nodes, cube.action_dim), dtype=int)
 		self.W         = np.zeros((self.expand_nodes, cube.action_dim))
 		self.L         = np.zeros((self.expand_nodes, cube.action_dim))
+		return time_limit, max_states
 
 	def increase_stack_size(self):
 		expand_size    = len(self.states)
@@ -224,11 +224,8 @@ class MCTS(DeepSearcher):
 
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
-		self.reset()
+		time_limit, max_states = self.reset(time_limit, max_states)
 		self.tt.tick()
-		assert time_limit or max_states
-		time_limit = time_limit or 1e10
-		max_states = max_states or int(1e10)
 
 		self.indices[state.tostring()] = 1
 		self.states[1] = state
@@ -458,11 +455,8 @@ class AStar(DeepSearcher):
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
 		self.tt.tick()
-		self.reset()
+		time_limit, max_states = self.reset(time_limit, max_states)
 		self.net.eval()
-		assert time_limit or max_states
-		time_limit = time_limit or 1e10
-		max_states = max_states or int(1e10)
 
 		self.indices[state.tostring()] = 1
 		self.states[1] = state
@@ -538,20 +532,22 @@ class AStar(DeepSearcher):
 		seen_substates = np.array([s in self.indices for s in substate_strs])
 		unseen_substates = ~seen_substates
 			# Handle duplicates
-		last_occurences		= np.array([s not in substate_strs[i+1:] for i, s in enumerate(substate_strs)])
-		last_seen		= last_occurences & seen_substates
-		last_unseen		= last_occurences & unseen_substates
+		first_occurences	= np.zeros(len(substate_strs), dtype=bool)
+		_, first_indeces	= np.unique(substate_strs, return_index=True)
+		first_occurences[first_indeces] = True
+		first_seen		= first_occurences & seen_substates
+		first_unseen		= first_occurences & unseen_substates
 		self.tt.end_profile("Find new substates")
 
 		self.tt.profile("Add substates to data structure")
-		new_states		= substates[last_unseen]
-		new_states_idcs		= len(self) + np.arange(last_unseen.sum()) + 1
-		new_idcs_dict		= { s: i for i, s in zip(new_states_idcs, get_substate_strs(last_unseen)) }
+		new_states		= substates[first_unseen]
+		new_states_idcs		= len(self) + np.arange(first_unseen.sum()) + 1
+		new_idcs_dict		= { s: i for i, s in zip(new_states_idcs, get_substate_strs(first_unseen)) }
 		self.indices.update(new_idcs_dict)
 		substate_idcs		= np.array([self.indices[s] for s in substate_strs])
-		old_states_idcs		= substate_idcs[last_seen]
+		old_states_idcs		= substate_idcs[first_seen]
 
-		self.states[new_states_idcs] = substates[last_unseen]
+		self.states[new_states_idcs] = substates[first_unseen]
 		self.tt.end_profile("Add substates to data structure")
 
 		self.tt.profile("Forward pass new states")
@@ -559,9 +555,9 @@ class AStar(DeepSearcher):
 		self.tt.end_profile("Forward pass new states")
 
 		self.tt.profile("Update new state values") # TODO: Test these lines: Is my numpy-fu up to the game?
-		new_parent_idcs = parent_idcs[last_unseen]
+		new_parent_idcs = parent_idcs[first_unseen]
 		self.G[new_states_idcs] = self.G[new_parent_idcs] + 1
-		self.parent_actions[new_states_idcs] = actions_taken[last_unseen]
+		self.parent_actions[new_states_idcs] = actions_taken[first_unseen]
 		self.parents[new_states_idcs] = new_parent_idcs
 			# Add the new states to "open" priority queue
 		for i in new_states_idcs:
@@ -580,7 +576,7 @@ class AStar(DeepSearcher):
 		# Also: Have I understood the algorithm cases correctly?
 		self.tt.profile("Old states: Update parents and G")
 
-		local_old_idcs = np.arange(len(substates))[last_seen] #Old idcs corresponding to last_seen
+		local_old_idcs = np.arange(len(substates))[first_seen] #Old idcs corresponding to first_seen
 		old_parent_idcs = parent_idcs[local_old_idcs]
 			# Update for the cases where the substate is a new shortcut to its parent
 		shortcuts = (self.G[old_states_idcs] + 1 < self.G[old_parent_idcs]) & self.closed[old_states_idcs]
@@ -612,8 +608,8 @@ class AStar(DeepSearcher):
 		J = -self.net(states, value=True, policy=False)
 		return J.cpu().squeeze().detach().numpy()
 
-	def reset(self):
-		super().reset()
+	def reset(self, time_limit: float, max_states: int):
+		time_limit, max_states = super().reset(time_limit, max_states)
 		self.open_queue = list()
 		self.indices   = dict()
 
@@ -624,6 +620,7 @@ class AStar(DeepSearcher):
 		self.H         = np.empty(self._stack_expand)
 		self.closed    = np.zeros(self._stack_expand, dtype=bool)
 		self.open_     = np.zeros(self._stack_expand, dtype=bool)
+		return time_limit, max_states
 
 	def increase_stack_size(self):
 		expand_size    = len(self.states)
@@ -655,11 +652,8 @@ class DankSearch(DeepSearcher):
 
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
-		self.reset()
+		time_limit, max_states = self.reset(time_limit, max_states)
 		self.tt.tick()
-		assert time_limit or max_states
-		time_limit = time_limit or 1e10
-		max_states = max_states or int(1e10)
 
 		if cube.is_solved(state):
 			return True
