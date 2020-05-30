@@ -30,8 +30,8 @@ class TestSearchers(MainTest):
 	def _test_searcher(self, searcher: Searcher):
 		state, _, _ = cube.scramble(4)
 		solution_found  = searcher.search(state, .01)
-		for action in searcher.actions():
-			state = cube.rotate(state, *action)
+		for action in searcher.action_queue:
+			state = cube.rotate(state, *cube.action_space[action])
 		assert solution_found == cube.is_solved(state)
 
 class TestMCTS(MainTest):

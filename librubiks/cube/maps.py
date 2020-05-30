@@ -145,6 +145,7 @@ def get_tensor_map(dtype):
 if __name__ == "__main__":
 	# Pretty print of tensor maps
 	map_pos, map_neg = get_tensor_map(np.int8)
+	breakpoint()
 	for pos, neg in zip(map_pos, map_neg):
 		print("".join([f"{x: 4}" for x in pos[0]]))
 		print("".join([f"{x: 4}" for x in pos[1]]))

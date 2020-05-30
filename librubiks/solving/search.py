@@ -57,12 +57,6 @@ class Searcher:
 		max_states = max_states or int(1e10)
 		return time_limit, max_states
 
-	def action(self)->(int, bool):
-		return cube.action_space[self.action_queue.popleft()]
-
-	def actions(self) -> (int, bool):
-		while self.action_queue: yield self.action()
-
 	def __str__(self):
 		raise NotImplementedError
 
@@ -638,9 +632,11 @@ class AStar(DeepSearcher):
 		net = Model.load(loc, load_best=use_best).to(gpu)
 		return cls(net, lambda_=lambda_, expansions=expansions)
 
-	def __len__(self): return len(self.indices)
+	def __len__(self):
+		return len(self.indices)
 
-	def __str__(self): return f'AStar(lambda={self.lambda_}, N={self.expansions})'
+	def __str__(self):
+		return f'AStar (lambda={self.lambda_}, N={self.expansions})'
 
 class DankSearch(DeepSearcher):
 

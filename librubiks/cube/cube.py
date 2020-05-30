@@ -98,15 +98,11 @@ def as_oh(states: np.ndarray) -> torch.tensor:
 	method = _Cube2024.as_oh if get_is2024() else _Cube686.as_oh
 	return method(states)
 
-def pad(oh: torch.tensor, pad_size: int) -> torch.tensor:
-	assert not get_is2024(), "Padding is only implemented for 20x24 representation"
-	return _Cube686.pad(oh, pad_size)
-
 def as_correct(t: torch.tensor) -> torch.tensor:
 	assert not get_is2024(), "Correctness representation is only implemented for 20x24 representation"
 	return _Cube686.as_correct(t)
 
-def get_oh_shape():
+def get_oh_shape() -> int:
 	return 480 if get_is2024() else 288
 
 def repeat_state(state: np.ndarray, n: int=action_dim) -> np.ndarray:
@@ -122,6 +118,10 @@ def as633(state: np.ndarray) -> np.ndarray:
 	"""
 	method = _Cube2024.as633 if get_is2024() else _Cube686.as633
 	return method(state)
+
+def as69(state: np.ndarray) -> np.ndarray:
+	# Nice
+	return as633(state).reshape((6, 9))
 
 def stringify(state: np.ndarray) -> str:
 	state633 = as633(state)
@@ -261,6 +261,7 @@ class _Cube2024:
 			state633[cls.corner_633map[pos][0]] = values[0]
 			state633[cls.corner_633map[pos][1]] = values[1]
 			state633[cls.corner_633map[pos][2]] = values[2]
+		
 		for i in range(12):
 			# Inserts values for side i in position pos
 			pos = state[i+8] // 2
@@ -268,6 +269,7 @@ class _Cube2024:
 			values = np.roll([x[0] for x in cls.side_633map[i]], orientation)
 			state633[cls.side_633map[pos][0]] = values[0]
 			state633[cls.side_633map[pos][1]] = values[1]
+		
 		return state633
 
 

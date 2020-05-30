@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpService } from './http.service';
-import { CommonService } from './common.service';
+import { HttpService } from './common/http.service';
+import { CommonService } from './common/common.service';
+import { CubeService } from './common/cube.service';
 
 @Component({
   selector: 'app-root',
@@ -13,17 +14,14 @@ export class AppComponent implements OnInit {
 
   scrambleDepth = 10;
 
-  constructor(public commonService: CommonService, public httpService: HttpService) { }
+  constructor(public commonService: CommonService, public cubeService: CubeService, public httpService: HttpService) { }
 
   ngOnInit() {
     this.getInitData();
   }
 
   private async getInitData() {
-    await Promise.all([
-      this.commonService.getInfo(),
-      this.commonService.getSolved(true),
-    ]);
+    await this.commonService.getInfo();
     this.commonService.status.hasData = true;
   }
 }
