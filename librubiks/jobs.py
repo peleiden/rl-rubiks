@@ -14,8 +14,7 @@ from librubiks.model import Model, ModelConfig
 from librubiks.train import Train
 
 from librubiks.solving.evaluation import Evaluator
-from librubiks.solving.agents import Agent, DeepAgent
-from librubiks.solving.search import PolicySearch, ValueSearch
+from librubiks.solving.search import PolicySearch, ValueSearch, DeepSearcher, Searcher
 
 import librubiks.solving.search as search
 
@@ -46,7 +45,7 @@ class TrainJob:
 				 reward_method: str,
 
 				 # Currently not set by argparser/configparser
-				 agent = DeepAgent(PolicySearch(net=None)),
+				 searcher = PolicySearch(net=None),
 				 scrambling_depths: tuple = (10,),
 				 verbose: bool = True,
 			 ):
@@ -83,8 +82,8 @@ class TrainJob:
 		self.evaluator = Evaluator(n_games=self.eval_games, max_time=self.max_time, scrambling_depths=scrambling_depths, logger=self.logger)
 		self.evaluation_interval = evaluation_interval
 		assert isinstance(self.evaluation_interval, int) and 0 <= self.evaluation_interval
-		self.agent = agent
-		assert isinstance(self.agent, DeepAgent)
+		self.searcher = searcher
+		assert isinstance(self.searcher, DeepSearcher)
 		self.is2024 = is2024
 
 		assert nn_init in ["glorot", "he"] or ( float(nn_init) or True ),\
@@ -122,7 +121,7 @@ class TrainJob:
 					  tau					= self.tau,
 					  reward_method			= self.reward_method,
 					  update_interval		= self.update_interval,
-					  agent					= self.agent,
+					  searcher					= self.searcher,
 					  logger				= self.logger,
 					  evaluation_interval	= self.evaluation_interval,
 					  evaluator				= self.evaluator,
@@ -203,13 +202,13 @@ class EvalJob:
 		self.logger = Logger(f"{self.location}/{self.name}.log", name, verbose) #Already creates logger at init to test whether path works
 		self.evaluator = Evaluator(n_games=games, max_time=max_time, max_states=max_states, scrambling_depths=scrambling, logger=self.logger)
 
-		#Create agents
+		#Create searchers
 		searcher_string = searcher
 		searcher = getattr(search, searcher_string)
 		assert issubclass(searcher, search.Searcher)
 
 		if issubclass(searcher, search.DeepSearcher):
-			self.agents, self.reps, search_args = {}, {}, {}
+			self.searchers, self.reps, search_args = {}, {}, {}
 
 			#DeepSearchers need specific arguments
 			if searcher == search.MCTS:
@@ -252,32 +251,32 @@ class EvalJob:
 				key = f'{str(searcher)}{"" if folder==search_location else " " + os.path.basename(folder.rstrip(os.sep))}'
 
 				self.reps[key] = cfg["is2024"]
-				self.agents[key] = DeepAgent(searcher)
+				self.searchers[key] = searcher
 				restore_repr()
 
-			if not self.agents:
+			if not self.searchers:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
 			self.logger.log(f"Loaded model from {search_location}")
 
 		else:
 			searcher = searcher()
-			self.agents = {searcher: Agent(searcher)}
+			self.searchers = {searcher: searcher}
 			self.reps = {searcher: True}
 
-		self.agent_results = {}
-		self.logger.log(f"Initialized {self.name} with agents {', '.join(str(agent) for agent in self.agents)}")
-		self.logger.log(f"TIME ESTIMATE: {len(self.agents)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
+		self.searcher_results = {}
+		self.logger.log(f"Initialized {self.name} with searchers {', '.join(str(s) for s in self.searchers)}")
+		self.logger.log(f"TIME ESTIMATE: {len(self.searchers)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
 
 	def execute(self):
 		self.logger.log(f"Beginning evaluator {self.name}\nLocation {self.location}\nCommit: {get_commit()}")
-		for (name, agent), representation in zip(self.agents.items(), self.reps.values()):
+		for (name, searcher), representation in zip(self.searchers.items(), self.reps.values()):
 			self.is2024 = representation
-			self.agent_results[name] = self._single_exec(name, agent)
+			self.searcher_results[name] = self._single_exec(name, searcher)
 
 	@with_used_repr
-	def _single_exec(self, name, agent):
-		self.logger.section(f'Evaluationg agent {name}')
-		res, states = self.evaluator.eval(agent)
+	def _single_exec(self, name: str, searcher: Searcher):
+		self.logger.section(f'Evaluationg searcher {name}')
+		res, states = self.evaluator.eval(searcher)
 		np.save(f"{self.location}/{name}_results.npy", res)
 		np.save(f"{self.location}/{name}_states_seen.npy", states)
 		return res
@@ -286,8 +285,8 @@ class EvalJob:
 	def plot_all_jobs(jobs: list, save_location: str):
 		results, settings = dict(), list()
 		for job in jobs:
-			for agent, result in job.agent_results.items():
-				key = agent if len(jobs) == 1 else f"{job.name} - {agent}"
+			for searcher, result in job.searcher_results.items():
+				key = searcher if len(jobs) == 1 else f"{job.name} - {searcher}"
 				results[key] = result
 				settings.append(
 					{

@@ -6,14 +6,33 @@ from tests import MainTest
 from librubiks import gpu
 from librubiks.cube import Cube
 from librubiks.model import Model, ModelConfig
-from librubiks.solving.search import MCTS, AStar
 
+from librubiks.solving.search import Searcher, RandomDFS, BFS, PolicySearch, ValueSearch, DankSearch, MCTS, AStar
 
 def _action_queue_test(state, searcher, sol_found):
 	for action in searcher.action_queue:
 		state = Cube.rotate(state, *Cube.action_space[action])
 	assert Cube.is_solved(state) == sol_found
 
+class TestSearchers(MainTest):
+	def test_searchers(self):
+		net = Model.create(ModelConfig())
+		searchers = [
+			RandomDFS(),
+			BFS(),
+			PolicySearch(net, sample_policy=False),
+			PolicySearch(net, sample_policy=True),
+			ValueSearch(net),
+			DankSearch(net, 0.1, 4, 12),
+		]
+		for s in searchers: self._test_searcher(s)
+
+	def _test_searcher(self, searcher: Searcher):
+		state, _, _ = Cube.scramble(4)
+		solution_found  = searcher.search(state, .01)
+		for action in searcher.actions():
+			state = Cube.rotate(state, *action)
+		assert solution_found == Cube.is_solved(state)
 
 class TestMCTS(MainTest):
 

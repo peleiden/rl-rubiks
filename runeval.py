@@ -18,7 +18,7 @@ options = {
 	},
 	'searcher': {
 		'default':  'AStar',
-		'help':     'Name of searcher for agent corresponding to searcher class in librubiks.solving.search',
+		'help':     'Name of searcher for solution agent corresponding to searcher class in librubiks.solving.search',
 		'type':     str,
 		'choices':  ['AStar', 'MCTS', 'PolicySearch','BFS', 'RandomDFS', ],
 	},

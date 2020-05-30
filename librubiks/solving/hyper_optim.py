@@ -12,7 +12,6 @@ from bayes_opt import BayesianOptimization, UtilityFunction
 from librubiks.utils import Logger, NullLogger
 
 from librubiks.solving.evaluation import Evaluator
-from librubiks.solving.agents import DeepAgent
 
 import librubiks.solving.search as search
 from librubiks.model import Model
@@ -33,9 +32,8 @@ class Optimizer:
 
 		# For evaluation use
 		self.evaluator = None
-		self.searcher_class = None
 		self.persistent_searcher_params = None
-		self.agent_class = None
+		self.searcher_class = None
 
 		self.score_history = list()
 		self.parameter_history = list()
@@ -46,17 +44,15 @@ class Optimizer:
 	def optimize(self, iterations: int):
 		raise NotImplementedError("To be implemented in child class")
 
-	def objective_from_evaluator(self, evaluator: Evaluator, searcher_class, persistent_searcher_params: dict, param_prepper: Callable=lambda x: None,  agent_class = DeepAgent):
+	def objective_from_evaluator(self, evaluator: Evaluator, searcher_class, persistent_searcher_params: dict, param_prepper: Callable=lambda x: None):
 		self.evaluator = evaluator
 		self.searcher_class = searcher_class
-		self.agent_class = agent_class
 		self.persistent_searcher_params = persistent_searcher_params
 
 		def target_function(searcher_params):
 			param_prepper(searcher_params)
 			searcher = self.searcher_class(**self.persistent_searcher_params, **searcher_params)
-			agent = self.agent_class(searcher)
-			res, _= self.evaluator.eval(agent)
+			res, _= self.evaluator.eval(searcher)
 			won = res != -1
 			return won.mean() if won.any() else 0
 
@@ -135,8 +131,6 @@ def searcher_optimize():
 	python librubiks/solving/hyper_optim.py --location example/net1/
 	python runeval.py --location example/ --optimized_params True
 	```
-
-
 	"""
 
 
@@ -155,7 +149,7 @@ def searcher_optimize():
 		type=str, default=model_path)
 	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
 		type=int, default=25)
-	parser.add_argument('--searcher', help='Name of searcher for agent corresponding to searcher class in librubiks.solving.search',
+	parser.add_argument('--searcher', help='Name of searcher corresponding to searcher class in librubiks.solving.search',
 		type=str, default='AStar', choices = ['MCTS', 'AStar'])
 	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test',
 		type=int, default=50)

@@ -53,8 +53,13 @@ class Searcher:
 		self._explored_states = 0
 		self.action_queue = deque()
 		self.tt.reset()
-		if hasattr(self, "net"):
-			self.net.eval()
+		if hasattr(self, "net"): self.net.eval()
+
+	def action(self)->(int, bool):
+		return Cube.action_space[self.action_queue.popleft()]
+
+	def actions(self) -> (int, bool):
+		while self.action_queue: yield self.action()
 
 	def __str__(self):
 		raise NotImplementedError
@@ -313,7 +318,7 @@ class MCTS(DeepSearcher):
 		p, v = self.net(new_substates_oh)
 		p, v = p.cpu().softmax(dim=1).numpy(), v.cpu().numpy().squeeze()
 		self.tt.end_profile("Feedforward")
-		
+
 		self.tt.profile("Update P, V, and W")
 		self.P[new_substate_idcs] = p
 		self.V[new_substate_idcs] = v
@@ -718,7 +723,7 @@ class DankSearch(DeepSearcher):
 	def from_saved(cls, loc: str, use_best: bool, epsilon: float, workers: int, depth: int):
 		net = Model.load(loc, load_best=use_best).to(gpu)
 		return cls(net, epsilon=epsilon, workers=workers, depth=depth)
-	
+
 	def __str__(self):
 		return f"EGVM (e={self.epsilon}, w={self.workers}, d={self.depth})"
 

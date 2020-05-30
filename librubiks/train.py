@@ -13,7 +13,7 @@ from librubiks.analysis import TrainAnalysis
 from librubiks.cube import Cube
 from librubiks.model import Model
 
-from librubiks.solving.agents import DeepAgent
+from librubiks.solving.search import DeepSearcher
 from librubiks.solving.evaluation import Evaluator
 
 class Train:
@@ -36,7 +36,7 @@ class Train:
 				 lr: float,
 				 gamma: float,
 				 update_interval: int,
-				 agent: DeepAgent,
+				 searcher: DeepSearcher,
 				 evaluator: Evaluator,
 				 evaluation_interval: int,
 				 with_analysis: bool,
@@ -73,7 +73,7 @@ class Train:
 				self.evaluation_rollouts = np.append(self.evaluation_rollouts, self.rollouts-1)
 		else:
 			self.evaluation_rollouts = np.array([])
-		self.agent = agent
+		self.searcher = searcher
 
 		self.tau = tau
 		self.alpha_update = alpha_update
@@ -132,7 +132,7 @@ class Train:
 		]))
 		best_solve = 0
 		best_net = net.clone()
-		self.agent.update_net(net)
+		self.searcher.net = net
 		if self.with_analysis:
 			self.analysis.orig_params = net.get_params()
 
@@ -212,13 +212,13 @@ class Train:
 			if rollout in self.evaluation_rollouts:
 				net.eval()
 
-				self.agent.update_net(net)
-				self.tt.profile(f"Evaluating using agent {self.agent}")
+				self.searcher.net = net
+				self.tt.profile(f"Evaluating using searcher {self.searcher}")
 				with unverbose:
-					eval_results, _ = self.evaluator.eval(self.agent)
+					eval_results, _ = self.evaluator.eval(self.searcher)
 				eval_reward = (eval_results != -1).mean()
 				self.sol_percents.append(eval_reward)
-				self.tt.end_profile(f"Evaluating using agent {self.agent}")
+				self.tt.end_profile(f"Evaluating using searcher {self.searcher}")
 
 				if eval_reward > best_solve:
 					best_solve = eval_reward
@@ -228,7 +228,7 @@ class Train:
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
-		eval_time = self.tt.profiles[f'Evaluating using agent {self.agent}'].sum() if len(self.evaluation_rollouts) else 0
+		eval_time = self.tt.profiles[f'Evaluating using searcher {self.searcher}'].sum() if len(self.evaluation_rollouts) else 0
 		train_time = self.tt.profiles["Training loop"].sum()
 		adi_time = self.tt.profiles["ADI training data"].sum()
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * Cube.action_dim
