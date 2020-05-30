@@ -216,7 +216,7 @@ class Train:
 				self.agent.update_net(net)
 				self.tt.profile(f"Evaluating using agent {self.agent}")
 				with unverbose:
-					eval_results = self.evaluator.eval(self.agent)
+					eval_results, _ = self.evaluator.eval(self.agent)
 				eval_reward = (eval_results != -1).mean()
 				self.sol_percents.append(eval_reward)
 				self.tt.end_profile(f"Evaluating using agent {self.agent}")
@@ -351,7 +351,7 @@ class Train:
 		generator_net.load_state_dict(new_genparams)
 		self.tt.end_profile("Creating generator network")
 		return generator_net.to(gpu)
-		
+
 	def plot_training(self, save_dir: str, name: str, semi_logy=False, show=False):
 		"""
 		Visualizes training by showing training loss + evaluation reward in same plot

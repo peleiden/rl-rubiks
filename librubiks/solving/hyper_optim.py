@@ -56,7 +56,7 @@ class Optimizer:
 			param_prepper(searcher_params)
 			searcher = self.searcher_class(**self.persistent_searcher_params, **searcher_params)
 			agent = self.agent_class(searcher)
-			res = self.evaluator.eval(agent)
+			res, _= self.evaluator.eval(agent)
 			won = res != -1
 			return won.mean() if won.any() else 0
 

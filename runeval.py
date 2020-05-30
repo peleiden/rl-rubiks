@@ -17,10 +17,10 @@ options = {
 		'type':     str,
 	},
 	'searcher': {
-		'default':  'MCTS',
+		'default':  'AStar',
 		'help':     'Name of searcher for agent corresponding to searcher class in librubiks.solving.search',
 		'type':     str,
-		'choices':  ['MCTS', 'PolicySearch','BFS', 'RandomDFS', 'AStar',],
+		'choices':  ['AStar', 'MCTS', 'PolicySearch','BFS', 'RandomDFS', ],
 	},
 	'scrambling': {
 		'default':  '10 25',

@@ -277,8 +277,9 @@ class EvalJob:
 	@with_used_repr
 	def _single_exec(self, name, agent):
 		self.logger.section(f'Evaluationg agent {name}')
-		res = self.evaluator.eval(agent)
+		res, states = self.evaluator.eval(agent)
 		np.save(f"{self.location}/{name}_results.npy", res)
+		np.save(f"{self.location}/{name}_states_seen.npy", states)
 		return res
 
 	@staticmethod

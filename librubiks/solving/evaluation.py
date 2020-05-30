@@ -55,36 +55,63 @@ class Evaluator:
 		self.log.section(f"Evaluation of {agent}")
 		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <~ {self.approximate_time()/60:.2f} min")
 
-		# Builds configurations for runs
-		cfgs = []
-		for i, d in enumerate(self.scrambling_depths):
-			for _ in range(self.n_games):
-				cfgs.append((agent, self.max_time, d))
 		res = []
-		for i, cfg in enumerate(cfgs):
-			self.tt.profile(f"Evaluation of {agent}. Depth {cfg[2]}")
-			res.append(self._eval_game(agent, cfg[2]))
-			self.log.verbose(f"Performing evaluation {i+1} / {len(cfgs)}. Depth: {cfg[2]}. Explored states: {len(agent)}")
-			self.tt.end_profile(f"Evaluation of {agent}. Depth {cfg[2]}")
+		states = []
+		times = []
+		for d in self.scrambling_depths:
+			for _ in range(self.n_games):
+				self.tt.profile(f"Evaluation of {agent}. Depth {d}")
+				r = self._eval_game(agent, d)
+				t = self.tt.end_profile(f"Evaluation of {agent}. Depth {d}")
+
+				res.append(r)
+				states.append(len(agent))
+				times.append(t)
+			self.log.verbose(f"Performed evaluation at depth: {d}/{self.scrambling_depths[-1]}")
+
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
+		states = np.reshape(states, (len(self.scrambling_depths), self.n_games))
+		times = np.reshape(times, (len(self.scrambling_depths), self.n_games))
 
 		self.log(f"Evaluation results")
 		for i, d in enumerate(self.scrambling_depths):
-			share_completed = np.count_nonzero(res[i]!=-1)*100/len(res[i])
-			won_games = res[i][res[i]!=-1]
-			mean_turns = won_games.mean() if won_games.size else np.nan  # Done this way to prevent warnings
-			median_turns = np.median(won_games) if won_games.size else np.nan
-			self.log(f"Scrambling depth {d}", with_timestamp=False)
-			self.log(f"\tShare completed: {share_completed:.2f} %", with_timestamp=False)
-			if (res[i]!=-1).any():
-				self.log(f"\tMean turns to complete (ex. unfinished): {mean_turns:.2f}", with_timestamp=False)
-				self.log(f"\tMedian turns to complete (ex. unfinished): {median_turns:.2f}", with_timestamp=False)
+			self.log_this_depth(res[i], states[i], times[i], d)
+
 		S_mu, S_conf = self.S_confidence(self.S_dist(res, self.scrambling_depths))
 		self.log(f"S: {S_mu:.2f} p/m {S_conf:.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
-		return res
+		return res, states
 
+	def log_this_depth(self, res: np.ndarray, states: np.ndarray, times: np.ndarray, depth: int):
+		"""Logs summary statistics for given deth
+
+		:param res:  Vector of results
+		:param states: Vector of seen states for each game
+		:param times: Vector of runtimes for each game
+		:param depth:  Scrambling depth at which results were generated
+		"""
+		share_completed = np.count_nonzero(res!=-1)*100/len(res)
+		won_games = res[res!=-1]
+		self.log(f"Scrambling depth {depth}", with_timestamp=False)
+		self.log(f"\tShare completed: {share_completed:.2f} %", with_timestamp=False)
+
+		if won_games.size:
+			mean_turns = won_games.mean()
+			median_turns = np.median(won_games)
+			std_turns = won_games.std()
+			self.log(
+				f"\tMean, std. and median turns to complete (ex. unfinished): "\
+				f"{mean_turns:.2f} +/- {std_turns:.2f}, med: {median_turns:.1f}"
+				, with_timestamp=False
+			)
+
+		safe_times = times != 0
+		states_per_sec = states[safe_times] / times[safe_times]
+		self.log(
+			f"\tMean and std. no. states seen: Pr. game: {states.mean():.2f} +/- {states.std():.2f}, "\
+			f"Pr. sec.: {states_per_sec.mean():.2f} +/- {states_per_sec.std():.2f}", with_timestamp=False)
+		self.log(f"\tMean and std. time used: {times.mean():.2f} +/- {times.std():.2f}", with_timestamp=False)
 	@staticmethod
 	def S_dist(res: np.ndarray, scrambling_depths: np.ndarray) -> np.ndarray:
 		"""
@@ -167,7 +194,7 @@ class Evaluator:
 		height = (len(eval_results)+1) // width if width == max_width else 1
 		positions = [(i, j) for i in range(height) for j in range(width)]
 		fig, axes = plt.subplots(height, width, figsize=(width*10, height*6))
-		
+
 		max_sollength = 50
 		agents, agent_results = list(zip(*eval_results.items()))
 		agent_results = np.array(agent_results).copy()
@@ -200,7 +227,7 @@ class Evaluator:
 				pass
 			ax.set_ylim(ylim)
 			ax.set_xlim([used_settings["scrambling_depths"].min()-1, used_settings["scrambling_depths"].max()+1])
-		
+
 		plt.setp(axes, xticks=xticks, xticklabels=[str(x) for x in xticks])
 		plt.rcParams.update({"font.size": 22})
 		if axes.size > 1:

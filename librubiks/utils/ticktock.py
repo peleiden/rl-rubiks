@@ -43,6 +43,7 @@ class TickTock:
 		dt = perf_counter() - self.profiles[name].start
 		self.profiles[name].hits.append(dt)
 		self._profile_depth -= 1
+		return dt
 
 	def rename_section(self, name: str, new_name: str):
 		# Renames a section

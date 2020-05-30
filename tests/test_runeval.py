@@ -9,23 +9,19 @@ class TestRuneval(MainTest):
 		run_path = os.path.join( os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  'runeval.py' )
 		location = 'local_tests/eval'
 
-		#TODO: Add test with deepsearcher
 		run_settings = {'location': location, 'searcher': 'BFS', 'games': 2, 'max_time': 1, 'scrambling': '2 4',
 				'mcts_c': 0.6123, 'mcts_graph_search': False, 'policy_sample': True}
 		args = [sys.executable, run_path,]
 		for k,v in run_settings.items(): args.extend([f'--{k}', str(v)])
 		subprocess.check_call(args) #Raises error on problems in call
 
-		expected_files = ['Breadth-first search_results.npy', 'eval_sollengths.png', 'eval_winrates.png']
+		expected_files = ['Breadth-first search_results.npy', 'Breadth-first search_states_seen.npy' , 'eval_sollengths.png', 'eval_winrates.png']
 
 		for fname in expected_files:
 			assert fname in os.listdir(location)
 
 
-		#TODO: Test with DeepSearcher (needs a quick training first)
-		# run_settings = {'location': location, 'searcher': 'MCTS', 'games': 2, 'max_time': 1, 'scrambling': '2 4',
-				# 'mcts_c': 0.6123, 'mcts_nu':.005, 'mcts_graph_search': False}
-
+		# DeepSearcher + Optimization hyper parameter test
 		to = TestOptimizer()
 		location = to.test_searcher_optim(['AStar'])
 
