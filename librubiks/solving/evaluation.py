@@ -6,7 +6,7 @@ import matplotlib.colors as mcolour
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 
-from librubiks.utils import NullLogger, Logger, TickTock
+from librubiks.utils import NullLogger, Logger, TickTock, bernoulli_error
 
 from librubiks.cube import Cube
 from librubiks.solving.agents import Agent
@@ -94,24 +94,23 @@ class Evaluator:
 		share_completed = np.count_nonzero(res!=-1)*100/len(res)
 		won_games = res[res!=-1]
 		self.log(f"Scrambling depth {depth}", with_timestamp=False)
-		self.log(f"\tShare completed: {share_completed:.2f} %", with_timestamp=False)
-
+		self.log(f"\tShare completed: {share_completed:.2f} % {bernoulli_error(share_completed/100, len(res), 0.05, stringify=True)} (approx. 95 % CI)", with_timestamp=False)
 		if won_games.size:
 			mean_turns = won_games.mean()
 			median_turns = np.median(won_games)
 			std_turns = won_games.std()
 			self.log(
-				f"\tMean, std. and median turns to complete (ex. unfinished): "\
-				f"{mean_turns:.2f} +/- {std_turns:.2f}, med: {median_turns:.1f}"
+				f"\tTurns to win: "\
+				f"{mean_turns:.2f} +/- {std_turns:.1f} (std.), Median: {median_turns:.0f}"
 				, with_timestamp=False
 			)
 
 		safe_times = times != 0
 		states_per_sec = states[safe_times] / times[safe_times]
 		self.log(
-			f"\tMean and std. no. states seen: Pr. game: {states.mean():.2f} +/- {states.std():.2f}, "\
-			f"Pr. sec.: {states_per_sec.mean():.2f} +/- {states_per_sec.std():.2f}", with_timestamp=False)
-		self.log(f"\tMean and std. time used: {times.mean():.2f} +/- {times.std():.2f}", with_timestamp=False)
+			f"\tStates seen: Pr. game: {states.mean():.2f} +/- {states.std():.0f} (std.), "\
+			f"Pr. sec.: {states_per_sec.mean():.2f} +/- {states_per_sec.std():.0f} (std.)", with_timestamp=False)
+		self.log(f"\tTime:  {times.mean():.2f} +/- {times.std():.2f} (std.)", with_timestamp=False)
 	@staticmethod
 	def S_dist(res: np.ndarray, scrambling_depths: np.ndarray) -> np.ndarray:
 		"""

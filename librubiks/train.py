@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from librubiks import gpu, no_grad, reset_cuda
-from librubiks.utils import Logger, NullLogger, unverbose, TickTock
+from librubiks.utils import Logger, NullLogger, unverbose, TickTock, bernoulli_error
 
 from librubiks.analysis import TrainAnalysis
 from librubiks.cube import Cube
@@ -24,8 +24,7 @@ class Train:
 	value_losses: np.ndarray
 	policy_losses: np.ndarray
 	train_losses: np.ndarray
-	sol_percents = list()
-	avg_value_targets = list()
+	sol_percents: list
 
 	def __init__(self,
 				 rollouts: int,
@@ -145,7 +144,7 @@ class Train:
 		self.policy_losses = np.zeros(self.rollouts)
 		self.value_losses = np.zeros(self.rollouts)
 		self.train_losses = np.empty(self.rollouts)
-		self.sol_percents, self.avg_value_targets = list(), list()
+		self.sol_percents = list()
 
 		for rollout in range(self.rollouts):
 			reset_cuda()
@@ -375,7 +374,9 @@ class Train:
 			reward_ax = loss_ax.twinx()
 			reward_ax.set_ylim(ylim)
 			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depth {self.evaluator.scrambling_depths[0]} in {self.evaluator.max_time:.2f} seconds", color=color)
-			reward_ax.plot(self.evaluation_rollouts, self.sol_percents, "-o", color=color, label="Fraction of cubes solved")
+			bernoulli_errors = bernoulli_error(np.array(self.sol_percents), self.evaluator.n_games, alpha=0.05)
+			reward_ax.errorbar(self.evaluation_rollouts, self.sol_percents, bernoulli_errors, fmt="-o",
+				capsize=10, color=color, label="Fraction of cubes solved")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 			h2, l2 = reward_ax.get_legend_handles_labels()
 			h1 += h2
