@@ -1,9 +1,11 @@
 import os, sys
+from ast import literal_eval
+from wget import download
+
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 from flask_cors import CORS
 
-from ast import literal_eval
 import numpy as np
 import torch
 
@@ -15,11 +17,12 @@ app = Flask(__name__)
 api = Api(app)
 CORS(app)
 
-net_loc = os.path.join(
-	os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # Get parent folder
-	'data',
-	'hpc-20-04-12'
-)
+net_loc = "net"
+os.makedirs(net_loc, exist_ok=True)
+url = "https://github.com/peleiden/rubiks-models/blob/master/fcnew/%s?raw=true"
+download(url % "model.pt", net_loc)
+download(url % "config.json", net_loc)
+
 agents = [
 	{ "name": "MCTS", "agent": DeepAgent(MCTS.from_saved(net_loc, use_best=False, c=0.6, search_graph=True)) },
 	{ "name": "AStar", "agent": DeepAgent(AStar.from_saved(net_loc, use_best=False, lambda_=0.2, expansions=50)) },
