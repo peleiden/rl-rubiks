@@ -43,7 +43,7 @@ def get_state_dict(state: np.ndarray or list):
 
 @app.route("/")
 def index():
-	return "<a href='https://asgerius.github.io/rl-rubiks' style='margin: 20px'>Gå til hovedside</a>"
+	return "<a href='https://peleiden.github.io/rl-rubiks' style='margin: 20px'>Gå til hovedside</a>"
 
 @app.route("/info")
 def get_info():

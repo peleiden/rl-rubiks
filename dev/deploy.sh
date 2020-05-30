@@ -1,6 +1,6 @@
 cd "$(dirname "$0")"
 cd ../frontend
-ng deploy --base-href https://asgerius.github.io/rl-rubiks/
+ng deploy --base-href https://peleiden.github.io/rl-rubiks/
 git checkout prod
 git pull
 git merge master
