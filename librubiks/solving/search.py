@@ -9,7 +9,7 @@ from librubiks.utils import TickTock
 
 from librubiks import gpu, no_grad, softmax
 from librubiks.model import Model, ModelConfig
-import librubiks.cube as cube
+from librubiks import cube
 
 
 class Searcher:

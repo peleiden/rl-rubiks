@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 
 from librubiks import set_is2024
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks.utils import TickTock, Logger
 
 

@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from librubiks import gpu, no_grad
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks.model import Model
 from librubiks.utils import TickTock, Logger
 

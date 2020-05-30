@@ -6,7 +6,7 @@ from scipy.stats import entropy
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolour
 
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks.model import Model
 from librubiks.utils import NullLogger, Logger
 

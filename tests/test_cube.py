@@ -3,7 +3,7 @@ import torch
 
 from tests import MainTest
 
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks import gpu, get_is2024, set_is2024, with_used_repr
 from librubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 

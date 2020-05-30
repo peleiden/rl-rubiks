@@ -10,7 +10,7 @@ from librubiks import gpu, no_grad, reset_cuda
 from librubiks.utils import Logger, NullLogger, unverbose, TickTock, bernoulli_error
 
 from librubiks.analysis import TrainAnalysis
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks.model import Model
 
 from librubiks.solving.search import DeepSearcher

@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks import gpu
 from librubiks.utils import NullLogger
 

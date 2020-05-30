@@ -4,7 +4,7 @@ import torch
 from tests import MainTest
 
 from librubiks import gpu
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks.model import Model, ModelConfig
 
 from librubiks.solving.search import Searcher, RandomDFS, BFS, PolicySearch, ValueSearch, DankSearch, MCTS, AStar

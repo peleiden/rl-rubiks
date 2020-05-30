@@ -10,7 +10,7 @@ from librubiks.utils import NullLogger, Logger, TickTock, bernoulli_error
 
 from librubiks.solving import search
 
-import librubiks.cube as cube
+from librubiks import cube
 
 
 class Evaluator:

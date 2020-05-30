@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks.utils import TickTock
 
 def estimate_state_space(d: int):

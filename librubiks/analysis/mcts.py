@@ -4,7 +4,7 @@ import numpy as np
 np.set_printoptions(precision=4, threshold=np.inf)
 
 from librubiks import gpu, set_is2024
-import librubiks.cube as cube
+from librubiks import cube
 from librubiks.model import Model, ModelConfig
 from librubiks.solving.search import Searcher, MCTS, PolicySearch, BFS, ValueSearch
 
