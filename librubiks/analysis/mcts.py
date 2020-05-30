@@ -4,7 +4,7 @@ import numpy as np
 np.set_printoptions(precision=4, threshold=np.inf)
 
 from librubiks import gpu, set_is2024
-from librubiks.cube import Cube
+import librubiks.cube as cube
 from librubiks.model import Model, ModelConfig
 from librubiks.solving.search import Searcher, MCTS, PolicySearch, BFS, ValueSearch
 
@@ -16,10 +16,10 @@ net = Model.load("data/local_method_comparison/asgerfix").eval().to(gpu)
 
 
 def solve(depth: int, c: float, nu: float, workers: int, time_limit: float, policy_type: str):
-	state, f, d = Cube.scramble(depth, True)
+	state, f, d = cube.scramble(depth, True)
 	searcher = MCTS(net, c=c, search_graph=False)
 	is_solved = searcher.search(state, time_limit)
-	assert is_solved == (Cube.get_solved().tostring() in searcher.indices)
+	assert is_solved == (cube.get_solved().tostring() in searcher.indices)
 	return is_solved, len(searcher.indices)
 
 def analyze_var(var: str, values: np.ndarray, other_vars: dict):
@@ -66,7 +66,7 @@ def analyse_time_distribution(depth: int, c: float):
 		log(f"Analyzing with time limit of {tl:.2f} s")
 		sols = np.zeros(n)
 		for j in range(n):
-			state, f, d = Cube.scramble(depth, True)
+			state, f, d = cube.scramble(depth, True)
 			sols[j] = searcher.search(state, time_limit=tl)
 			expand[i] += sum(searcher.tt.profiles["Expanding leaves"].hits)
 			try:
@@ -100,9 +100,9 @@ def detailed_time(state, searcher, max_states: int, time_limit: float, c: float)
 	log(searcher.tt)
 
 def W(max_states, time_limit, opts):
-	# state = np.array("8 18 12  2  5 17 22 11 14 22 12 11 17  2  7  4 21  9 19  0".split(), dtype=Cube.dtype)
-	# state = np.array("11  3 23  6  2 15 18 14  6  2  4 15  1 10 12 17  9 18 20 22".split(), dtype=Cube.dtype)
-	state, f, d = Cube.scramble(50)
+	# state = np.array("8 18 12  2  5 17 22 11 14 22 12 11 17  2  7  4 21  9 19  0".split(), dtype=cube.dtype)
+	# state = np.array("11  3 23  6  2 15 18 14  6  2  4 15  1 10 12 17  9 18 20 22".split(), dtype=cube.dtype)
+	state, f, d = cube.scramble(50)
 	log("State:", state)
 	searcher = MCTS.from_saved("data/local_method_comparison/asgerfix", use_best=False, search_graph=False, **opts)
 	log.section("Analyzing W")
@@ -116,7 +116,7 @@ def W(max_states, time_limit, opts):
 	searcher._shorten_action_queue(best_index)
 	log("Best value", searcher.V[best_index], "at index", best_index)
 	log("State at best index", searcher.states[best_index])
-	# log(Cube.stringify(searcher.states[best_index]))
+	# log(cube.stringify(searcher.states[best_index]))
 	
 	print(searcher.tt)
 	
@@ -139,13 +139,13 @@ def W(max_states, time_limit, opts):
 	plt.grid(True)
 	
 	plt.subplot(313)
-	states = [Cube.get_solved()]
+	states = [cube.get_solved()]
 	for f_, d_ in zip(f, d):
-		states.append(Cube.rotate(states[-1], f_, d_))
+		states.append(cube.rotate(states[-1], f_, d_))
 	for action in searcher.action_queue:
-		states.append(Cube.rotate(states[-1], *Cube.action_space[action]))
-	states = np.array(states, dtype=Cube.dtype)
-	oh_states = Cube.as_oh(states)
+		states.append(cube.rotate(states[-1], *cube.action_space[action]))
+	states = np.array(states, dtype=cube.dtype)
+	oh_states = cube.as_oh(states)
 	values = net(oh_states, policy=False).detach().cpu().squeeze().numpy()
 	assert np.isclose(values[-1], searcher.V[best_index], atol=1e-5)
 	plt.plot(values)
@@ -172,7 +172,7 @@ if __name__ == "__main__":
 	#analyse_time_distribution(25, 0.5, 0.005, 100, "p")
 	s = int(1e6)
 	tl = 1
-	# state, _, _ = Cube.scramble(50)
+	# state, _, _ = cube.scramble(50)
 	# detailed_time(state, MCTS, s, tl, 0.6, 0.005, 10, "p")
 	W(None, 10, get_other_vars("depth"))
 

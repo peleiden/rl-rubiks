@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from librubiks.cube import Cube
+import librubiks.cube as cube
 from librubiks.utils import TickTock
 
 def estimate_state_space(d: int):
@@ -11,17 +11,17 @@ def estimate_state_space(d: int):
 	Some probability theory would do nicely here
 	"""
 	n = int(1e7)
-	states = np.array([Cube.get_solved() for _ in range(n)], dtype=Cube.dtype)
+	states = np.array([cube.get_solved() for _ in range(n)], dtype=cube.dtype)
 	for step in range(d):
 		faces, dirs = np.random.randint(0, 6, n), np.random.randint(0, 2, n)
-		states = Cube.multi_rotate(states, faces, dirs)
+		states = cube.multi_rotate(states, faces, dirs)
 	uniques = {x.tostring() for x in states}
 
 	m = int(n / 10)
-	states = np.array([Cube.get_solved() for _ in range(m)], dtype=Cube.dtype)
+	states = np.array([cube.get_solved() for _ in range(m)], dtype=cube.dtype)
 	for step in range(d):
 		faces, dirs = np.random.randint(0, 6, m), np.random.randint(0, 2, m)
-		states = Cube.multi_rotate(states, faces, dirs)
+		states = cube.multi_rotate(states, faces, dirs)
 	observed = [x.tostring() in uniques for x in states]
 
 	obs_share = np.mean(observed)

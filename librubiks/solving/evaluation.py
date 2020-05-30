@@ -10,7 +10,7 @@ from librubiks.utils import NullLogger, Logger, TickTock, bernoulli_error
 
 from librubiks.solving import search
 
-from librubiks.cube import Cube
+import librubiks.cube as cube
 
 
 class Evaluator:
@@ -41,7 +41,7 @@ class Evaluator:
 
 	def _eval_game(self, searcher: search.Searcher, depth: int):
 		turns_to_complete = -1  # -1 for unfinished
-		state, _, _ = Cube.scramble(depth, True)
+		state, _, _ = cube.scramble(depth, True)
 		solution_found = searcher.search(state, self.max_time, self.max_states)
 		if solution_found: turns_to_complete = len(searcher.action_queue)
 		return turns_to_complete

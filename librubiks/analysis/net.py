@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from librubiks import gpu, no_grad
-from librubiks.cube import Cube
+import librubiks.cube as cube
 from librubiks.model import Model
 from librubiks.utils import TickTock, Logger
 
@@ -35,7 +35,7 @@ def _ff(oh_states, value=True, policy=True):
 @no_grad
 def value(n, d):
 	depths = np.tile(np.arange(1, d+1), n).reshape(n, d)
-	states, states_oh = Cube.sequence_scrambler(n, d, False)
+	states, states_oh = cube.sequence_scrambler(n, d, False)
 	values = _ff(states_oh, policy=False).squeeze().numpy().reshape(n, d)
 	plt.plot(depths.T, values.T, "o-")
 	plt.grid(True)

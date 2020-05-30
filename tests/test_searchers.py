@@ -4,15 +4,15 @@ import torch
 from tests import MainTest
 
 from librubiks import gpu
-from librubiks.cube import Cube
+import librubiks.cube as cube
 from librubiks.model import Model, ModelConfig
 
 from librubiks.solving.search import Searcher, RandomDFS, BFS, PolicySearch, ValueSearch, DankSearch, MCTS, AStar
 
 def _action_queue_test(state, searcher, sol_found):
 	for action in searcher.action_queue:
-		state = Cube.rotate(state, *Cube.action_space[action])
-	assert Cube.is_solved(state) == sol_found
+		state = cube.rotate(state, *cube.action_space[action])
+	assert cube.is_solved(state) == sol_found
 
 class TestSearchers(MainTest):
 	def test_searchers(self):
@@ -28,18 +28,18 @@ class TestSearchers(MainTest):
 		for s in searchers: self._test_searcher(s)
 
 	def _test_searcher(self, searcher: Searcher):
-		state, _, _ = Cube.scramble(4)
+		state, _, _ = cube.scramble(4)
 		solution_found  = searcher.search(state, .01)
 		for action in searcher.actions():
-			state = Cube.rotate(state, *action)
-		assert solution_found == Cube.is_solved(state)
+			state = cube.rotate(state, *action)
+		assert solution_found == cube.is_solved(state)
 
 class TestMCTS(MainTest):
 
 	def test_search(self):
-		state, _, _ = Cube.scramble(50)
+		state, _, _ = cube.scramble(50)
 		self._mcts_test(state, False)
-		state, _, _ = Cube.scramble(3)
+		state, _, _ = cube.scramble(3)
 		searcher, sol_found = self._mcts_test(state, False)
 		_action_queue_test(state, searcher, sol_found)
 		searcher, sol_found = self._mcts_test(state, True)
@@ -73,12 +73,12 @@ class TestMCTS(MainTest):
 				for j, neighbor_index in enumerate(neighs):
 					assert neighbor_index == 0 or neighbor_index in searcher.indices.values()
 					if neighbor_index == 0: continue
-					substate = Cube.rotate(state, *Cube.action_space[j])
+					substate = cube.rotate(state, *cube.action_space[j])
 					assert np.all(searcher.states[neighbor_index] == substate)
 
 		# Policy and value
 		with torch.no_grad():
-			p, v = searcher.net(Cube.as_oh(searcher.states[used_idcs]))
+			p, v = searcher.net(cube.as_oh(searcher.states[used_idcs]))
 		p, v = p.softmax(dim=1).cpu().numpy(), v.squeeze().cpu().numpy()
 		assert np.all(np.isclose(searcher.P[used_idcs], p, atol=1e-5))
 		assert np.all(np.isclose(searcher.V[used_idcs], v, atol=1e-5))
@@ -112,24 +112,24 @@ class TestAStar(MainTest):
 			assert not searcher.open_.any()
 
 	def _can_win_all_easy_games(self, searcher):
-		state, i, j = Cube.scramble(2, force_not_solved=True)
+		state, i, j = cube.scramble(2, force_not_solved=True)
 		is_solved = searcher.search(state, time_limit=1)
 		if is_solved:
 			for action in searcher.action_queue:
-				state = Cube.rotate(state, *Cube.action_space[action])
-			assert Cube.is_solved(state)
+				state = cube.rotate(state, *cube.action_space[action])
+			assert cube.is_solved(state)
 
 	def test_expansion(self):
 		net = Model.create(ModelConfig()).to(gpu).eval()
-		init_state, _, _ = Cube.scramble(3)
+		init_state, _, _ = cube.scramble(3)
 		searcher = AStar(net, lambda_=0.1, expansions=5)
 		searcher.search(init_state, time_limit=1)
 		init_idx = searcher.indices[init_state.tostring()]
 		assert init_idx == 1
 		assert searcher.G[init_idx]  == 0
 		assert searcher.closed[init_idx]
-		for action in Cube.action_space:
-			substate = Cube.rotate(init_state, *action)
+		for action in cube.action_space:
+			substate = cube.rotate(init_state, *action)
 			idx = searcher.indices[substate.tostring()]
 			assert searcher.G[idx] == 1
 			assert searcher.parents[idx] == init_idx
@@ -137,7 +137,7 @@ class TestAStar(MainTest):
 	def test_batched_H(self):
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		games = 5
-		states, _ = Cube.sequence_scrambler(games, 1, True)
+		states, _ = cube.sequence_scrambler(games, 1, True)
 		searcher = AStar(net, lambda_=1, expansions=2)
 		J = searcher.batched_H(states)
 		assert J.shape == (games,)

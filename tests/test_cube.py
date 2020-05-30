@@ -3,8 +3,8 @@ import torch
 
 from tests import MainTest
 
+import librubiks.cube as cube
 from librubiks import gpu, get_is2024, set_is2024, with_used_repr
-from librubiks.cube import Cube
 from librubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
 
 
@@ -13,9 +13,9 @@ class TestRubiksCube(MainTest):
 	is2024: bool
 
 	def test_init(self):
-		state = Cube.get_solved()
-		assert Cube.is_solved(state)
-		assert Cube.get_solved_instance().shape == (20,)
+		state = cube.get_solved()
+		assert cube.is_solved(state)
+		assert cube.get_solved_instance().shape == (20,)
 
 	def test_cube(self):
 		self.is2024 = True
@@ -27,12 +27,12 @@ class TestRubiksCube(MainTest):
 
 	@with_used_repr
 	def _rotation_tests(self):
-		state = Cube.get_solved()
-		for action in Cube.action_space:
-			state = Cube.rotate(state, *action)
+		state = cube.get_solved()
+		for action in cube.action_space:
+			state = cube.rotate(state, *action)
 		# Tests that stringify and by extensions as633 works on assembled
-		state = Cube.get_solved()
-		assert Cube.stringify(state) == "\n".join([
+		state = cube.get_solved()
+		assert cube.stringify(state) == "\n".join([
 			"      2 2 2            ",
 			"      2 2 2            ",
 			"      2 2 2            ",
@@ -47,20 +47,20 @@ class TestRubiksCube(MainTest):
 		moves = ((0, 1), (0, 0), (0, 1), (1, 1), (2, 0), (3, 0))
 		assembled = (False, True, False, False, False, False)
 		for m, a in zip(moves, assembled):
-			state = Cube.rotate(state, *m)
-			assert a == Cube.is_solved(state)
+			state = cube.rotate(state, *m)
+			assert a == cube.is_solved(state)
 
 		# Tests more moves
 		moves = ((3, 1), (2, 1), (1, 0), (0, 0))
 		assembled = (False, False, False, True)
 		for m, a in zip(moves, assembled):
-			state = Cube.rotate(state, *m)
-			assert a == Cube.is_solved(state)
+			state = cube.rotate(state, *m)
+			assert a == cube.is_solved(state)
 
 		# Performs move and checks if it fits with how the string representation would look
-		state = Cube.get_solved()
-		state = Cube.rotate(state, *(0, 1))
-		assert Cube.stringify(state) == "\n".join([
+		state = cube.get_solved()
+		state = cube.rotate(state, *(0, 1))
+		assert cube.stringify(state) == "\n".join([
 			"      2 2 2            ",
 			"      2 2 2            ",
 			"      5 5 5            ",
@@ -73,15 +73,15 @@ class TestRubiksCube(MainTest):
 		])
 
 		# Performs all moves and checks if result fits with how it theoretically should look
-		state = Cube.get_solved()
+		state = cube.get_solved()
 		moves = ((0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0),
 				 (0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1))
 		assembled = (False, False, False, False, False, False,
 					 False, False, False, False, False, False)
 		for m, a in zip(moves, assembled):
-			state = Cube.rotate(state, *m)
-			assert a == Cube.is_solved(state)
-		assert Cube.stringify(state) == "\n".join([
+			state = cube.rotate(state, *m)
+			assert a == cube.is_solved(state)
+		assert cube.stringify(state) == "\n".join([
 			"      2 0 2            ",
 			"      5 2 4            ",
 			"      2 1 2            ",
@@ -95,42 +95,42 @@ class TestRubiksCube(MainTest):
 
 	@with_used_repr
 	def _multi_rotate_test(self):
-		states = np.array([Cube.get_solved()]*5)
+		states = np.array([cube.get_solved()]*5)
 		for _ in range(10):
 			faces, dirs = np.random.randint(0, 6, 5), np.random.randint(0, 1, 5)
-			states_classic = np.array([Cube.rotate(state, face, d) for state, face, d in zip(states, faces, dirs)])
-			states = Cube.multi_rotate(states, faces, dirs)
+			states_classic = np.array([cube.rotate(state, face, d) for state, face, d in zip(states, faces, dirs)])
+			states = cube.multi_rotate(states, faces, dirs)
 			assert (states_classic == states).all()
 
 	def test_scramble(self):
 		np.random.seed(42)
-		state = Cube.get_solved()
-		state, faces, dirs = Cube.scramble(1)
-		assert not Cube.is_solved(state)
+		state = cube.get_solved()
+		state, faces, dirs = cube.scramble(1)
+		assert not cube.is_solved(state)
 
-		state = Cube.get_solved()
-		state, faces, dirs = Cube.scramble(20)
-		assert not Cube.is_solved(state)
+		state = cube.get_solved()
+		state, faces, dirs = cube.scramble(20)
+		assert not cube.is_solved(state)
 		for f, d in zip(reversed(faces), reversed([not item for item in dirs])):
-			state = Cube.rotate(state, *(f, d))
-		assert Cube.is_solved(state)
+			state = cube.rotate(state, *(f, d))
+		assert cube.is_solved(state)
 
 	def test_iter_actions(self):
 		actions = np.array([
 			[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5] * 2,
 			[True, False, True, False, True, False, True, False, True, False, True, False] * 2,
 		], dtype=np.uint8)
-		assert np.all(actions==Cube.iter_actions(2))
-	
+		assert np.all(actions==cube.iter_actions(2))
+
 	def test_indices_to_actions(self):
-		actions = np.arange(Cube.action_dim)
-		faces, dirs = Cube.indices_to_actions(actions)
+		actions = np.arange(cube.action_dim)
+		faces, dirs = cube.indices_to_actions(actions)
 		assert np.all(faces == np.array([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]))
 		assert np.all(dirs == np.array([1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]))
 
 	def test_as_oh(self):
-		state = Cube.get_solved()
-		oh = Cube.as_oh(state)
+		state = cube.get_solved()
+		oh = cube.as_oh(state)
 		supposed_state = torch.zeros(20, 24, device=gpu)
 		corners = [get_corner_pos(c, o) for c, o in zip(SimpleState.corners, SimpleState.corner_orientations)]
 		supposed_state[torch.arange(8), corners] = 1
@@ -139,7 +139,7 @@ class TestRubiksCube(MainTest):
 		assert (supposed_state.flatten() == oh).all()
 
 	def test_as633(self):
-		state = Cube.as633(Cube.get_solved())
+		state = cube.as633(cube.get_solved())
 		target633 = list()
 		for i in range(6):
 			target633.append(np.ones((3, 3)) * i)
@@ -152,9 +152,9 @@ class TestRubiksCube(MainTest):
 
 	@with_used_repr
 	def _get_correctness(self):
-		state = Cube.get_solved()
-		state = Cube.rotate(state, 0, True)
-		state = Cube.rotate(state, 5, False)
+		state = cube.get_solved()
+		state = cube.rotate(state, 0, True)
+		state = cube.rotate(state, 5, False)
 		correctness = torch.tensor([
 			[1, 1, 1, 1, -1, -1, -1, 1],
 			[-1, 1, 1, 1, 1, 1, -1, -1],
@@ -163,5 +163,5 @@ class TestRubiksCube(MainTest):
 			[-1, 1, 1, 1, 1, 1, -1, -1],
 			[1, 1, -1, -1, -1, 1, 1, 1],
 		], device=gpu)
-		assert torch.all(correctness == Cube.as_correct(torch.from_numpy(state).unsqueeze(0)))
+		assert torch.all(correctness == cube.as_correct(torch.from_numpy(state).unsqueeze(0)))
 

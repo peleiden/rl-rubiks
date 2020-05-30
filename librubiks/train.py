@@ -10,7 +10,7 @@ from librubiks import gpu, no_grad, reset_cuda
 from librubiks.utils import Logger, NullLogger, unverbose, TickTock, bernoulli_error
 
 from librubiks.analysis import TrainAnalysis
-from librubiks.cube import Cube
+import librubiks.cube as cube
 from librubiks.model import Model
 
 from librubiks.solving.search import DeepSearcher
@@ -116,7 +116,7 @@ class Train:
 		The network is evaluated for each rollout number in `self.evaluations` according to `self.evaluator`.
 		Stores multiple performance and training results.
 
-		:param torch.nn.Model net: The network to be trained. Must accept input consistent with Cube.get_oh_size()
+		:param torch.nn.Model net: The network to be trained. Must accept input consistent with cube.get_oh_size()
 		:return: The network after all evaluations and the network with the best evaluation score (win fraction)
 		:rtype: (torch.nn.Model, torch.nn.Model)
 		"""
@@ -231,7 +231,7 @@ class Train:
 		eval_time = self.tt.profiles[f'Evaluating using searcher {self.searcher}'].sum() if len(self.evaluation_rollouts) else 0
 		train_time = self.tt.profiles["Training loop"].sum()
 		adi_time = self.tt.profiles["ADI training data"].sum()
-		nstates = self.rollouts * self.rollout_games * self.rollout_depth * Cube.action_dim
+		nstates = self.rollouts * self.rollout_games * self.rollout_depth * cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
 		if len(self.evaluation_rollouts):
 			self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
@@ -247,7 +247,7 @@ class Train:
 		return net, best_net
 
 	def _get_adi_ff_slices(self):
-		data_points = self.rollout_games * self.rollout_depth * Cube.action_dim
+		data_points = self.rollout_games * self.rollout_depth * cube.action_dim
 		slice_size = data_points // self.adi_ff_batches + 1
 		# Final slice may have overflow, however this is simply ignored when indexing
 		slices = [slice(i*slice_size, (i+1)*slice_size) for i in range(self.adi_ff_batches)]
@@ -274,22 +274,22 @@ class Train:
 		net.eval()
 		self.tt.profile("Scrambling")
 		# Only include solved state in training if using Max Lapan convergence fix
-		states, oh_states = Cube.sequence_scrambler(self.rollout_games, self.rollout_depth, with_solved = self.reward_method == 'lapanfix')
+		states, oh_states = cube.sequence_scrambler(self.rollout_games, self.rollout_depth, with_solved = self.reward_method == 'lapanfix')
 		self.tt.end_profile("Scrambling")
 
 		# Keeps track of solved states - Max Lapan's convergence fix
-		solved_scrambled_states = Cube.multi_is_solved(states)
+		solved_scrambled_states = cube.multi_is_solved(states)
 
 		# Generates possible substates for all scrambled states. Shape: n_states*action_dim x *Cube_shape
 		self.tt.profile("ADI substates")
-		substates = Cube.multi_rotate(np.repeat(states, Cube.action_dim, axis=0), *Cube.iter_actions(len(states)))
+		substates = cube.multi_rotate(np.repeat(states, cube.action_dim, axis=0), *cube.iter_actions(len(states)))
 		self.tt.end_profile("ADI substates")
 		self.tt.profile("One-hot encoding")
-		substates_oh = Cube.as_oh(substates)
+		substates_oh = cube.as_oh(substates)
 		self.tt.end_profile("One-hot encoding")
 
 		self.tt.profile("Reward")
-		solved_substates = Cube.multi_is_solved(substates)
+		solved_substates = cube.multi_is_solved(substates)
 		# Reward for won state is 1 normally but 0 if running with reward0
 		rewards = (torch.zeros if self.reward_method == 'reward0' else torch.ones)\
 			(*solved_substates.shape)
@@ -385,7 +385,7 @@ class Train:
 
 		fig.tight_layout()
 		title = (f"Training of {name}" if name != "train" else "Training") +\
-		         f" - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*Cube.action_dim)} states"
+		         f" - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*cube.action_dim)} states"
 		plt.title(title)
 		if semi_logy: plt.semilogy()
 		plt.grid(True)

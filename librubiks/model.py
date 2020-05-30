@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from librubiks.cube import Cube
+import librubiks.cube as cube
 from librubiks import gpu
 from librubiks.utils import NullLogger
 
@@ -117,8 +117,8 @@ class Model(nn.Module):
 		"""
 		pv_input_size =  self.config.shared_sizes[-1] if pv_input_size is None else pv_input_size
 
-		shared_thiccness = [Cube.get_oh_shape(), *self.config.shared_sizes]
-		policy_thiccness = [pv_input_size, *self.config.part_sizes, Cube.action_dim]
+		shared_thiccness = [cube.get_oh_shape(), *self.config.shared_sizes]
+		policy_thiccness = [pv_input_size, *self.config.part_sizes, cube.action_dim]
 		value_thiccness = [pv_input_size, *self.config.part_sizes, 1]
 
 		self.shared_net = nn.Sequential(*self._create_fc_layers(shared_thiccness, False))
@@ -210,7 +210,7 @@ class Model(nn.Module):
 		# This avoids skewing evaluation results
 		with torch.no_grad():
 			model.eval()
-			model(Cube.as_oh(Cube.get_solved()))
+			model(cube.as_oh(cube.get_solved()))
 			model.train()
 		return model
 
@@ -252,7 +252,7 @@ class ResNet(Model):
 	#				    \-> value fc layer(s)
 	def _construct_net(self):
 		# Resblock class is very simple currently (does not change size), so its input must match the res_size
-		assert self.config.shared_sizes[-1] == self.config.res_size or (not self.config.shared_sizes and self.config.res_size == Cube.get_oh_shape())
+		assert self.config.shared_sizes[-1] == self.config.res_size or (not self.config.shared_sizes and self.config.res_size == cube.get_oh_shape())
 
 		# Uses FF constructor to set up feed forward nets. Resblocks are added only to shared net
 		super()._construct_net( pv_input_size = self.config.res_size )
@@ -320,7 +320,7 @@ class ConvNet(Model):
 
 		# Shared part of network
 		fc_out = self.shared_net(x)
-		conv_out = self.shared_conv_net(Cube.as_correct(x)).view(len(x), -1)
+		conv_out = self.shared_conv_net(cube.as_correct(x)).view(len(x), -1)
 		x = torch.cat([fc_out, conv_out], dim=1)
 		x = self.cat_net(x)
 

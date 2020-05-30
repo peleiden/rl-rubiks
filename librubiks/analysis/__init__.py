@@ -6,7 +6,7 @@ from scipy.stats import entropy
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolour
 
-from librubiks.cube import Cube
+import librubiks.cube as cube
 from librubiks.model import Model
 from librubiks.utils import NullLogger, Logger
 
@@ -49,10 +49,10 @@ class TrainAnalysis:
 		self.params = None
 
 		self.first_states = np.stack((
-				Cube.get_solved(),
-				*Cube.multi_rotate(Cube.repeat_state(Cube.get_solved(), Cube.action_dim), *Cube.iter_actions())
+				cube.get_solved(),
+				*cube.multi_rotate(cube.repeat_state(cube.get_solved(), cube.action_dim), *cube.iter_actions())
 				))
-		self.first_states = Cube.as_oh( self.first_states )
+		self.first_states = cube.as_oh( self.first_states )
 		self.first_state_values = list()
 
 		self.substate_val_stds = list()
@@ -155,14 +155,14 @@ class TrainAnalysis:
 			positions = {0: (50, 85)}
 			label_positions = {0: (50, 80)}
 			# Labels must be
-			for i in range(Cube.action_dim):
-				x_pos = 100*( i / (Cube.action_dim - 1) )
+			for i in range(cube.action_dim):
+				x_pos = 100*( i / (cube.action_dim - 1) )
 				positions[i+1] = (x_pos, 5)
 				label_positions[i+1] = (x_pos, 12.5)
 
-			for i, (face, pos) in enumerate(Cube.action_space):
+			for i, (face, pos) in enumerate(cube.action_space):
 				G.add_edge(0, i+1)
-				edge_labels[(0, i+1)] =	Cube.action_names[face].lower() if pos else Cube.action_names[face].upper()
+				edge_labels[(0, i+1)] =	cube.action_names[face].lower() if pos else cube.action_names[face].upper()
 
 
 

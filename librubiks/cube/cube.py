@@ -1,9 +1,57 @@
+"""
+The API for our Rubik's Cube simulator.
+As we use the Rubik's cube in many different ways, this module has some requirements
+
+- Pretty much all functions must work without altering any state as they are to be used by searchers.
+- Efficiency
+- Must support two different Rubik's representations (20x24 and 6x8x6)
+
+The solution to this is this quite large module with these features
+
+- The module carries NO STATE: Environment state must be maintained elsewhere when used and this API works
+	mostly purely functionally
+- Many functions are polymorphic between corresponding functions of the two representations
+- Most functions are implemented compactly using numpy or pytorch sacrificing readability for efficiency
+- Some global constants are maintained
+"""
 import numpy as np
 import torch
 
 from librubiks import cpu, gpu, get_is2024, set_is2024
 from librubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
 
+
+####################
+# Action constants #
+####################
+
+# If the six sides are represented by an array, the order should be F, B, T, D, L, R
+F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
+action_names = ('F', 'B', 'T', 'D', 'L', 'R')
+
+action_space = list()
+for i in range(6): action_space.extend( [(i, True), (i, False)] )
+action_dim = len(action_space)
+
+################
+# Rotate logic #
+################
+
+def rotate(state: np.ndarray, face: int, pos_rev: bool) -> np.ndarray:
+	"""
+	Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
+	"""
+	method = _Cube2024.rotate if get_is2024() else _Cube686.rotate
+	return method(state, face, pos_rev)
+
+def multi_rotate(states: np.ndarray, faces: np.ndarray, pos_rev: np.ndarray) -> np.ndarray:
+	# Performs action (faces[i], pos_revs[i]) on states[i]
+	method = _Cube2024.multi_rotate if get_is2024() else _Cube686.multi_rotate
+	return method(states, faces, pos_rev)
+
+#################
+# Solving logic #
+#################
 
 def _get_2024solved(dtype):
 	solved_state = SimpleState()
@@ -20,173 +68,142 @@ def _get_686solved(dtype):
 		solved_state[i, :, i] = 1
 	return solved_state
 
+dtype = np.int8  # Data type used for internal representation
+_solved2024 = _get_2024solved(dtype)
+_solved686 = _get_686solved(dtype)
 
-class Cube:
-	# If the six sides are represented by an array, the order should be F, B, T, D, L, R
-	# For niceness
-	F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
-	action_names = ('F', 'B', 'T', 'D', 'L', 'R')
+def get_solved_instance() -> np.ndarray:
+	# Careful, Ned, careful now - this method returns the instance - not a copy - so the output is readonly
+	# If speed is not critical, use get_solved()
+	return _solved2024 if get_is2024() else _solved686
 
-	dtype = np.int8  # Data type used for internal representation
-	_solved2024 = _get_2024solved(dtype)
-	_solved686 = _get_686solved(dtype)
+def get_solved() -> np.ndarray:
+	return get_solved_instance().copy()
 
-	action_space = list()
-	for i in range(6): action_space.extend( [(i, True), (i, False)] )
-	action_dim = len(action_space)
+def is_solved(state: np.ndarray) -> bool:
+	return (state == get_solved_instance()).all()
 
-	@classmethod
-	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool) -> np.ndarray:
-		"""
-		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
-		"""
-		method = _Cube2024.rotate if get_is2024() else _Cube686.rotate
-		return method(state, face, pos_rev)
+def multi_is_solved( states: np.ndarray) -> np.ndarray:
+	return (states == get_solved_instance()).all(axis=tuple(range(1, len(shape())+1)))
 
-	@classmethod
-	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_rev: np.ndarray) -> np.ndarray:
-		# Performs action (faces[i], pos_revs[i]) on states[i]
-		method = _Cube2024.multi_rotate if get_is2024() else _Cube686.multi_rotate
-		return method(states, faces, pos_rev)
+########################
+# Representation logic #
+########################
 
-	@classmethod
-	def iter_actions(cls, n: int=1):
-		"""
-		Returns a numpy array of size 2 x n*cls.action_dim containing tiled actions
-		Practical for use with multi_rotate, e.g. Cube.multi_rotate(states, *Cube.iter_actions())
-		"""
-		return np.array(list(zip(*cls.action_space*n)), dtype=np.uint8)
-	
-	@classmethod
-	def indices_to_actions(cls, indices: np.ndarray) -> (np.ndarray, np.ndarray):
-		"""
-		Converts an array of action indices [0, 12[ to arrays of corresponding faces and dirs
-		"""
-		faces = indices // 2
-		dirs = ~(indices % 2) + 2
-		return faces, dirs
+def shape():
+	return get_solved_instance().shape
 
-	@classmethod
-	def scramble(cls, depth: int, force_not_solved=False) -> (np.ndarray, np.ndarray, np.ndarray):
-		faces = np.random.randint(6, size=(depth,))
-		dirs = np.random.randint(2, size=(depth,)).astype(bool)
-		state = cls.get_solved()
-		for face, d in zip(faces, dirs):
-			state = cls.rotate(state, face, d)
+def as_oh(states: np.ndarray) -> torch.tensor:
+	# Takes in n states and returns an n x 480 one-hot tensor
+	method = _Cube2024.as_oh if get_is2024() else _Cube686.as_oh
+	return method(states)
 
-		if force_not_solved and cls.is_solved(state) and depth != 0:
-			return cls.scramble(depth, True)
+def pad(oh: torch.tensor, pad_size: int) -> torch.tensor:
+	assert not get_is2024(), "Padding is only implemented for 20x24 representation"
+	return _Cube686.pad(oh, pad_size)
 
-		return state, faces, dirs
+def as_correct(t: torch.tensor) -> torch.tensor:
+	assert not get_is2024(), "Correctness representation is only implemented for 20x24 representation"
+	return _Cube686.as_correct(t)
 
-	@classmethod
-	def sequence_scrambler(cls, games: int, depth: int, with_solved: bool) -> (np.ndarray, torch.tensor):
-		"""
-		An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
-		Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
-		:with_solved: Whether to include the solved cube in the sequence
-		"""
-		states = []
-		current_states = np.array([cls.get_solved_instance()]*games)
-		faces = np.random.randint(0, 6, (depth, games))
-		dirs = np.random.randint(0, 2, (depth, games))
-		if with_solved: states.append(current_states)
-		for d in range(depth - with_solved):
-			current_states = cls.multi_rotate(current_states, faces[d], dirs[d])
-			states.append(current_states)
-		states = np.vstack(np.transpose(states, (1, 0, *np.arange(2, len(cls.shape())+2))))
-		oh_states = cls.as_oh(states)
-		return states, oh_states
+def get_oh_shape():
+	return 480 if get_is2024() else 288
 
-	@classmethod
-	def get_solved_instance(cls) -> np.ndarray:
-		# Careful, Ned, careful now - this method returns the instance - not a copy - so the output is readonly
-		# If speed is not critical, use get_solved()
-		return cls._solved2024 if get_is2024() else cls._solved686
+def repeat_state(state: np.ndarray, n: int=action_dim) -> np.ndarray:
+	"""
+	Repeats state n times, such that the output array will have shape n x *Cube shape
+	Useful in combination with multi_rotate
+	"""
+	return np.tile(state, [n, *[1]*len(shape())])
 
-	@classmethod
-	def get_solved(cls) -> np.ndarray:
-		return cls.get_solved_instance().copy()
+def as633(state: np.ndarray) -> np.ndarray:
+	"""
+	Order: F, B, T, D, L, R
+	"""
+	method = _Cube2024.as633 if get_is2024() else _Cube686.as633
+	return method(state)
 
-	@classmethod
-	def is_solved(cls, state: np.ndarray) -> bool:
-		return (state == cls.get_solved_instance()).all()
+def stringify(state: np.ndarray) -> str:
+	state633 = as633(state)
+	stringarr = np.empty((9, 12), dtype=str)
+	stringarr[...] = " "
+	simple = np.array([
+		[-1, T, -1, -1],
+		[L,  F,  R,  B],
+		[-1, D, -1, -1],
+	])
+	for i in range(6):
+		pos = tuple(int(x) for x in np.where(simple==i))
+		stringarr[pos[0]*3 : pos[0]*3+3, pos[1]*3 : pos[1]*3+3] = state633[i].astype(str)
+	string = "\n".join([" ".join(list(y)) for y in stringarr])
+	return string
 
-	@classmethod
-	def multi_is_solved(cls, states: np.ndarray) -> np.ndarray:
-		return (states == Cube.get_solved_instance()).all(axis=tuple(range(1, len(Cube.shape())+1)))
+################
+# Action logic #
+################
 
-	@classmethod
-	def shape(cls):
-		return cls.get_solved_instance().shape
+def iter_actions(n: int=1):
+	"""
+	Returns a numpy array of size 2 x n*action_dim containing tiled actions
+	Practical for use with multi_rotate, e.g. multi_rotate(states, *cube.iter_actions())
+	"""
+	return np.array(list(zip(*action_space*n)), dtype=np.uint8)
 
-	@classmethod
-	def as_oh(cls, states: np.ndarray) -> torch.tensor:
-		# Takes in n states and returns an n x 480 one-hot tensor
-		method = _Cube2024.as_oh if get_is2024() else _Cube686.as_oh
-		return method(states)
+def indices_to_actions(indices: np.ndarray) -> (np.ndarray, np.ndarray):
+	"""
+	Converts an array of action indices [0, 12[ to arrays of corresponding faces and dirs
+	"""
+	faces = indices // 2
+	dirs = ~(indices % 2) + 2
+	return faces, dirs
 
-	@classmethod
-	def pad(cls, oh: torch.tensor, pad_size: int) -> torch.tensor:
-		assert not get_is2024(), "Padding is only implemented for 20x24 representation"
-		return _Cube686.pad(oh, pad_size)
+def rev_action(action: int) -> int:
+	return action + 1 if action % 2 == 0 else action - 1
 
-	@classmethod
-	def as_correct(cls, t: torch.tensor) -> torch.tensor:
-		assert not get_is2024(), "Correctness representation is only implemented for 20x24 representation"
-		return _Cube686.as_correct(t)
+def rev_actions(actions: np.ndarray) -> np.ndarray:
+	rev_actions = actions - 1
+	rev_actions[actions % 2 == 0] += 2
+	return rev_actions
 
-	@staticmethod
-	def get_oh_shape():
-		return 480 if get_is2024() else 288
+##################
+# Scramble logic #
+##################
 
-	@staticmethod
-	def rev_action(action: int) -> int:
-		return action + 1 if action % 2 == 0 else action - 1
+def scramble(depth: int, force_not_solved=False) -> (np.ndarray, np.ndarray, np.ndarray):
+	faces = np.random.randint(6, size=(depth,))
+	dirs = np.random.randint(2, size=(depth,)).astype(bool)
+	state = get_solved()
+	for face, d in zip(faces, dirs):
+		state = rotate(state, face, d)
 
-	@staticmethod
-	def rev_actions(actions: np.ndarray) -> np.ndarray:
-		rev_actions = actions - 1
-		rev_actions[actions % 2 == 0] += 2
-		return rev_actions
+	if force_not_solved and is_solved(state) and depth != 0:
+		return scramble(depth, True)
 
-	@classmethod
-	def repeat_state(cls, state: np.ndarray, n: int=action_dim) -> np.ndarray:
-		"""
-		Repeats state n times, such that the output array will have shape n x *Cube shape
-		Useful in combination with multi_rotate
-		"""
-		return np.tile(state, [n, *[1]*len(Cube.shape())])
+	return state, faces, dirs
 
-	@classmethod
-	def as633(cls, state: np.ndarray) -> np.ndarray:
-		"""
-		Order: F, B, T, D, L, R
-		"""
-		method = _Cube2024.as633 if get_is2024() else _Cube686.as633
-		return method(state)
-
-	@classmethod
-	def stringify(cls, state: np.ndarray) -> str:
-		state633 = cls.as633(state)
-		stringarr = np.empty((9, 12), dtype=str)
-		stringarr[...] = " "
-		simple = np.array([
-			[-1, cls.T, -1, -1],
-			[cls.L, cls.F, cls.R, cls.B],
-			[-1, cls.D, -1, -1],
-		])
-		for i in range(6):
-			pos = tuple(int(x) for x in np.where(simple==i))
-			stringarr[pos[0]*3 : pos[0]*3+3, pos[1]*3 : pos[1]*3+3] = state633[i].astype(str)
-		string = "\n".join([" ".join([x for x in y]) for y in stringarr])
-		return string
+def sequence_scrambler(games: int, depth: int, with_solved: bool) -> (np.ndarray, torch.tensor):
+	"""
+	An out-of-place scrambler which returns the state to each of the scrambles useful for ADI
+	Returns a games x n x 20 tensor with states as well as their one-hot representations (games * n) x 480
+	:with_solved: Whether to include the solved cube in the sequence
+	"""
+	states = []
+	current_states = np.array([get_solved_instance()]*games)
+	faces = np.random.randint(0, 6, (depth, games))
+	dirs = np.random.randint(0, 2, (depth, games))
+	if with_solved: states.append(current_states)
+	for d in range(depth - with_solved):
+		current_states = multi_rotate(current_states, faces[d], dirs[d])
+		states.append(current_states)
+	states = np.vstack(np.transpose(states, (1, 0, *np.arange(2, len(shape())+2))))
+	oh_states = as_oh(states)
+	return states, oh_states
 
 
-class _Cube2024(Cube):
+class _Cube2024:
 
-	map_pos, map_neg = get_tensor_map(Cube.dtype)
-	corner_633map, side_633map = get_633maps(Cube.F, Cube.B, Cube.T, Cube.D, Cube.L, Cube.R)
+	map_pos, map_neg = get_tensor_map(dtype)
+	corner_633map, side_633map = get_633maps(F, B, T, D, L, R)
 
 	@classmethod
 	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool):
@@ -210,8 +227,8 @@ class _Cube2024(Cube):
 		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
 		return altered_states
 
-	@classmethod
-	def as_oh(cls, states: np.ndarray):
+	@staticmethod
+	def as_oh(states: np.ndarray):
 		# Takes in n states and returns an n x 480 one-hot tensor
 		if len(states.shape) == 1:
 			oh = torch.zeros(1, 480, device=gpu)
@@ -223,6 +240,7 @@ class _Cube2024(Cube):
 			all_idcs = np.repeat(np.arange(len(states)), 20)
 			oh[all_idcs, idcs.ravel()] = 1
 		return oh
+
 
 	@classmethod
 	def as633(cls, state: np.ndarray):
@@ -253,7 +271,7 @@ class _Cube2024(Cube):
 		return state633
 
 
-class _Cube686(Cube):
+class _Cube686:
 
 	# The i'th index contain the neighbors of the i'th side in positive direction
 	neighbors = np.array([
@@ -282,7 +300,7 @@ class _Cube686(Cube):
 	# Number of times the 8 long vector has to be shifted to the left to start at (0, 0) in 3x3
 	shifts = np.array([0, 6, 6, 4, 2, 4])
 
-	solved_cuda = torch.from_numpy(_get_686solved(Cube.dtype)).to(gpu)
+	solved_cuda = torch.from_numpy(_get_686solved(dtype)).to(gpu)
 
 	@staticmethod
 	def _shift_left(a: np.ndarray, num_elems: int):
@@ -312,12 +330,12 @@ class _Cube686(Cube):
 
 		return altered_state
 
-	@classmethod
-	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
-		return np.array([cls.rotate(state, face, pos_rev) for state, face, pos_rev in zip(states, faces, pos_revs)], dtype=cls.dtype)
+	@staticmethod
+	def multi_rotate(states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
+		return np.array([rotate(state, face, pos_rev) for state, face, pos_rev in zip(states, faces, pos_revs)], dtype=dtype)
 
-	@classmethod
-	def as_oh(cls, states: np.ndarray) -> torch.tensor:
+	@staticmethod
+	def as_oh(states: np.ndarray) -> torch.tensor:
 		# This representation is already one-hot encoded, so only ravelling is done
 		if len(states.shape) == 3:
 			states = np.expand_dims(states, 0)

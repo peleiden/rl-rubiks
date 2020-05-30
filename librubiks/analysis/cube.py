@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 
 from librubiks import set_is2024
-from librubiks.cube import Cube
+import librubiks.cube as cube
 from librubiks.utils import TickTock, Logger
 
 
@@ -15,33 +15,33 @@ tt = TickTock()
 log = Logger(os.path.join("data", "local_analyses", "cube.log"), "Cube")
 
 def scramble():
-	states = np.empty((scrambles, *Cube.get_solved_instance().shape), dtype=Cube.dtype)
+	states = np.empty((scrambles, *cube.get_solved_instance().shape), dtype=cube.dtype)
 	for i in range(scrambles):
 		tt.profile(f"Scrambling of depth {depth}")
-		states[i], _, _ = Cube.scramble(depth)
+		states[i], _, _ = cube.scramble(depth)
 		tt.end_profile(f"Scrambling of depth {depth}")
 	return states
 
 def sequence_sramble():
 	n = 100
 	tt.profile(f"Generating {n} sequence scrambles of depth {depth}")
-	states, oh = Cube.sequence_scrambler(n, depth)
+	states, oh = cube.sequence_scrambler(n, depth)
 	tt.end_profile(f"Generating {n} sequence scrambles of depth {depth}")
 	return states
 
 def oh(states):
 	n_states = states.shape[-1]
 	tt.profile(f"One-hot encoding of {n_states} states")
-	oh = Cube.as_oh(states)
+	oh = cube.as_oh(states)
 	tt.end_profile(f"One-hot encoding of {n_states} states")
 	return oh
 
 def perform_actions():
-	state = Cube.get_solved_instance()
+	state = cube.get_solved_instance()
 	for i in range(actions):
-		action = Cube.action_space[np.random.choice(Cube.action_dim)]
+		action = cube.action_space[np.random.choice(cube.action_dim)]
 		tt.profile("Performing one action")
-		state = Cube.rotate(state, *action)
+		state = cube.rotate(state, *action)
 		tt.end_profile("Performing one action")
 
 def analyse_cube():
@@ -64,7 +64,7 @@ def analyse_cube():
 
 	log.section(f"One-hot encoding one state {scrambles} times")
 	for i in range(10_000):
-		oh(Cube.get_solved())
+		oh(cube.get_solved())
 
 	log.section(f"Performing {actions} actions")
 	perform_actions()
