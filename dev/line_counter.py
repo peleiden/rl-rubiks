@@ -1,5 +1,4 @@
 import os, sys
-os.chdir(sys.path[0])
 from pathlib import Path
 import git
 import matplotlib.pyplot as plt
@@ -36,7 +35,7 @@ def get_files(patterns: dict):
 	return files
 
 
-repopath = os.path.realpath(os.path.join(os.getcwd(), "..", "..", ".."))
+repopath = os.path.realpath(os.getcwd())
 os.chdir(repopath)
 print(repopath)
 repo = git.Repo(repopath)
@@ -77,8 +76,5 @@ plt.ylabel("Nummer of lines (excl. empty lines and comments)")
 plt.legend(loc=2)
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(f"{repopath}/dev/legacy/project_management/local_line_counts.png")
+plt.savefig(os.path.join(repopath, "dev", "local_line_counts.png"))
 plt.show()
-
-
-
