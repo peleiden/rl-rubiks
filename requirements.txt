@@ -1,10 +1,10 @@
-# Do not use this file to install dependencies. It is designed for heroku only
-Flask
-flask_restful
-flask_cors
-gunicorn
-numpy
+# Do not use this file to install dependencies. It is designed for the heroku backend
+flask==1.1.2
+flask_cors==3.0.8
+flask_restful==0.3.8
+gunicorn==20.0.4
+numpy==1.18.4
 --find-links https://download.pytorch.org/whl/torch_stable.html
 torch==1.5.0+cpu
-wget
-scipy
+wget==3.2
+scipy==1.4.1
