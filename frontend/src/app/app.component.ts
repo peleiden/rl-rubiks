@@ -6,9 +6,6 @@ import { CubeService } from './common/cube.service';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styles: [
-    "button.btn-action { width: 65px; }"
-  ],
 })
 export class AppComponent implements OnInit {
 

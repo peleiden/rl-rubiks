@@ -4,17 +4,23 @@ import { HttpClientModule } from "@angular/common/http";
 import { FormsModule } from "@angular/forms";
 
 import { AppComponent } from './app.component';
-import { RubiksComponent } from './rubiks/rubiks.component';
+import { AppRoutingModule } from './app-routing.module';
+import { CubeComponent } from './cube/cube.component';
+import { AppendixComponent } from './appendix/appendix.component';
+import { DocumentationComponent } from './documentation/documentation.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    RubiksComponent,
+    CubeComponent,
+    AppendixComponent,
+    DocumentationComponent,
   ],
   imports: [
     BrowserModule,
     HttpClientModule,
     FormsModule,
+    AppRoutingModule,
   ],
   providers: [],
   bootstrap: [AppComponent]
