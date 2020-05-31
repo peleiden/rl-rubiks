@@ -6,7 +6,7 @@ np.set_printoptions(precision=4, threshold=np.inf)
 from librubiks import gpu, set_is2024
 from librubiks import cube
 from librubiks.model import Model, ModelConfig
-from librubiks.solving.search import Searcher, MCTS, PolicySearch, BFS, ValueSearch
+from librubiks.solving.agents import Agent, MCTS, PolicySearch, BFS, ValueSearch
 
 from librubiks.utils import seedsetter, Logger, TickTock
 
@@ -116,11 +116,11 @@ def W(max_states, time_limit, opts):
 	searcher._shorten_action_queue(best_index)
 	log("Best value", searcher.V[best_index], "at index", best_index)
 	log("State at best index", searcher.states[best_index])
-	# log(cube.stringify(searcher.states[best_index]))
+	# log(cube.stringify(agent.states[best_index]))
 	
 	print(searcher.tt)
 	
-	samples = np.arange(1, len(searcher)+1, )#len(searcher)//1000)
+	samples = np.arange(1, len(searcher)+1, )#len(agent)//1000)
 	plt.figure(figsize=(15, 15))
 	plt.subplot(311)
 	plt.scatter(samples, searcher.V[samples], s=2, label="V")

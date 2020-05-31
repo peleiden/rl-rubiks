@@ -8,7 +8,7 @@ plt.rcParams.update({"font.size": 22})
 
 from librubiks.utils import NullLogger, Logger, TickTock, bernoulli_error
 
-from librubiks.solving import search
+from librubiks.solving import agents
 
 from librubiks import cube
 
@@ -39,20 +39,20 @@ class Evaluator:
 	def approximate_time(self):
 		return self.max_time * self.n_games * len(self.scrambling_depths)
 
-	def _eval_game(self, searcher: search.Searcher, depth: int):
+	def _eval_game(self, agent: agents.Agent, depth: int):
 		turns_to_complete = -1  # -1 for unfinished
 		state, _, _ = cube.scramble(depth, True)
-		solution_found = searcher.search(state, self.max_time, self.max_states)
-		if solution_found: turns_to_complete = len(searcher.action_queue)
+		solution_found = agent.search(state, self.max_time, self.max_states)
+		if solution_found: turns_to_complete = len(agent.action_queue)
 		return turns_to_complete
 
-	def eval(self, searcher: search.Searcher):
+	def eval(self, agent: agents.Agent):
 		"""
-		Evaluates a searcher agent
+		Evaluates an agent
 		Returns results which is an a len(self.scrambling_depths) x self.n_games matrix
 		Each entry contains the number of steps needed to solve the scrambled cube or -1 if not solved
 		"""
-		self.log.section(f"Evaluation of {searcher}")
+		self.log.section(f"Evaluation of {agent}")
 		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <~ {self.approximate_time()/60:.2f} min")
 
 		res = []
@@ -60,12 +60,12 @@ class Evaluator:
 		times = []
 		for d in self.scrambling_depths:
 			for _ in range(self.n_games):
-				self.tt.profile(f"Evaluation of {searcher}. Depth {d}")
-				r = self._eval_game(searcher, d)
-				t = self.tt.end_profile(f"Evaluation of {searcher}. Depth {d}")
+				self.tt.profile(f"Evaluation of {agent}. Depth {d}")
+				r = self._eval_game(agent, d)
+				t = self.tt.end_profile(f"Evaluation of {agent}. Depth {d}")
 
 				res.append(r)
-				states.append(len(searcher))
+				states.append(len(agent))
 				times.append(t)
 			self.log.verbose(f"Performed evaluation at depth: {d}/{self.scrambling_depths[-1]}")
 

@@ -12,7 +12,7 @@ from librubiks.model import Model, ModelConfig
 from librubiks import cube
 
 
-class Searcher:
+class Agent:
 	eps = np.finfo("float").eps
 	_explored_states = 0
 
@@ -23,7 +23,7 @@ class Searcher:
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
 		# Returns whether a path was found and generates action queue
-		# Implement _step method for searchers that look one step ahead, otherwise overwrite this method
+		# Implement _step method for agents that look one step ahead, otherwise overwrite this method
 		time_limit, max_states = self.reset(time_limit, max_states)
 		self.tt.tick()
 
@@ -65,7 +65,7 @@ class Searcher:
 		return self._explored_states
 
 
-class DeepSearcher(Searcher):
+class DeepAgent(Agent):
 	def __init__(self, net: Model):
 		super().__init__()
 		self.net = net
@@ -80,7 +80,7 @@ class DeepSearcher(Searcher):
 		raise NotImplementedError
 
 
-class RandomDFS(Searcher):
+class RandomDFS(Agent):
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		action = np.random.randint(cube.action_dim)
 		state = cube.rotate(state, *cube.action_space[action])
@@ -90,7 +90,7 @@ class RandomDFS(Searcher):
 		return "Random depth-first search"
 
 
-class BFS(Searcher):
+class BFS(Agent):
 
 	states = dict()
 
@@ -130,7 +130,7 @@ class BFS(Searcher):
 		return len(self.states)
 
 
-class PolicySearch(DeepSearcher):
+class PolicySearch(DeepAgent):
 
 	def __init__(self, net: Model, sample_policy=False):
 		super().__init__(net)
@@ -152,7 +152,7 @@ class PolicySearch(DeepSearcher):
 		return f"{'Sampled' if self.sample_policy else 'Greedy'} policy"
 
 
-class ValueSearch(DeepSearcher):
+class ValueSearch(DeepAgent):
 
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		substates = cube.multi_rotate(cube.repeat_state(state, cube.action_dim), *cube.iter_actions())
@@ -170,7 +170,7 @@ class ValueSearch(DeepSearcher):
 		return "Greedy value"
 
 
-class MCTS(DeepSearcher):
+class MCTS(DeepAgent):
 
 	_expand_nodes = 1000  # Expands stack by 1000, then 2000, then 4000 and etc. each expansion
 	n_states = 0
@@ -402,7 +402,7 @@ class MCTS(DeepSearcher):
 		return len(self.indices)
 
 
-class AStar(DeepSearcher):
+class AStar(DeepAgent):
 	"""Batch Weighted A* Search
 	As per Agostinelli, McAleer, Shmakov, Baldi:
 	"Solving the Rubik's cube with deep reinforcement learning and search".
@@ -638,7 +638,7 @@ class AStar(DeepSearcher):
 	def __str__(self):
 		return f'AStar (lambda={self.lambda_}, N={self.expansions})'
 
-class DankSearch(DeepSearcher):
+class EGVM(DeepAgent):
 
 	def __init__(self, net, epsilon: float, workers: int, depth: int):
 		super().__init__(net)

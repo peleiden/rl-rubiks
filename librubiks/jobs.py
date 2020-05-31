@@ -13,10 +13,10 @@ from librubiks.utils import get_commit, Logger
 from librubiks.model import Model, ModelConfig
 from librubiks.train import Train
 
+from librubiks.solving import agents
+from librubiks.solving.agents import PolicySearch, ValueSearch, DeepAgent, Agent
 from librubiks.solving.evaluation import Evaluator
-from librubiks.solving.search import PolicySearch, ValueSearch, DeepSearcher, Searcher
 
-import librubiks.solving.search as search
 
 class TrainJob:
 	eval_games = 200  # Not given as arguments to __init__, as they should be accessible in runtime_estim
@@ -45,10 +45,10 @@ class TrainJob:
 				 reward_method: str,
 
 				 # Currently not set by argparser/configparser
-				 searcher = PolicySearch(net=None),
+				 agent = PolicySearch(net=None),
 				 scrambling_depths: tuple = (10,),
 				 verbose: bool = True,
-			 ):
+				 ):
 
 		self.name = name
 		assert isinstance(self.name, str)
@@ -82,8 +82,8 @@ class TrainJob:
 		self.evaluator = Evaluator(n_games=self.eval_games, max_time=self.max_time, scrambling_depths=scrambling_depths, logger=self.logger)
 		self.evaluation_interval = evaluation_interval
 		assert isinstance(self.evaluation_interval, int) and 0 <= self.evaluation_interval
-		self.searcher = searcher
-		assert isinstance(self.searcher, DeepSearcher)
+		self.agent = agent
+		assert isinstance(self.agent, DeepAgent)
 		self.is2024 = is2024
 
 		assert nn_init in ["glorot", "he"] or ( float(nn_init) or True ),\
@@ -121,12 +121,12 @@ class TrainJob:
 					  tau					= self.tau,
 					  reward_method			= self.reward_method,
 					  update_interval		= self.update_interval,
-					  searcher					= self.searcher,
+					  agent					= self.agent,
 					  logger				= self.logger,
 					  evaluation_interval	= self.evaluation_interval,
 					  evaluator				= self.evaluator,
 					  with_analysis			= self.analysis,
-				  )
+					  )
 		self.logger(f"Rough upper bound on total evaluation time during training: {len(train.evaluation_rollouts)*self.evaluator.approximate_time()/60:.2f} min")
 
 		net = Model.create(self.model_cfg, self.logger).to(gpu)
@@ -163,29 +163,29 @@ class EvalJob:
 	is2024: bool
 
 	def __init__(self,
-			name: str,
-			# Set by parser, should correspond to options in runeval
-			location: str,
-			use_best: bool,
-			searcher: str,
-			games: int,
-			max_time: float,
-			max_states: int,
-			scrambling: str,
-			optimized_params: bool,
-			mcts_c: float,
-			mcts_graph_search: bool,
-			policy_sample: bool,
-			astar_lambda: float,
-			astar_expansions: int,
-			egvm_epsilon: float,
-			egvm_workers: int,
-			egvm_depth: int,
+				 name: str,
+				 # Set by parser, should correspond to options in runeval
+				 location: str,
+				 use_best: bool,
+				 agent: str,
+				 games: int,
+				 max_time: float,
+				 max_states: int,
+				 scrambling: str,
+				 optimized_params: bool,
+				 mcts_c: float,
+				 mcts_graph_search: bool,
+				 policy_sample: bool,
+				 astar_lambda: float,
+				 astar_expansions: int,
+				 egvm_epsilon: float,
+				 egvm_workers: int,
+				 egvm_depth: int,
 
-			# Currently not set by parser
-			verbose: bool = True,
-			in_subfolder: bool = False, # Should be true if there are multiple experiments
-		):
+				 # Currently not set by parser
+				 verbose: bool = True,
+				 in_subfolder: bool = False,  # Should be true if there are multiple experiments
+			 ):
 		self.name = name
 		self.location = location
 
@@ -202,33 +202,33 @@ class EvalJob:
 		self.logger = Logger(f"{self.location}/{self.name}.log", name, verbose) #Already creates logger at init to test whether path works
 		self.evaluator = Evaluator(n_games=games, max_time=max_time, max_states=max_states, scrambling_depths=scrambling, logger=self.logger)
 
-		#Create searchers
-		searcher_string = searcher
-		searcher = getattr(search, searcher_string)
-		assert issubclass(searcher, search.Searcher)
+		#Create agents
+		agent_string = agent
+		agent = getattr(agents, agent_string)
+		assert issubclass(agent, agents.Agent)
 
-		if issubclass(searcher, search.DeepSearcher):
-			self.searchers, self.reps, search_args = {}, {}, {}
+		if issubclass(agent, agents.DeepAgent):
+			self.agents, self.reps, agents_args = {}, {}, {}
 
 			#DeepSearchers need specific arguments
-			if searcher == search.MCTS:
+			if agent == agents.MCTS:
 				assert mcts_c >= 0, f"Exploration parameter c must be 0 or larger, not {mcts_c}"
-				search_args = { 'c': mcts_c, 'search_graph': mcts_graph_search }
-			elif searcher == search.PolicySearch:
+				agents_args = { 'c': mcts_c, 'search_graph': mcts_graph_search }
+			elif agent == agents.PolicySearch:
 				assert isinstance(policy_sample, bool)
-				search_args = { 'sample_policy': policy_sample }
-			elif searcher == search.AStar:
+				agents_args = { 'sample_policy': policy_sample }
+			elif agent == agents.AStar:
 				assert isinstance(astar_lambda, float) and 0 <= astar_lambda <= 1, "AStar lambda must be float in [0, 1]"
 				assert isinstance(astar_expansions, int) and  astar_expansions >= 1 and (not max_states or astar_expansions < max_states) , "Expansions must be int < max states"
 
-				search_args = { 'lambda_': astar_lambda, 'expansions': astar_expansions }
-			elif searcher == search.DankSearch:
+				agents_args = { 'lambda_': astar_lambda, 'expansions': astar_expansions }
+			elif agent == agents.EGVM:
 				assert isinstance(egvm_epsilon, float) and 0 <= egvm_epsilon <= 1, "EGVM epsilon must be float in [0, 1]"
 				assert isinstance(egvm_workers, int) and egvm_workers >= 1, "Number of EGWM workers must a natural number"
 				assert isinstance(egvm_depth, int) and egvm_depth >= 1, "EGWM depth must be a natural number"
-				search_args = { 'epsilon': egvm_epsilon, 'workers': egvm_workers, 'depth': egvm_depth }
+				agents_args = { 'epsilon': egvm_epsilon, 'workers': egvm_workers, 'depth': egvm_depth }
 			else:  # Non-parametric methods go brrrr
-				search_args = {}
+				agents_args = {}
 
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
 			# DeepSearchers might have to test multiple NN's
@@ -237,46 +237,46 @@ class EvalJob:
 				store_repr()
 				with open(f"{folder}/config.json") as f:
 					cfg = json.load(f)
-				if optimized_params and searcher in [search.MCTS, search. AStar]:
-					parampath = os.path.join(folder, f'{searcher_string}_params.json')
+				if optimized_params and agent in [agents.MCTS, agents.AStar]:
+					parampath = os.path.join(folder, f'{agent_string}_params.json')
 					if os.path.isfile(parampath):
 						with open(parampath, 'r') as paramfile:
-							search_args = json.load(paramfile)
-							if searcher == search.MCTS: search_args['search_graph'] = mcts_graph_search
+							agents_args = json.load(paramfile)
+							if agent == agents.MCTS: agents_args['search_graph'] = mcts_graph_search
 					else:
-						self.logger.log(f"Optimized params was set to true, but no file {parampath} was found, proceding with arguments for this {searcher_string}.")
+						self.logger.log(f"Optimized params was set to true, but no file {parampath} was found, proceding with arguments for this {agent_string}.")
 
 				set_is2024(cfg["is2024"])
-				searcher = searcher.from_saved(folder, use_best=use_best, **search_args)
-				key = f'{str(searcher)}{"" if folder==search_location else " " + os.path.basename(folder.rstrip(os.sep))}'
+				agent = agent.from_saved(folder, use_best=use_best, **agents_args)
+				key = f'{str(agent)}{"" if folder == search_location else " " + os.path.basename(folder.rstrip(os.sep))}'
 
 				self.reps[key] = cfg["is2024"]
-				self.searchers[key] = searcher
+				self.agents[key] = agent
 				restore_repr()
 
-			if not self.searchers:
+			if not self.agents:
 				raise FileNotFoundError(f"No model.pt found in folder or subfolder of {self.location}")
 			self.logger.log(f"Loaded model from {search_location}")
 
 		else:
-			searcher = searcher()
-			self.searchers = {searcher: searcher}
-			self.reps = {searcher: True}
+			agent = agent()
+			self.agents = {agent: agent}
+			self.reps = {agent: True}
 
-		self.searcher_results = {}
-		self.logger.log(f"Initialized {self.name} with searchers {', '.join(str(s) for s in self.searchers)}")
-		self.logger.log(f"TIME ESTIMATE: {len(self.searchers)*self.evaluator.approximate_time()/60:.2f} min.\t(Rough upper bound)")
+		self.agent_results = {}
+		self.logger.log(f"Initialized {self.name} with searchers {', '.join(str(s) for s in self.agents)}")
+		self.logger.log(f"TIME ESTIMATE: {len(self.agents) * self.evaluator.approximate_time() / 60:.2f} min.\t(Rough upper bound)")
 
 	def execute(self):
 		self.logger.log(f"Beginning evaluator {self.name}\nLocation {self.location}\nCommit: {get_commit()}")
-		for (name, searcher), representation in zip(self.searchers.items(), self.reps.values()):
+		for (name, agent), representation in zip(self.agents.items(), self.reps.values()):
 			self.is2024 = representation
-			self.searcher_results[name] = self._single_exec(name, searcher)
+			self.agent_results[name] = self._single_exec(name, agent)
 
 	@with_used_repr
-	def _single_exec(self, name: str, searcher: Searcher):
-		self.logger.section(f'Evaluationg searcher {name}')
-		res, states = self.evaluator.eval(searcher)
+	def _single_exec(self, name: str, agent: Agent):
+		self.logger.section(f'Evaluationg agent {name}')
+		res, states = self.evaluator.eval(agent)
 		np.save(f"{self.location}/{name}_results.npy", res)
 		np.save(f"{self.location}/{name}_states_seen.npy", states)
 		return res
@@ -285,8 +285,8 @@ class EvalJob:
 	def plot_all_jobs(jobs: list, save_location: str):
 		results, settings = dict(), list()
 		for job in jobs:
-			for searcher, result in job.searcher_results.items():
-				key = searcher if len(jobs) == 1 else f"{job.name} - {searcher}"
+			for agent, result in job.agent_results.items():
+				key = agent if len(jobs) == 1 else f"{job.name} - {agent}"
 				results[key] = result
 				settings.append(
 					{

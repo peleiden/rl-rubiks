@@ -2,7 +2,7 @@
 The API for our Rubik's Cube simulator.
 As we use the Rubik's cube in many different ways, this module has some requirements
 
-- Pretty much all functions must work without altering any state as they are to be used by searchers.
+- Pretty much all functions must work without altering any state as they are to be used by agents.
 - Efficiency
 - Must support two different Rubik's representations (20x24 and 6x8x6)
 

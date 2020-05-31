@@ -13,7 +13,7 @@ from librubiks.utils import Logger, NullLogger
 
 from librubiks.solving.evaluation import Evaluator
 
-import librubiks.solving.search as search
+from librubiks.solving import agents
 from librubiks.model import Model
 
 class Optimizer:
@@ -32,8 +32,8 @@ class Optimizer:
 
 		# For evaluation use
 		self.evaluator = None
-		self.persistent_searcher_params = None
-		self.searcher_class = None
+		self.persistent_agent_params = None
+		self.agent_class = None
 
 		self.score_history = list()
 		self.parameter_history = list()
@@ -44,15 +44,15 @@ class Optimizer:
 	def optimize(self, iterations: int):
 		raise NotImplementedError("To be implemented in child class")
 
-	def objective_from_evaluator(self, evaluator: Evaluator, searcher_class, persistent_searcher_params: dict, param_prepper: Callable=lambda x: None):
+	def objective_from_evaluator(self, evaluator: Evaluator, agent_class, persistent_agent_params: dict, param_prepper: Callable=lambda x: None):
 		self.evaluator = evaluator
-		self.searcher_class = searcher_class
-		self.persistent_searcher_params = persistent_searcher_params
+		self.agent_class = agent_class
+		self.persistent_agent_params = persistent_agent_params
 
-		def target_function(searcher_params):
-			param_prepper(searcher_params)
-			searcher = self.searcher_class(**self.persistent_searcher_params, **searcher_params)
-			res, _= self.evaluator.eval(searcher)
+		def target_function(agent_params):
+			param_prepper(agent_params)
+			agent = self.agent_class(**self.persistent_agent_params, **agent_params)
+			res, _= self.evaluator.eval(agent)
 			won = res != -1
 			return won.mean() if won.any() else 0
 
@@ -118,7 +118,7 @@ class BayesianOptimizer(Optimizer):
 	def __str__(self):
 		return f"BayesianOptimizer()"
 
-def searcher_optimize():
+def agent_optimize():
 	"""
 	Main way to run optimization. Hard coded to run optimization at 1 sec per game, but other behaviour can be set with CLI arguments seen by
 	running `python librubiks/solving/hyper_optim.py --help`.
@@ -149,7 +149,7 @@ def searcher_optimize():
 		type=str, default=model_path)
 	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
 		type=int, default=25)
-	parser.add_argument('--searcher', help='Name of searcher corresponding to searcher class in librubiks.solving.search',
+	parser.add_argument('--agent', help='Name of agent corresponding to agent class in librubiks.solving.agents',
 		type=str, default='AStar', choices = ['MCTS', 'AStar'])
 	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test',
 		type=int, default=50)
@@ -163,8 +163,8 @@ def searcher_optimize():
 	args = parser.parse_args()
 	assert args.save_optimal or not args.save_optimal # that is the question
 
-	searcher_name = args.searcher
-	if searcher_name == 'MCTS':
+	agent_name = args.agent
+	if agent_name == 'MCTS':
 		params = {
 			'c': (0.1, 1),
 		}
@@ -174,7 +174,7 @@ def searcher_optimize():
 			'net' : Model.load(args.location, load_best=args.use_best),
 			'search_graph': False,
 		}
-	elif searcher_name == 'AStar':
+	elif agent_name == 'AStar':
 		params = {
 			'lambda_': (0.1, 1),
 			'expansions': (1, 250),
@@ -184,21 +184,22 @@ def searcher_optimize():
 		persistent_params = {
 			'net' : Model.load(args.location, load_best=args.use_best),
 		}
-	else: raise NameError(f"{searcher_name} does not correspond to a known searcher, please pick either AStar og MCTS")
+	else:
+		raise NameError(f"{agent_name} does not correspond to a known agent, please pick either AStar og MCTS")
 
-	logger = Logger(os.path.join(args.location, f'{searcher_name}_optimization.log'), 'Optimization')
-	logger.log(f"{searcher_name} optimization. Using network from {model_path}.")
+	logger = Logger(os.path.join(args.location, f'{agent_name}_optimization.log'), 'Optimization')
+	logger.log(f"{agent_name} optimization. Using network from {model_path}.")
 
-	searcher = getattr(search, searcher_name)
+	agent = getattr(agents, agent_name)
 
 	evaluator = Evaluator(n_games=args.eval_games, max_time=1, scrambling_depths=[args.depth])
 	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
-	optimizer.objective_from_evaluator(evaluator, searcher, persistent_params, param_prepper=prepper)
+	optimizer.objective_from_evaluator(evaluator, agent, persistent_params, param_prepper=prepper)
 	optimizer.optimize(args.iterations)
 
 	if args.save_optimal:
-		with open(os.path.join(args.location, f'{searcher_name}_params.json'), 'w') as outfile:
+		with open(os.path.join(args.location, f'{agent_name}_params.json'), 'w') as outfile:
 			json.dump(optimizer.optimal, outfile)
 
 if __name__ == '__main__':
-	searcher_optimize()
+	agent_optimize()

@@ -13,7 +13,7 @@ from librubiks.analysis import TrainAnalysis
 from librubiks import cube
 from librubiks.model import Model
 
-from librubiks.solving.search import DeepSearcher
+from librubiks.solving.agents import DeepAgent
 from librubiks.solving.evaluation import Evaluator
 
 class Train:
@@ -36,7 +36,7 @@ class Train:
 				 lr: float,
 				 gamma: float,
 				 update_interval: int,
-				 searcher: DeepSearcher,
+				 agent: DeepAgent,
 				 evaluator: Evaluator,
 				 evaluation_interval: int,
 				 with_analysis: bool,
@@ -73,7 +73,7 @@ class Train:
 				self.evaluation_rollouts = np.append(self.evaluation_rollouts, self.rollouts-1)
 		else:
 			self.evaluation_rollouts = np.array([])
-		self.searcher = searcher
+		self.searcher = agent
 
 		self.tau = tau
 		self.alpha_update = alpha_update
