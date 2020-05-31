@@ -4,7 +4,8 @@ from datetime import timedelta
 
 import numpy as np
 
-from librubiks.runtrain import TrainJob, options
+from runtrain import options
+from librubiks.jobs import TrainJob
 from librubiks.utils import seedsetter, Logger, Parser, TickTock
 
 if __name__ == "__main__":
@@ -36,7 +37,7 @@ if __name__ == "__main__":
 	log_loc += "/runtime_estimation.txt"
 	log = Logger(log_loc, "Training time estimation")
 	log("\n".join([
-		f"Expected runtime for the {len(job_settings)} jobs given: {timedelta(seconds=int(estimated_runtime))}",
+		f"Expected training time for the {len(job_settings)} given jobs: {timedelta(seconds=int(estimated_runtime))}",
 		f"With 20 % buffer: {timedelta(seconds=int(estimated_runtime*1.2))}"
 	]))
 
