@@ -17,11 +17,11 @@ api = Api(app)
 CORS(app)
 
 net_loc = "local_net"
-if not os.path.exists(f"{net_loc}/model.pt"):
-	os.makedirs(net_loc, exist_ok=True)
-	url = "https://github.com/peleiden/rubiks-models/blob/master/fcnew/%s?raw=true"
-	download(url % "model.pt", net_loc)
-	download(url % "config.json", net_loc)
+# if not os.path.exists(f"{net_loc}/model.pt"):
+os.makedirs(net_loc, exist_ok=True)
+url = "https://github.com/peleiden/rubiks-models/blob/master/fcnew/%s?raw=true"
+download(url % "model.pt", net_loc)
+download(url % "config.json", net_loc)
 
 searchers = [
 	{ "name": "AStar", "searcher": AStar.from_saved(net_loc, use_best=False, lambda_=0.2, expansions=50) },
