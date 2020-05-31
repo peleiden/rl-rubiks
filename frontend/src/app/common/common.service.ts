@@ -14,7 +14,7 @@ export class CommonService {
   };
   cuda: boolean;
   searchers: string[];
-  timeLimit = 1;
+  timeLimit = 5;
   selectedSearcher: number;
   hasSearchedForSolution = false;
   hasSolution: boolean;
