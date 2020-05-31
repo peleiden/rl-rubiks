@@ -3,6 +3,6 @@ cd ../frontend
 ng deploy --base-href https://peleiden.github.io/rl-rubiks/
 git checkout prod
 git pull
-git merge master
+git rebase master
 git push
 git checkout master
