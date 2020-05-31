@@ -55,9 +55,9 @@ class SimpleState:
 	# Used for representation in the readable Actions maps
 	# Initialized in solved state
 	corners = np.arange(8)
-	corner_orientations = np.zeros(8)
+	corner_orientations = np.zeros(8, dtype=int)
 	sides = np.arange(12)
-	side_orientations = np.zeros(12)
+	side_orientations = np.zeros(12, dtype=int)
 	def __str__(self):
 		return f"Corners:             {[int(x) for x in self.corners]}\n" + \
 			   f"Corner orientations: {[int(x) for x in self.corner_orientations]}\n" + \

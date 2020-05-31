@@ -132,9 +132,11 @@ class TestRubiksCube(MainTest):
 		state = cube.get_solved()
 		oh = cube.as_oh(state)
 		supposed_state = torch.zeros(20, 24, device=gpu)
-		corners = [get_corner_pos(c, o) for c, o in zip(SimpleState.corners, SimpleState.corner_orientations)]
+		corners = [get_corner_pos(c, o) for c, o
+				   in zip(SimpleState.corners.tolist(), SimpleState.corner_orientations.tolist())]
 		supposed_state[torch.arange(8), corners] = 1
-		sides = [get_side_pos(s, o) for s, o in zip(SimpleState.sides, SimpleState.side_orientations)]
+		sides = [get_side_pos(s, o) for s, o
+				 in zip(SimpleState.sides.tolist(), SimpleState.side_orientations.tolist())]
 		supposed_state[torch.arange(8, 20), sides] = 1
 		assert (supposed_state.flatten() == oh).all()
 
