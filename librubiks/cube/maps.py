@@ -139,13 +139,12 @@ def get_tensor_map(dtype):
 				neg[1, to_idx] = from_idx - to_idx
 		map_pos.append(pos)
 		map_neg.append(neg)
-	
+
 	return map_pos, map_neg
 
 if __name__ == "__main__":
 	# Pretty print of tensor maps
 	map_pos, map_neg = get_tensor_map(np.int8)
-	breakpoint()
 	for pos, neg in zip(map_pos, map_neg):
 		print("".join([f"{x: 4}" for x in pos[0]]))
 		print("".join([f"{x: 4}" for x in pos[1]]))
