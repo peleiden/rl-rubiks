@@ -21,9 +21,9 @@ class TestRuneval(MainTest):
 			assert fname in os.listdir(location)
 
 
-		# DeepSearcher + Optimization hyper parameter test
+		# DeepAgent + Optimization hyper parameter test
 		to = TestOptimizer()
-		location = to.test_searcher_optim(['AStar'])
+		location = to.test_agent_optim(['AStar'])
 
 		dank_unlikely_number = 0.6969
 		run_settings = {'location': location, 'agent': 'AStar', 'games': 1, 'max_time': 1, 'scrambling': '1 3',

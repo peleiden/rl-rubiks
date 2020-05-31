@@ -14,7 +14,7 @@ class TestOptimizer(MainTest):
 		# assert len(bo.score_history) == 2
 		# assert bo.highscore >= bo.score_history[0]
 
-	def test_searcher_optim(self, agents = ['MCTS', 'AStar']):
+	def test_agent_optim(self, agents = ['MCTS', 'AStar']):
 
 		run_path = os.path.join( os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'librubiks', 'solving', 'hyper_optim.py' )
 		location = 'local_tests/optim'

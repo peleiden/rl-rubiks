@@ -210,7 +210,7 @@ class EvalJob:
 		if issubclass(agent, agents.DeepAgent):
 			self.agents, self.reps, agents_args = {}, {}, {}
 
-			#DeepSearchers need specific arguments
+			#DeepAgents need specific arguments
 			if agent == agents.MCTS:
 				assert mcts_c >= 0, f"Exploration parameter c must be 0 or larger, not {mcts_c}"
 				agents_args = { 'c': mcts_c, 'search_graph': mcts_graph_search }
@@ -231,7 +231,7 @@ class EvalJob:
 				agents_args = {}
 
 			search_location = os.path.dirname(os.path.abspath(self.location)) if in_subfolder else self.location # Use parent folder, if parser has generated multiple folders
-			# DeepSearchers might have to test multiple NN's
+			# DeepAgent might have to test multiple NN's
 			for folder in glob(f"{search_location}/*/") + [search_location]:
 				if not os.path.isfile(os.path.join(folder, 'model.pt')): continue
 				store_repr()
@@ -264,7 +264,7 @@ class EvalJob:
 			self.reps = {agent: True}
 
 		self.agent_results = {}
-		self.logger.log(f"Initialized {self.name} with searchers {', '.join(str(s) for s in self.agents)}")
+		self.logger.log(f"Initialized {self.name} with agents {', '.join(str(s) for s in self.agents)}")
 		self.logger.log(f"TIME ESTIMATE: {len(self.agents) * self.evaluator.approximate_time() / 60:.2f} min.\t(Rough upper bound)")
 
 	def execute(self):
