@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { cube69, cube, ISolveRequest, action } from './rubiks';
+
+import { cube, ISolveRequest, host } from './rubiks';
 import { HttpService } from './http.service';
 import { deepCopy, CubeService } from './cube.service';
 
@@ -10,8 +11,10 @@ export class CommonService {
 
   status = {
     loading: true,
-    hasData: false,
+    connectedToServer: false,
+    serverCallId: Math.random(),  // Resets on server change to prevent old server calls messing things up
   };
+  scrambleDepth = 10;
   cuda: boolean;
   searchers: string[];
   timeLimit = 5;
@@ -28,9 +31,15 @@ export class CommonService {
     return this.actionQueue.map(val => this.cubeService.actions[val]).join(" ");
   }
 
-  public setSelectedHost(host: { name: string, address: string }) {
+  public async setSelectedHost(host: host) {
+    this.status.serverCallId = Math.random();
     this.httpService.selectedHost = host;
-    this.getInfo();
+    try {
+      await this.getInfo();
+    } catch {  // If it cannot connect to a server
+      this.httpService.selectedHost = this.httpService.previousHost;
+      this.status.loading = false;
+    }
   }
 
   public scramble(moves: number) {
@@ -40,17 +49,15 @@ export class CommonService {
   }
 
   public async getInfo() {
-    try {
-      this.status.loading = true;
-      const { cuda, searchers } = await this.httpService.getInfo();
+    const callId = this.status.serverCallId;
+    this.status.loading = true;
+    const { cuda, searchers } = await this.httpService.getInfo();
+    if (callId === this.status.serverCallId) {
       this.cuda = cuda;
       this.searchers = searchers;
       this.selectedSearcher = 0;
-      this.status.hasData = true;
       this.status.loading = false;
-    } catch (e) {
-      this.status.hasData = false;
-      this.status.loading = false;
+      this.status.connectedToServer = true;
     }
   }
 

@@ -12,16 +12,9 @@ import { CubeService } from './common/cube.service';
 })
 export class AppComponent implements OnInit {
 
-  scrambleDepth = 10;
-
   constructor(public commonService: CommonService, public cubeService: CubeService, public httpService: HttpService) { }
 
   ngOnInit() {
-    this.getInitData();
-  }
-
-  private async getInitData() {
-    await this.commonService.getInfo();
-    this.commonService.status.hasData = true;
+    this.commonService.getInfo();
   }
 }

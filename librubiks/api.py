@@ -1,4 +1,4 @@
-import os, sys
+import os
 from ast import literal_eval
 from wget import download
 
@@ -17,7 +17,6 @@ api = Api(app)
 CORS(app)
 
 net_loc = "local_net"
-# if not os.path.exists(f"{net_loc}/model.pt"):
 os.makedirs(net_loc, exist_ok=True)
 url = "https://github.com/peleiden/rubiks-models/blob/master/fcnew/%s?raw=true"
 download(url % "model.pt", net_loc)

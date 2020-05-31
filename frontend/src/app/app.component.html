@@ -1,14 +1,14 @@
 <div class="content">
   <div class="row">
     <h1 class="col-10">Solving Rubik's Cube with Reinforcement Learning</h1>
-    <span class="col-2" *ngIf="commonService.status.hasData">
+    <span class="col-2">
       <p>Server</p>
       <select [ngModel]="httpService.selectedHost" (ngModelChange)="commonService.setSelectedHost($event)">
         <option *ngFor="let host of httpService.hosts" [ngValue]="host">{{host.name}}</option>
       </select>
     </span>
   </div>
-  <div class="row" *ngIf="!(commonService.status.loading && !commonService.status.hasData) else loading">
+  <div class="row">
     <div class="col-5">
       <p>
         Developed by Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
@@ -42,10 +42,10 @@
       <!-- Reset -->
       <button class="btn btn-secondary my-1" (click)="cubeService.reset()" [disabled]="commonService.status.loading">Reset</button>
       <!-- Scrambling -->
-      <form class="form-inline my-1" (ngSubmit)="commonService.scramble(scrambleDepth)">
+      <form class="form-inline my-1" (ngSubmit)="commonService.scramble(commonService.scrambleDepth)">
         <button class="btn btn-secondary" type="submit" [disabled]="commonService.status.loading">Perform</button>
         <div class="form-group mx-2">
-          <input type="number" class="form-control" style="width: 6rem;" [(ngModel)]="scrambleDepth" [ngModelOptions]="{standalone: true}">
+          <input type="number" class="form-control" style="width: 6rem;" [(ngModel)]="commonService.scrambleDepth" [ngModelOptions]="{standalone: true}">
         </div>
         random actions.
       </form>
@@ -53,12 +53,14 @@
       <h2 class="h5 mt-4">Agents</h2>
       <p>All agents create an an action queue, which if followed produces the solved states, insofar as it was found.</p>
       <p *ngIf="!commonService.cuda">
-        Be aware that CUDA is not available on the selected server. Agents depending on a neural network will need more time to search for good results.
+        Be aware that CUDA is not available on the selected server.
+        Neural network based agents will need more time to search for good results.
       </p>
       <p *ngIf="!commonService.cuda && httpService.selectedHost.name !== 'Local'">
-        If CUDA is available on your machine, you can start start a local server by running the src/api.py script.
+        If CUDA is available on your machine, you can start start a local server by running <code>python librubiks/api.py</code>.
+        Run <code>pip install wget flask flask_cors flask_restful</code> to install the necessary dependencies.
       </p>
-      <form class="form-inline" (ngSubmit)="commonService.solve()">
+      <form class="form-inline" (ngSubmit)="commonService.solve()" *ngIf="commonService.status.connectedToServer">
         <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Try</button>
         to solve in
         <div class="form-group mx-2">
@@ -96,7 +98,3 @@
     </div>
   </div>
 </div>
-
-<ng-template #loading>
-  <div class="loader"></div>
-</ng-template>

@@ -16,6 +16,12 @@ input {
 	text-align: right;
 }
 
+code {
+	background-color: rgba(27,31,35,.07);
+	color: black !important;
+	padding: 0.2em 0.4em;
+}
+
 .loader {
 	color: #000000;
 	font-size: 90px;
