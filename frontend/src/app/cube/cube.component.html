@@ -1,0 +1,116 @@
+<div class="row">
+  <div class="col-5">
+    <p>
+      Developed by Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
+      Søren Winkel Holm (<a href="mailto:s183911@student.dtu.dk">s183911@student.dtu.dk</a>), and
+      Anne Agathe Pedersen (<a href="mailto:s174300@student.dtu.dk">s174300@student.dtu.dk</a>).
+      Repository available on <a href="https://github.com/peleiden/rl-rubiks">GitHub</a>.
+    </p>
+
+    <h2 class="h5 mt-2">Perform action</h2>
+    <!-- Actions -->
+    <div style="max-width: 450px;">
+      <div class="row my-1">
+        <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
+          <button class="btn btn-secondary btn-action"
+                  (click)="cubeService.inplaceRotate(cubeService.actionSpace[i][0], cubeService.actionSpace[i][1])"
+                  [disabled]="commonService.status.loading">
+            {{cubeService.actions[i]}}
+          </button>
+        </div>
+      </div>
+      <div class="row my-1">
+        <div class="col-2" *ngFor="let i of [1, 3, 5, 7, 9, 11]">
+          <button class="btn btn-secondary btn-action"
+                  (click)="cubeService.inplaceRotate(cubeService.actionSpace[i][0], cubeService.actionSpace[i][1])"
+                  [disabled]="commonService.status.loading">
+            {{cubeService.actions[i]}}
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Reset -->
+    <!-- Scrambling -->
+    <form class="form-inline my-1" (ngSubmit)="commonService.scramble(commonService.scrambleDepth)">
+      <button class="btn btn-secondary my-1" (click)="cubeService.reset()" [disabled]="commonService.status.loading">Reset</button>
+      <span class="mx-2">or</span>
+      <button class="btn btn-secondary" type="submit" [disabled]="commonService.status.loading">perform</button>
+      <div class="form-group mx-2">
+        <input type="number" class="form-control" style="width: 6rem;" [(ngModel)]="commonService.scrambleDepth" [ngModelOptions]="{standalone: true}">
+      </div>
+      random actions.
+    </form>
+
+    <h2 class="h5 mt-4">Agents</h2>
+    <p>All agents create an an action queue, which if followed produces the solved states, insofar as it was found.</p>
+    <p *ngIf="!commonService.cuda">
+      Be aware that CUDA is not available on the selected server.
+      Agents using a neural network will need more time to search.
+    </p>
+    <p *ngIf="!commonService.cuda && httpService.selectedHost.name !== 'Local'">
+      If CUDA is available on your machine, you can start start a local server by running <code>python librubiks/api.py</code>.
+      Run <code>pip install wget flask flask_cors flask_restful</code> to install the necessary dependencies.
+    </p>
+    <form class="form-inline" (ngSubmit)="commonService.solve()" *ngIf="commonService.status.connectedToServer">
+      <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Try</button>
+      to solve in
+      <div class="form-group mx-2">
+        <input type="number"
+                class="form-control"
+                style="width: 6rem;"
+                [(ngModel)]="commonService.timeLimit"
+                [ngModelOptions]="{standalone: true}">
+      </div>
+      seconds with
+      <select class="my-2 ml-2" [(ngModel)]="commonService.selectedSearcher" [ngModelOptions]="{standalone: true}">
+        <option *ngFor="let searcher of commonService.searchers; let i = index" [ngValue]="i">{{searcher}}</option>
+      </select>
+    </form>
+    <div *ngIf="commonService.hasSearchedForSolution" class="mt-2">
+      <p>
+        {{commonService.exploredStates || "A number of"}} states were explored,
+        <span *ngIf="commonService.hasSolution">and a solution of {{commonService.solveLength}} steps was found.</span>
+        <span *ngIf="!commonService.hasSolution">but a solution was not found.</span>
+      </p>
+      <p *ngIf="commonService.hasSolution"></p>
+      <div *ngIf="commonService.hasSolution && commonService.actionQueue.length">
+        <p>Actions to solution: {{commonService.prettyActionQueue}}</p>
+        <button class="btn btn-secondary mr-2" (click)="commonService.step(commonService.actionQueue.pop())">Perform one action</button>
+        <button class="btn btn-secondary" (click)="commonService.animateStates()">Perform remaining actions</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cube -->
+  <div class="col-7">
+    <div class="container grid mb-4">
+      <div class="filler"></div>
+      <div class="side">
+        <div *ngFor="let j of indices" [class]="getClass(2, j)"></div>
+      </div>
+      <div></div>
+      <div></div>
+      <div class="side">
+        <div *ngFor="let j of indices" [class]="getClass(4, j)"></div>
+      </div>
+      <div class="side">
+        <div *ngFor="let j of indices" [class]="getClass(0, j)"></div>
+      </div>
+      <div class="side">
+        <div *ngFor="let j of indices" [class]="getClass(5, j)"></div>
+      </div>
+      <div class="side">
+        <div *ngFor="let j of indices" [class]="getClass(1, j)"></div>
+      </div>
+      <div class="filler"></div>
+      <div class="side">
+        <div *ngFor="let j of indices" [class]="getClass(3, j)"></div>
+      </div>
+      <div></div>
+      <div></div>
+    </div>
+    <div *ngIf="commonService.status.loading" style="padding-right: 112px;">
+      <div class="loader"></div>
+    </div>
+  </div>
+</div>
