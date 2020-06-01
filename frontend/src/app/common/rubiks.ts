@@ -10,7 +10,7 @@ export type host = { name: string, address: string };
 
 export interface IInfoResponse {
 	cuda: boolean;
-	searchers: string[];
+	agents: string[];
 }
 
 export interface ISolveRequest {

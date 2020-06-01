@@ -16,7 +16,7 @@ export class CommonService {
   };
   scrambleDepth = 10;
   cuda: boolean;
-  searchers: string[];
+  agents: string[];
   timeLimit = 5;
   selectedSearcher: number;
   hasSearchedForSolution = false;
@@ -42,6 +42,12 @@ export class CommonService {
     }
   }
 
+  public reset() {
+    this.cubeService.reset();
+    this.hasSearchedForSolution = false;
+    this.actionQueue = [];
+  }
+
   public scramble(moves: number) {
     // Scrambles from current state with animation
     const actions = this.cubeService.scramble(moves);
@@ -51,10 +57,10 @@ export class CommonService {
   public async getInfo() {
     const callId = this.status.serverCallId;
     this.status.loading = true;
-    const { cuda, searchers } = await this.httpService.getInfo();
+    const { cuda, agents } = await this.httpService.getInfo();
     if (callId === this.status.serverCallId) {
       this.cuda = cuda;
-      this.searchers = searchers;
+      this.agents = agents;
       this.selectedSearcher = 0;
       this.status.loading = false;
       this.status.connectedToServer = true;

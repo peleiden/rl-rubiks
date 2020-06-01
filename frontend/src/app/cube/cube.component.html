@@ -29,10 +29,9 @@
         </div>
       </div>
     </div>
-    <!-- Reset -->
-    <!-- Scrambling -->
+    <!-- Reset and scrambling -->
     <form class="form-inline my-1" (ngSubmit)="commonService.scramble(commonService.scrambleDepth)">
-      <button class="btn btn-secondary my-1" (click)="cubeService.reset()" [disabled]="commonService.status.loading">Reset</button>
+      <button class="btn btn-secondary my-1" type="button" (click)="commonService.reset()" [disabled]="commonService.status.loading">Reset</button>
       <span class="mx-2">or</span>
       <button class="btn btn-secondary" type="submit" [disabled]="commonService.status.loading">perform</button>
       <div class="form-group mx-2">
@@ -49,7 +48,8 @@
     </p>
     <p *ngIf="!commonService.cuda && httpService.selectedHost.name !== 'Local'">
       If CUDA is available on your machine, you can start start a local server by running <code>python librubiks/api.py</code>.
-      Run <code>pip install wget flask flask_cors flask_restful</code> to install the necessary dependencies.
+      Apart from <code>pip install -r rlrequirements.txt</code>, you will need to run
+      <code>pip install wget flask flask_cors flask_restful</code> to install the necessary dependencies.
     </p>
     <form class="form-inline" (ngSubmit)="commonService.solve()" *ngIf="commonService.status.connectedToServer">
       <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Try</button>
@@ -63,7 +63,7 @@
       </div>
       seconds with
       <select class="my-2 ml-2" [(ngModel)]="commonService.selectedSearcher" [ngModelOptions]="{standalone: true}">
-        <option *ngFor="let searcher of commonService.searchers; let i = index" [ngValue]="i">{{searcher}}</option>
+        <option *ngFor="let agent of commonService.agents; let i = index" [ngValue]="i">{{agent}}</option>
       </select>
     </form>
     <div *ngIf="commonService.hasSearchedForSolution" class="mt-2">
@@ -75,8 +75,12 @@
       <p *ngIf="commonService.hasSolution"></p>
       <div *ngIf="commonService.hasSolution && commonService.actionQueue.length">
         <p>Actions to solution: {{commonService.prettyActionQueue}}</p>
-        <button class="btn btn-secondary mr-2" (click)="commonService.step(commonService.actionQueue.pop())">Perform one action</button>
-        <button class="btn btn-secondary" (click)="commonService.animateStates()">Perform remaining actions</button>
+        <button class="btn btn-secondary mr-2"
+                (click)="commonService.step(commonService.actionQueue.pop())"
+                [disabled]="commonService.status.loading">Perform one action</button>
+        <button class="btn btn-secondary"
+                (click)="commonService.animateStates()"
+                [disabled]="commonService.status.loading">Perform remaining actions</button>
       </div>
     </div>
   </div>
