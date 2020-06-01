@@ -8,20 +8,23 @@ class Profile:
 	def __init__(self, depth: int):
 		self.hits: List[float] = []
 		self.depth = depth
+	
+	def get_hits(self):
+		return self.hits
 
 	def sum(self):
 		# Returns total runtime
-		return sum(self.hits)
+		return sum(self.get_hits())
 
 	def mean(self):
 		# Returns mean runtime lengths
-		return self.sum() / len(self.hits) if self.hits else 0
+		return self.sum() / len(self) if self.get_hits() else 0
 	
 	def std(self):
 		# Returns empirical standard deviation of runtime
 		# Be aware that this is highly sensitive to outliers and often a bad estimate
 		s = self.mean()
-		return (1 / (len(self)+1) * sum(map(lambda x: (x-s)**2, self.hits))) ** 0.5
+		return (1 / (len(self)+1) * sum(map(lambda x: (x-s)**2, self.get_hits()))) ** 0.5
 
 	def __len__(self):
 		return len(self.hits)

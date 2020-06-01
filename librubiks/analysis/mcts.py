@@ -68,9 +68,9 @@ def analyse_time_distribution(depth: int, c: float):
 		for j in range(n):
 			state, f, d = cube.scramble(depth, True)
 			sols[j] = searcher.search(state, time_limit=tl)
-			expand[i] += sum(searcher.tt.profiles["Expanding leaves"].hits)
+			expand[i] += sum(searcher.tt.profiles["Expanding leaves"].get_hits())
 			try:
-				explore[i] += sum(searcher.tt.profiles["Exploring next node"].hits)
+				explore[i] += sum(searcher.tt.profiles["Exploring next node"].get_hits())
 			except KeyError:
 				pass
 		log(f"Solved {np.mean(sols)*100:.2f} % of configurations")
