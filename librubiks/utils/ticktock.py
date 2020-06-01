@@ -1,18 +1,27 @@
 from time import perf_counter
+from typing import List, Dict
 
 class Profile:
 
 	start: float
 
 	def __init__(self, depth: int):
-		self.hits = []
+		self.hits: List[float] = []
 		self.depth = depth
 
 	def sum(self):
+		# Returns total runtime
 		return sum(self.hits)
 
 	def mean(self):
+		# Returns mean runtime lengths
 		return self.sum() / len(self.hits) if self.hits else 0
+	
+	def std(self):
+		# Returns empirical standard deviation of runtime
+		# Be aware that this is highly sensitive to outliers and often a bad estimate
+		s = self.sum()
+		return (1 / (len(self)+1) * sum(map(lambda x: x-s, self.hits))) ** 0.5
 
 	def __len__(self):
 		return len(self.hits)
@@ -20,9 +29,9 @@ class Profile:
 
 class TickTock:
 
-	_start: float = 0.
-	_units = {"ns": 1e9, "mus": 1e6, "ms": 1e3, "s": 1, "m": 1/60}
-	profiles = {}
+	_start = 0
+	_units = { "ns": 1e9, "mus": 1e6, "ms": 1e3, "s": 1, "m": 1/60 }
+	profiles: Dict[str, Profile] = {}
 	_profile_depth = 0
 
 	def tick(self):
@@ -103,12 +112,4 @@ class TickTock:
 
 	def __str__(self):
 		return self.stringify_sections("s")
-
-if __name__ == "__main__":
-	tt = TickTock()
-	for i in range(100_000):
-		tt.profile("Test")
-		tt.end_profile("Test")
-	print(tt)
-
 
