@@ -177,23 +177,30 @@ class AStar(DeepAgent):
 	Expands the `self.expansions` best nodes at a time according to cost
 	f(node) = `self.lambda_` * g(node) + h(node)
 	where h(node) is given as the negative value (cost-to-go) of the DNN and g(x) is the path cost
-	"""
 
-	# Queue data structure
+	"""
+	# Expansion priority queue
 		# Min heap. An element contains tuple of (cost, index)
 		# This priority queue uses python std. lib heapq which is based on the python list.
 		# We should maybe consider whether this could be done faster if we build our own implementation.
 	open_queue: list
 
-	indices = dict  # Key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used
+	# State data structures
+	# The length of all arrays are dynamic and controlled by `reset` and `expand_stack_size`
+	# Index 0 is not used in these to allow for
+		# states
+			# Contains all states currently visited in the representation set in cube
+		# indices:
+			# Dictionary mapping state.tostring() to index in the states array.
+			#
+			# key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used.
+	indices = dict  # Key is state.tostring()
 	states: np.ndarray
-	parents: np.ndarray #parents[i] index of lightest parent of state i
+	G: np.ndarray # A* distance approximation of distance to starting node
+	parents: np.ndarray #parents[i] index of currently found parent with lowest G of state i
 	parent_actions: np.ndarray #parent_actions[i]: action idx taken FROM the lightest parent to state i
-	G: np.ndarray
 	closed: np.ndarray # Boolean vector. closed[i] == True iff. state i is closed (expanded)
-		# Boolean vector. open_[i] == True iff. state i in open_queue closed.
-		# Yes, we have two data structures for this: open_queue has sort, this has random access.
-	open_: np.ndarray
+	open_: np.ndarray # Boolean vector. open_[i] == True iff. state i is in open_queue to allow for random access
 
 	_stack_expand = 1000
 	def __init__(self, net: Model, lambda_: float, expansions: int):
@@ -211,13 +218,14 @@ class AStar(DeepAgent):
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
 		self.tt.tick()
 		time_limit, max_states = self.reset(time_limit, max_states)
+		if cube.is_solved(state): return True
 
+			#First node
 		self.indices[state.tostring()] = 1
 		self.states[1] = state
-		if cube.is_solved(state): return True
-		# First node given cost 0: Should not matter; just to avoid np.empty weirdness
-		self.G[1] =  0
+		self.G[1] =  0 #Given cost 0: Should not matter; just to avoid np.empty weirdness
 		heapq.heappush( self.open_queue, (0, 1) )
+
 		while self.tt.tock() < time_limit and len(self) + self.expansions <= max_states:
 			self.tt.profile("Remove nodes from open priority queue")
 			n_remove = min( len(self.open_queue), self.expansions )
@@ -226,19 +234,12 @@ class AStar(DeepAgent):
 			self.open_[expand_idcs] = False
 			self.closed[expand_idcs] = True
 			self.tt.end_profile("Remove nodes from open priority queue")
-			#TODO:
-				# A decision to be made: Where do we check for solved?
-				# In A* normally and in the paper it seems to be done on the expanded nodes
-				# and thus not on their substates. (Thus it waits at least 1 iteration after discovering the node to terminate)
-				# This surely helps finding the shortest path in some (small) problems,
-				# but seems wasteful and not greedy enough on this problem.
-				# Right now, I'm going with checking this already when adding the substates
-				# as we don't have just as much focus on the solution length and are probably
-				# more interested in running time/solve percentage.
 
 			is_won = self.expand_batch(expand_idcs)
+
 			if is_won: #🦀🦀🦀WE DID IT BOIS🦀🦀🦀
 				i = self.indices[ cube.get_solved().tostring() ]
+					#Build action queue
 				while i != 1:
 					self.action_queue.appendleft(
 						self.parent_actions[i]
@@ -247,7 +248,7 @@ class AStar(DeepAgent):
 				return True
 		return False
 
-	def expand_batch(self, expand_idcs: np.ndarray) -> True:
+	def expand_batch(self, expand_idcs: np.ndarray) -> bool:
 		"""
 		Expands to the neighbors of each of the states in
 		:param expand_idcs:
@@ -303,7 +304,7 @@ class AStar(DeepAgent):
 		self.states[new_states_idcs] = substates[first_unseen]
 		self.tt.end_profile("Add substates to data structure")
 
-		self.tt.profile("Update new state values") # TODO: Test these lines: Is my numpy-fu up to the game?
+		self.tt.profile("Update new state values")
 		new_parent_idcs = parent_idcs[first_unseen]
 		self.G[new_states_idcs] = self.G[new_parent_idcs] + 1
 		self.parent_actions[new_states_idcs] = actions_taken[first_unseen]
@@ -315,7 +316,7 @@ class AStar(DeepAgent):
 		self.open_[new_states_idcs] = True
 		self.tt.end_profile("Update new state values")
 
-		self.tt.profile("Check whether won") #TODO: Consider the location of this "won" check. See comment in search
+		self.tt.profile("Check whether won")
 		solved_substates = cube.multi_is_solved(new_states)
 		if solved_substates.any():
 			return True
@@ -345,7 +346,7 @@ class AStar(DeepAgent):
 		return False
 
 	@no_grad
-	def cost(self, states: np .ndarray, indeces: np.ndarray):
+	def cost(self, states: np .ndarray, indeces: np.ndarray) -> np.ndarray:
 		"""The A star costs of the state using the DNN heuristic
 		Uses the value neural network. -value is regarded as the distance heuristic
 		It is actually not really necessay to accept both the states and their indices, but
@@ -360,7 +361,7 @@ class AStar(DeepAgent):
 
 		return self.lambda_ * self.G[indeces] + H
 
-	def reset(self, time_limit: float, max_states: int):
+	def reset(self, time_limit: float, max_states: int) -> (float, int):
 		time_limit, max_states = super().reset(time_limit, max_states)
 		self.open_queue = list()
 		self.indices   = dict()
@@ -384,14 +385,14 @@ class AStar(DeepAgent):
 		self.open_     = np.concatenate([self.open_, np.zeros(expand_size, dtype=bool)])
 
 	@classmethod
-	def from_saved(cls, loc: str, use_best: bool, lambda_: float, expansions: int):
+	def from_saved(cls, loc: str, use_best: bool, lambda_: float, expansions: int) -> DeepAgent:
 		net = Model.load(loc, load_best=use_best).to(gpu)
 		return cls(net, lambda_=lambda_, expansions=expansions)
 
-	def __len__(self):
+	def __len__(self) -> int:
 		return len(self.indices)
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f'AStar (lambda={self.lambda_}, N={self.expansions})'
 
 class MCTS(DeepAgent):
