@@ -133,15 +133,17 @@ class TestAStar(MainTest):
 			idx = agent.indices[substate.tostring()]
 			assert agent.G[idx] == 1
 			assert agent.parents[idx] == init_idx
-			assert agent.cost(idx) is not None
 
-	def test_batched_H(self):
+	def test_cost(self):
 		net = Model.create(ModelConfig()).to(gpu).eval()
 		games = 5
 		states, _ = cube.sequence_scrambler(games, 1, True)
 		agent = AStar(net, lambda_=1, expansions=2)
-		J = agent.batched_H(states)
-		assert J.shape == (games,)
+		agent.reset(1, 1)
+		i = []
+		for i, _ in enumerate(states): agent.G[i] = 1
+		cost = agent.cost(states, i)
+		assert cost.shape == (games,)
 
 
 
