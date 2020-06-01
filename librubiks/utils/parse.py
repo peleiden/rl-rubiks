@@ -136,8 +136,7 @@ class Parser:
 
 		with open(f"{self.save_location}/{self.name}_config.ini", 'w') as f:
 			if with_config: self.configparser.write(f)
-			f.write(f"\n# Run command\n # {' '.join(sys.argv)}\n")
+			f.write(f"\n# Run command\n# {' '.join(sys.argv)}\n")
 			str_defaults = pformat(self.defaults).replace('\n', '\n# ')
 			f.write(f"\n# Default configuration values at run\n# {str_defaults}")
-
 
