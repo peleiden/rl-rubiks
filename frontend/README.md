@@ -1,27 +1,25 @@
 # Frontend
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 9.0.3.
+<a href="https://peleiden.github.io/rl-rubiks">Demo page</a>
 
-## Development server
+The frontend has two purposes: Demo our results and show things not well suited for a report, such as the value target GIF.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+## Setup a local backend
 
-## Code scaffolding
+By default a Python backend hosted on <a href="https://heroku.com">Heroku</a> is used, but this has access two only two fairly slow CPU cores. The lack of CUDA support is especially limiting for the agents using a neural network, who will need much more time two solve deeply scrambled cubes. If you want to use the demo with CUDA support, you can start your own local server. From the main repo folder, run
+```
+pip install -r rlrequirements.txt  # Install dependencies for the librubiks module
+pip install wget flask flask_cors flask_restful  # Install dependencies for running the server
+python librubiks/api.py
+```
+It is possible to connect to a local server from the demo page, so you do not need to run the frontend locally to use a local backend.
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Run the frontend locally
 
-## Build
-
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
-
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+In case you want to start the frontend locally, you can do so by running
+```
+cd frontend
+npm install
+npm start
+```
+from the main repo folder and opening your browser at `localhost:4200`.
