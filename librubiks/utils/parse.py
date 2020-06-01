@@ -118,7 +118,8 @@ class Parser:
 				if exp_args.location:
 					if self.save_location and self.save_location != exp_args.location: raise ValueError("Multiple save locations are not supported")
 					self.save_location = exp_args.location
-					exp_args.location = f"{exp_args.location}/{experiment_name.lower()}"
+					# Only give subfolder if there are indeed multiple runs
+					if len(self.configparser.sections()) > 1: exp_args.location = f"{exp_args.location}/{experiment_name.lower()}"
 
 				del exp_args.config
 				experiments.append({'name': experiment_name, **vars(exp_args)})
