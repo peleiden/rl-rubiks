@@ -20,8 +20,8 @@ class Profile:
 	def std(self):
 		# Returns empirical standard deviation of runtime
 		# Be aware that this is highly sensitive to outliers and often a bad estimate
-		s = self.sum()
-		return (1 / (len(self)+1) * sum(map(lambda x: x-s, self.hits))) ** 0.5
+		s = self.mean()
+		return (1 / (len(self)+1) * sum(map(lambda x: (x-s)**2, self.hits))) ** 0.5
 
 	def __len__(self):
 		return len(self.hits)
@@ -33,6 +33,7 @@ class TickTock:
 	_units = { "ns": 1e9, "mus": 1e6, "ms": 1e3, "s": 1, "m": 1/60 }
 	profiles: Dict[str, Profile] = {}
 	_profile_depth = 0
+	_latest_profile: str
 
 	def tick(self):
 		self._start = perf_counter()
@@ -46,10 +47,13 @@ class TickTock:
 		if name not in self.profiles:
 			self.profiles[name] = Profile(self._profile_depth)
 		self._profile_depth += 1
+		self._latest_profile = name
 		self.profiles[name].start = perf_counter()
 
-	def end_profile(self, name: str):
-		dt = perf_counter() - self.profiles[name].start
+	def end_profile(self, name: str=None):
+		end = perf_counter()
+		name = name or self._latest_profile
+		dt = end - self.profiles[name].start
 		self.profiles[name].hits.append(dt)
 		self._profile_depth -= 1
 		return dt
@@ -57,6 +61,7 @@ class TickTock:
 	def rename_section(self, name: str, new_name: str):
 		# Renames a section
 		# If a section with new_name already exists, they are combined under new_name
+		# TODO: Drop this method and make a fuse function instead
 		if self.profiles[new_name]:
 			self.profiles[new_name].hits += self.profiles[name].hits
 		else:
