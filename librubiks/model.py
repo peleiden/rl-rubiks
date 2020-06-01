@@ -105,9 +105,9 @@ class Model(nn.Module):
 		Allows this class to be used to instantiate other Network architectures based on the content
 		of the configuartion file.
 		"""
-		if config.architecture == "fc": return Model(config, logger)
-		if config.architecture == "res": return ResNet(config, logger)
-		if config.architecture == "conv": return ConvNet(config, logger)
+		if config.architecture == "fc": return Model(config, logger).to(gpu)
+		if config.architecture == "res": return ResNet(config, logger).to(gpu)
+		if config.architecture == "conv": return ConvNet(config, logger).to(gpu)
 
 		raise KeyError(f"Network architecture should be 'fc', 'res', or 'conv', but '{config.architecture}' was given")
 

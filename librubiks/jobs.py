@@ -129,7 +129,7 @@ class TrainJob:
 					  )
 		self.logger(f"Rough upper bound on total evaluation time during training: {len(train.evaluation_rollouts)*self.evaluator.approximate_time()/60:.2f} min")
 
-		net = Model.create(self.model_cfg, self.logger).to(gpu)
+		net = Model.create(self.model_cfg, self.logger)
 		net, min_net = train.train(net)
 		net.save(self.location)
 		if self.evaluation_interval:

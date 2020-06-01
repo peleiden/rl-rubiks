@@ -102,7 +102,7 @@ class TestAStar(MainTest):
 			(0.5, 2),
 			(1, 1),
 		}
-		net = Model.create(ModelConfig()).to(gpu).eval()
+		net = Model.create(ModelConfig()).eval()
 		for params in test_params:
 			agent = AStar(net, *params)
 			self._can_win_all_easy_games(agent)
@@ -119,7 +119,7 @@ class TestAStar(MainTest):
 			assert cube.is_solved(state)
 
 	def test_expansion(self):
-		net = Model.create(ModelConfig()).to(gpu).eval()
+		net = Model.create(ModelConfig()).eval()
 		init_state, _, _ = cube.scramble(3)
 		agent = AStar(net, lambda_=0.1, expansions=5)
 		agent.search(init_state, time_limit=1)
@@ -134,7 +134,7 @@ class TestAStar(MainTest):
 			assert agent.parents[idx] == init_idx
 
 	def test_cost(self):
-		net = Model.create(ModelConfig()).to(gpu).eval()
+		net = Model.create(ModelConfig()).eval()
 		games = 5
 		states, _ = cube.sequence_scrambler(games, 1, True)
 		agent = AStar(net, lambda_=1, expansions=2)
