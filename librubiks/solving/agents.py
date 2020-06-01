@@ -192,15 +192,21 @@ class AStar(DeepAgent):
 			# Contains all states currently visited in the representation set in cube
 		# indices:
 			# Dictionary mapping state.tostring() to index in the states array.
-			#
-			# key is state.tostring(). Contains index of state in the next arrays. Index 0 is not used.
-	indices = dict  # Key is state.tostring()
+		# G_
+			# A* distance approximation of distance to starting node
+		# parents
+			#parents[i] is index of currently found parent with lowest G of state i
+		# parent_actions
+			#parent_actions[i] is action idx taken FROM the lightest parent to state i
+		# closed
+			# Boolean vector. closed[i] == True iff. state i is closed (expanded)
+
+	indices = dict
 	states: np.ndarray
-	G: np.ndarray # A* distance approximation of distance to starting node
-	parents: np.ndarray #parents[i] index of currently found parent with lowest G of state i
-	parent_actions: np.ndarray #parent_actions[i]: action idx taken FROM the lightest parent to state i
-	closed: np.ndarray # Boolean vector. closed[i] == True iff. state i is closed (expanded)
-	open_: np.ndarray # Boolean vector. open_[i] == True iff. state i is in open_queue to allow for random access
+	G: np.ndarray
+	parents: np.ndarray
+	parent_actions: np.ndarray
+	closed: np.ndarray
 
 	_stack_expand = 1000
 	def __init__(self, net: Model, lambda_: float, expansions: int):
@@ -216,22 +222,25 @@ class AStar(DeepAgent):
 
 	@no_grad
 	def search(self, state: np.ndarray, time_limit: float=None, max_states: int=None) -> bool:
+		"""Seaches according to the batched, weighted A* algorithm
+
+		While there is time left, the algorithm finds the best `expansions` open states
+		(using priority queue) with lowest cost according to the A* cost heuristic (see `self.cost`).
+		From these, it expands to new open states according to `self.expand_batch`.
+		"""
 		self.tt.tick()
 		time_limit, max_states = self.reset(time_limit, max_states)
 		if cube.is_solved(state): return True
 
 			#First node
-		self.indices[state.tostring()] = 1
-		self.states[1] = state
-		self.G[1] =  0 #Given cost 0: Should not matter; just to avoid np.empty weirdness
-		heapq.heappush( self.open_queue, (0, 1) )
+		self.indices[state.tostring()], self.states[1], self.G[1] = 1, state, 0
+		heapq.heappush( self.open_queue, (0, 1) ) #Given cost 0: Should not matter; just to avoid np.empty weirdness
 
 		while self.tt.tock() < time_limit and len(self) + self.expansions <= max_states:
 			self.tt.profile("Remove nodes from open priority queue")
 			n_remove = min( len(self.open_queue), self.expansions )
 			expand_idcs = np.array([ heapq.heappop(self.open_queue)[1] for _ in range(n_remove) ], dtype=int)
 
-			self.open_[expand_idcs] = False
 			self.closed[expand_idcs] = True
 			self.tt.end_profile("Remove nodes from open priority queue")
 
@@ -251,21 +260,20 @@ class AStar(DeepAgent):
 	def expand_batch(self, expand_idcs: np.ndarray) -> bool:
 		"""
 		Expands to the neighbors of each of the states in
-		:param expand_idcs:
-		:return: True iff. solution was found in this expansion
-		(Very loose) pseudo code:
+		Loose pseudo code:
 		```
-		1. Calculate substates for all the batch bois
-		2. Check which substates are won, seen and not seen
+		1. Calculate children for all the batched expansion states
+		2. Check which children are seen and not seen
 		3. FOR the unseen
+			IF they are the goal state: RETURN TRUE
 			Set the state as their parent and set their G
 			Calculate their H and add to open-list with correct cost
-		4. FOR the seen
-			IF substate is closed AND its's G is lower than state's G:
-				Update state's G and set the substate as it's parent
-			ELSE IF substate is open AND state's G is lower than substate's G
-				Update substate's G and set state as it's parent
+		4. RELAX(seen) #See psudeo code under `relax_seen_states`
+		5. RETURN FALSE
 		```
+
+		:param expand_idcs: Indices corresponding to states in `self.states` of states from which to expand
+		:return: True iff. solution was found in this expansion
 		"""
 		expand_size = len(expand_idcs)
 		while len(self) + expand_size * cube.action_dim > len(self.states):
@@ -289,12 +297,12 @@ class AStar(DeepAgent):
 		first_occurences	= np.zeros(len(substate_strs), dtype=bool)
 		_, first_indeces	= np.unique(substate_strs, return_index=True)
 		first_occurences[first_indeces] = True
-		first_seen		= first_occurences & seen_substates
+		first_seen			= first_occurences & seen_substates
 		first_unseen		= first_occurences & unseen_substates
 		self.tt.end_profile("Find new substates")
 
 		self.tt.profile("Add substates to data structure")
-		new_states		= substates[first_unseen]
+		new_states			= substates[first_unseen]
 		new_states_idcs		= len(self) + np.arange(first_unseen.sum()) + 1
 		new_idcs_dict		= { s: i for i, s in zip(new_states_idcs, get_substate_strs(first_unseen)) }
 		self.indices.update(new_idcs_dict)
@@ -313,7 +321,6 @@ class AStar(DeepAgent):
 		costs = self.cost(new_states, new_states_idcs)
 		for i, cost in enumerate(costs):
 			heapq.heappush(self.open_queue, (cost, new_states_idcs[i]))
-		self.open_[new_states_idcs] = True
 		self.tt.end_profile("Update new state values")
 
 		self.tt.profile("Check whether won")
@@ -322,32 +329,52 @@ class AStar(DeepAgent):
 			return True
 		self.tt.end_profile("Check whether won")
 
-		# TODO: Test this section
-		# Need to especially test the parent stuff and that I have made no weird indexing errors.
-		# Also: Have I understood the algorithm cases correctly?
 		self.tt.profile("Old states: Update parents and G")
-
-		local_old_idcs = np.arange(len(substates))[first_seen] #Old idcs corresponding to first_seen
-		old_parent_idcs = parent_idcs[local_old_idcs]
-			# Update for the cases where the substate is a new shortcut to its parent
-		shortcuts = (self.G[old_states_idcs] + 1 < self.G[old_parent_idcs]) & self.closed[old_states_idcs]
-		self.G[ old_parent_idcs[shortcuts] ] = self.G[ old_states_idcs[shortcuts] ] + 1
-		self.parent_actions[ old_parent_idcs[shortcuts] ] = cube.rev_actions( actions_taken[ local_old_idcs[shortcuts] ] )
-		self.parents[ old_parent_idcs[shortcuts] ] = old_states_idcs[shortcuts]
-
-			# Update for the cases where a faster way has been found to the substate
-		new_ways =  (self.G[old_parent_idcs] + 1 < self.G[old_states_idcs] ) & self.open_[old_states_idcs]
-		self.G[ old_states_idcs[new_ways] ] = self.G[ old_parent_idcs[new_ways] ] + 1
-		self.parent_actions[ old_states_idcs[new_ways] ] = actions_taken[ local_old_idcs[new_ways] ]
-		self.parents[ old_states_idcs[new_ways] ] = old_parent_idcs[new_ways]
-
+		seen_batch_idcs = np.where(first_seen) #Old idcs corresponding to first_seen
+		self.relax_seen_states( old_states_idcs, parent_idcs[seen_batch_idcs], actions_taken[seen_batch_idcs] )
 		self.tt.end_profile("Old states: Update parents and G")
 
 		return False
 
+	def relax_seen_states(self, state_idcs: np.ndarray, parent_idcs: np.ndarray, actions_taken: np.ndarray):
+		"""A* relaxation of states already seen before
+		Relaxes the G A* upper bound on distance to starting node.
+		Relaxation of new states is done in `expand_batch`. Relaxation of seen states is aheuristic and follows the idea
+		of Djikstras algorithm closely with the exception that the new nodes also might prove to reveal a shorter path
+		to their parents.
+
+		(Very loose) pseudo code:
+		```
+		FOR seen children:
+			1. IF G of child is lower than G of state +1:
+				Update state's G and set the child as its' parent
+			2. ELSE IF G of parent + 1 is lower than  G of child:
+				Update substate's G and set state as its' parent
+		```
+		:param states_idcs: Vector, shape (batch_size,) of indeces in `self.states` of already seen states to consider for relaxation
+		:param parents_idcs: Vector, shape (batch_size,) of indeces in `self.states` of the parents of these
+		:param actions_taken: Vector, shape (batch_size,) where actions_taken[i], in [0, 12], corresponds\
+							to action taken from parent i to get to child i
+		"""
+		# Case: New ways to the substates: When a faster way has been found to the substate
+		new_ways = self.G[parent_idcs] + 1 < self.G[state_idcs]
+		new_way_states, new_way_parents = state_idcs[new_ways], parent_idcs[new_ways]
+
+		self.G[new_way_states]					= self.G[new_way_parents] + 1
+		self.parent_actions[ new_way_states]	= actions_taken[new_ways]
+		self.parents[new_way_states]			= new_way_parents
+
+		# Case: Shortcuts through the substates: When the substate is a new shortcut to its parent
+		shortcuts = self.G[state_idcs] + 1 < self.G[parent_idcs]
+		shortcut_states, shortcut_parents = state_idcs[shortcuts], parent_idcs[shortcuts]
+
+		self.G[shortcut_parents] = self.G[shortcut_states] + 1
+		self.parent_actions[shortcut_parents] = cube.rev_actions(actions_taken[shortcuts])
+		self.parents[shortcut_parents] = shortcut_states
+
 	@no_grad
 	def cost(self, states: np .ndarray, indeces: np.ndarray) -> np.ndarray:
-		"""The A star costs of the state using the DNN heuristic
+		"""The A star cost of the state using the DNN heuristic
 		Uses the value neural network. -value is regarded as the distance heuristic
 		It is actually not really necessay to accept both the states and their indices, but
 		it speeds things a bit up not having to calculate them here again.
@@ -371,7 +398,6 @@ class AStar(DeepAgent):
 		self.parent_actions = np.zeros(self._stack_expand, dtype=int)
 		self.G         = np.empty(self._stack_expand)
 		self.closed    = np.zeros(self._stack_expand, dtype=bool)
-		self.open_     = np.zeros(self._stack_expand, dtype=bool)
 		return time_limit, max_states
 
 	def increase_stack_size(self):
@@ -382,7 +408,6 @@ class AStar(DeepAgent):
 		self.parent_actions   = np.concatenate([self.parent_actions, np.zeros(expand_size, dtype=int)])
 		self.G         = np.concatenate([self.G, np.empty(expand_size)])
 		self.closed    = np.concatenate([self.closed, np.zeros(expand_size, dtype=bool)])
-		self.open_     = np.concatenate([self.open_, np.zeros(expand_size, dtype=bool)])
 
 	@classmethod
 	def from_saved(cls, loc: str, use_best: bool, lambda_: float, expansions: int) -> DeepAgent:

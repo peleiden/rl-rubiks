@@ -53,7 +53,7 @@ class Evaluator:
 		Each entry contains the number of steps needed to solve the scrambled cube or -1 if not solved
 		"""
 		self.log.section(f"Evaluation of {agent}")
-		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <~ {self.approximate_time()/60:.2f} min")
+		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <= ~{self.approximate_time()/60:.2f} min")
 
 		res = []
 		states = []

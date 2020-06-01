@@ -109,7 +109,6 @@ class TestAStar(MainTest):
 			agent.reset("Tue", "Herlau")
 			assert not len(agent.indices)
 			assert not len(agent.open_queue)
-			assert not agent.open_.any()
 
 	def _can_win_all_easy_games(self, agent):
 		state, i, j = cube.scramble(2, force_not_solved=True)
