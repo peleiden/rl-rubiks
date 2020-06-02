@@ -17,6 +17,7 @@ export class CommonService {
   scrambleDepth = 10;
   cuda: boolean;
   agents: string[];
+  progress = 0;
   timeLimit = 5;
   selectedSearcher: number;
   hasSearchedForSolution = false;
@@ -25,10 +26,16 @@ export class CommonService {
   actionQueue: number[];
   solveLength: number;
 
+  private breakProgress = false;
+
   constructor(private httpService: HttpService, private cubeService: CubeService) { }
 
   get prettyActionQueue(): string {
     return this.actionQueue.map(val => this.cubeService.actions[val]).join(" ");
+  }
+
+  public getTimeSearchedStyle(): string {
+    return `${this.progress*100}%`;
   }
 
   public async setSelectedHost(host: host) {
@@ -75,7 +82,10 @@ export class CommonService {
       timeLimit: this.timeLimit,
       state: this.cubeService.currentState,
     };
+    this.breakProgress = false;
+    this.updateSearchProgress(this.timeLimit);
     const { solution, actions, exploredStates } = await this.httpService.solve(solveRequest);
+    this.breakProgress = true;
     this.hasSearchedForSolution = true;
     this.hasSolution = solution;
     this.exploredStates = exploredStates;
@@ -83,6 +93,18 @@ export class CommonService {
     this.actionQueue.reverse();  // Allows pop to be used instead of shift which changes runtime complexity from O(n**2) to O(n)
     this.solveLength = this.actionQueue.length;
     this.status.loading = false;
+  }
+
+  private async updateSearchProgress(timeLimit: number) {
+    const fps = 60;
+    const frameLength = 1 / fps;
+    const frames = Math.round(timeLimit * fps);
+    for (let i = 0; i < frames; i ++) {
+      await new Promise((resolve, reject) => { setTimeout(() => resolve(), frameLength * 1000); });
+      this.progress = (i + 1) / frames;
+      if (this.breakProgress) break;
+    }
+    this.progress = 0;
   }
 
   public getStates(actions: number[]): cube[] {
@@ -99,15 +121,18 @@ export class CommonService {
     // Actions should go last to first
     // Uses this.actionQueue if actions is null
     this.status.loading = true;
+    this.progress = 0;
     const remainingActions = deepCopy(actions) || this.actionQueue;
+    const totalActions = remainingActions.length;
     const frameLength = Math.min(1000 / remainingActions.length, 100);
     while (remainingActions.length) {
-      const promise = new Promise((resolve, reject) => { setTimeout(() => resolve(), frameLength); })
-      await promise;
       const action = remainingActions.pop();
+      this.progress = 1 - remainingActions.length / totalActions;
+      await new Promise((resolve, reject) => { setTimeout(() => resolve(), frameLength); });
       this.step(action);
     }
     this.status.loading = false;
+    this.progress = 0;
   }
 
   public step(action: number = null) {

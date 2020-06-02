@@ -22,6 +22,10 @@ code {
 	padding: 0.2em 0.4em;
 }
 
+.progress-bar {
+    -webkit-transition: none !important;
+    transition: none !important;
+}
 
 .loader {
 	color: #000000;
