@@ -152,7 +152,7 @@ def agent_optimize():
 	parser.add_argument('--agent', help='Name of agent corresponding to agent class in librubiks.solving.agents',
 		type=str, default='AStar', choices = ['MCTS', 'AStar'])
 	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test',
-		type=int, default=100100100100100100100100100100)
+		type=int, default=100)
 	parser.add_argument('--eval_games', help='Number of games to evaluate at depth',
 			type = int, default='100')
 	parser.add_argument('--save_optimal', help='If Tue, saves a JSON of optimal hyperparameters usable for runeval',
@@ -188,7 +188,9 @@ def agent_optimize():
 		raise NameError(f"{agent_name} does not correspond to a known agent, please pick either AStar og MCTS")
 
 	logger = Logger(os.path.join(args.location, f'{agent_name}_optimization.log'), 'Optimization')
+
 	logger.log(f"{agent_name} optimization. Using network from {model_path}.")
+	logger.log(f"Received arguments: {Optimizer._format_params(vars(args))}")
 
 	agent = getattr(agents, agent_name)
 
