@@ -9,7 +9,7 @@ import json # For print
 import numpy as np
 from bayes_opt import BayesianOptimization, UtilityFunction
 
-from librubiks.utils import Logger, NullLogger
+from librubiks.utils import Logger, NullLogger, seedsetter
 
 from librubiks.solving.evaluation import Evaluator
 
@@ -72,7 +72,7 @@ class BayesianOptimizer(Optimizer):
 			target_function: Callable[[dict], float],
 			parameters: dict,
 
-			alpha: float =1e-6,
+			alpha: float =1e-5,
 			n_restarts: int = 20,
 			acquisition: str='ei',
 
@@ -92,7 +92,7 @@ class BayesianOptimizer(Optimizer):
 			verbose=0,
 		)
 		self.optimizer.set_gp_params(alpha=alpha, n_restarts_optimizer=n_restarts)
-		self.utility = UtilityFunction(kind=acquisition, kappa=2.5, xi=0)
+		self.utility = UtilityFunction(kind=acquisition, kappa=2.5, xi=0.05)
 
 		self.logger(f"Created Bayesian Optimizer with alpha={alpha} and {n_restarts} restarts for each optimization. Acquisition function is {acquisition}.")
 
@@ -132,7 +132,7 @@ def agent_optimize():
 	python runeval.py --location example/ --optimized_params True
 	```
 	"""
-
+	seedsetter()
 
 	#Lot of overhead just for default argument niceness: latest model is latest
 	from runeval import train_folders
@@ -145,16 +145,16 @@ def agent_optimize():
 				break
 
 	parser = argparse.ArgumentParser(description='Optimize Monte Carlo Tree Search for one model')
-	parser.add_argument('--location', help='Location for model.pt. Results will also be saved here',
+	parser.add_argument('--location', help='Folder which includes  model.pt. Results will also be saved here',
 		type=str, default=model_path)
 	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
-		type=int, default=25)
+		type=int, default=100)
 	parser.add_argument('--agent', help='Name of agent corresponding to agent class in librubiks.solving.agents',
 		type=str, default='AStar', choices = ['MCTS', 'AStar'])
 	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test',
-		type=int, default=50)
-	parser.add_argument('--eval_games', help='Number of games to evaluate at depth 50',
-			type = int, default='20')
+		type=int, default=100100100100100100100100100100)
+	parser.add_argument('--eval_games', help='Number of games to evaluate at depth',
+			type = int, default='100')
 	parser.add_argument('--save_optimal', help='If Tue, saves a JSON of optimal hyperparameters usable for runeval',
 			type=literal_eval, default=True, choices = [True, False])
 	parser.add_argument('--use_best', help="Set to True to use model-best.pt instead of model.pt.", type=literal_eval, default=False,
@@ -176,7 +176,7 @@ def agent_optimize():
 		}
 	elif agent_name == 'AStar':
 		params = {
-			'lambda_': (0.1, 1),
+			'lambda_': (0.01, 1),
 			'expansions': (1, 250),
 		}
 		def prepper(params): params['expansions'] = int(params['expansions'])
