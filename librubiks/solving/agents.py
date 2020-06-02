@@ -198,15 +198,13 @@ class AStar(DeepAgent):
 			#parents[i] is index of currently found parent with lowest G of state i
 		# parent_actions
 			#parent_actions[i] is action idx taken FROM the lightest parent to state i
-		# closed
-			# Boolean vector. closed[i] == True iff. state i is closed (expanded)
 
 	indices = dict
 	states: np.ndarray
 	G: np.ndarray
 	parents: np.ndarray
 	parent_actions: np.ndarray
-	closed: np.ndarray
+
 
 	_stack_expand = 1000
 	def __init__(self, net: Model, lambda_: float, expansions: int):
@@ -240,12 +238,9 @@ class AStar(DeepAgent):
 			self.tt.profile("Remove nodes from open priority queue")
 			n_remove = min( len(self.open_queue), self.expansions )
 			expand_idcs = np.array([ heapq.heappop(self.open_queue)[1] for _ in range(n_remove) ], dtype=int)
-
-			self.closed[expand_idcs] = True
 			self.tt.end_profile("Remove nodes from open priority queue")
 
 			is_won = self.expand_batch(expand_idcs)
-
 			if is_won: #🦀🦀🦀WE DID IT BOIS🦀🦀🦀
 				i = self.indices[ cube.get_solved().tostring() ]
 					#Build action queue
@@ -397,7 +392,6 @@ class AStar(DeepAgent):
 		self.parents = np.empty(self._stack_expand, dtype=int)
 		self.parent_actions = np.zeros(self._stack_expand, dtype=int)
 		self.G         = np.empty(self._stack_expand)
-		self.closed    = np.zeros(self._stack_expand, dtype=bool)
 		return time_limit, max_states
 
 	def increase_stack_size(self):
@@ -407,7 +401,6 @@ class AStar(DeepAgent):
 		self.parents   = np.concatenate([self.parents, np.zeros(expand_size, dtype=int)])
 		self.parent_actions   = np.concatenate([self.parent_actions, np.zeros(expand_size, dtype=int)])
 		self.G         = np.concatenate([self.G, np.empty(expand_size)])
-		self.closed    = np.concatenate([self.closed, np.zeros(expand_size, dtype=bool)])
 
 	@classmethod
 	def from_saved(cls, loc: str, use_best: bool, lambda_: float, expansions: int) -> DeepAgent:

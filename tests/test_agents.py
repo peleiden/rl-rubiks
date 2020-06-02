@@ -126,7 +126,6 @@ class TestAStar(MainTest):
 		init_idx = agent.indices[init_state.tostring()]
 		assert init_idx == 1
 		assert agent.G[init_idx]  == 0
-		assert agent.closed[init_idx]
 		for action in cube.action_space:
 			substate = cube.rotate(init_state, *action)
 			idx = agent.indices[substate.tostring()]
