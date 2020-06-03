@@ -78,7 +78,7 @@ def benchmark():
 	cube_bench = CubeBench(log, tt)
 
 	# Cube config variables
-	cn = int(1e6)
+	cn = int(1e5)
 	multi_op_size = 1000  # Number of states used in multi operations
 
 	store_repr()
@@ -95,6 +95,7 @@ def benchmark():
 	restore_repr()
 	
 	log.section("Benchmark runtime distribution")
+	tt.remove_outliers()
 	log(tt)
 
 

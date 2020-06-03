@@ -5,8 +5,9 @@ class Profile:
 
 	start: float
 
-	def __init__(self, depth: int):
+	def __init__(self, name: str, depth: int):
 		self.hits: List[float] = []
+		self.name = name
 		self.depth = depth
 	
 	def get_hits(self):
@@ -25,6 +26,14 @@ class Profile:
 		# Be aware that this is highly sensitive to outliers and often a bad estimate
 		s = self.mean()
 		return (1 / (len(self)+1) * sum(map(lambda x: (x-s)**2, self.get_hits()))) ** 0.5
+	
+	def remove_outliers(self, threshold=2):
+		# Remove all hits larger than threshold * average
+		mu = self.mean()
+		self.hits = [x for x in self.hits if x <= threshold * mu]
+	
+	def __str__(self):
+		return self.name
 
 	def __len__(self):
 		return len(self.hits)
@@ -48,7 +57,7 @@ class TickTock:
 
 	def profile(self, name: str):
 		if name not in self.profiles:
-			self.profiles[name] = Profile(self._profile_depth)
+			self.profiles[name] = Profile(name, self._profile_depth)
 		self._profile_depth += 1
 		self._latest_profile = name
 		self.profiles[name].start = perf_counter()
@@ -71,6 +80,15 @@ class TickTock:
 			self.profiles[new_name] = self.profiles[name]
 		del self.profiles[name]
 
+	def remove_outliers(self, threshold=2):
+		# For all profiles, remove hits longer than threshold * average hit
+		for profile in self.profiles.values():
+			profile.remove_outliers(threshold)
+
+	def reset(self):
+		self.profiles = {}
+		self._profile_depth = 0
+
 	@staticmethod
 	def thousand_seps(numstr: str or float or int) -> str:
 		decs = str(numstr)
@@ -86,10 +104,6 @@ class TickTock:
 	def stringify_time(cls, dt: float, unit="ms"):
 		str_ = f"{dt*cls._units[unit]:.3f} {unit}"
 		return cls.thousand_seps(str_)
-
-	def reset(self):
-		self.profiles = {}
-		self._profile_depth = 0
 
 	def stringify_sections(self, unit="s"):
 		# Returns pretty sections
