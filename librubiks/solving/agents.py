@@ -80,7 +80,7 @@ class DeepAgent(Agent):
 		raise NotImplementedError
 
 
-class RandomDFS(Agent):
+class RandomSearch(Agent):
 	def _step(self, state: np.ndarray) -> (int, np.ndarray, bool):
 		action = np.random.randint(cube.action_dim)
 		state = cube.rotate(state, *cube.action_space[action])

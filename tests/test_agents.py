@@ -7,7 +7,7 @@ from librubiks import gpu
 from librubiks import cube
 from librubiks.model import Model, ModelConfig
 
-from librubiks.solving.agents import Agent, RandomDFS, BFS, PolicySearch, ValueSearch, EGVM, MCTS, AStar
+from librubiks.solving.agents import Agent, RandomSearch, BFS, PolicySearch, ValueSearch, EGVM, MCTS, AStar
 
 def _action_queue_test(state, agent, sol_found):
 	for action in agent.action_queue:
@@ -18,7 +18,7 @@ class TestAgents(MainTest):
 	def test_agents(self):
 		net = Model.create(ModelConfig())
 		agents = [
-			RandomDFS(),
+			RandomSearch(),
 			BFS(),
 			PolicySearch(net, sample_policy=False),
 			PolicySearch(net, sample_policy=True),

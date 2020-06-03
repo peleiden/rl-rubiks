@@ -186,9 +186,9 @@ class EvalJob:
 				 verbose: bool = True,
 				 in_subfolder: bool = False,  # Should be true if there are multiple experiments
 			 ):
+		
 		self.name = name
 		self.location = location
-
 
 		assert isinstance(games, int) and games
 		assert max_time > 0
