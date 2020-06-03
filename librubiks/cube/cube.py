@@ -205,6 +205,7 @@ def sequence_scrambler(games: int, depth: int, with_solved: bool) -> (np.ndarray
 class _Cube2024:
 
 	maps = get_tensor_map(dtype)
+	corner_side_idcs = np.array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 	corner_633map, side_633map = get_633maps(F, B, T, D, L, R)
 
 	@classmethod
@@ -213,11 +214,11 @@ class _Cube2024:
 		Performs one move on the cube, specified by the side (0-5),
 		and whether the rotation is in a positive direction (0 for negative and 1 for positive)
 		"""
-		altered_state = state.copy()
+		
 		map_ = cls.maps[direction, face]
-		altered_state[:8] += map_[0, altered_state[:8]]
-		altered_state[8:] += map_[1, altered_state[8:]]
-		return altered_state
+		state = state + map_[cls.corner_side_idcs, state]
+		
+		return state
 
 	@classmethod
 	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, directions: np.ndarray):
@@ -293,14 +294,6 @@ class _Cube686:
 
 	solved_cuda = torch.from_numpy(_get_686solved(dtype)).to(gpu)
 
-	@staticmethod
-	def _shift_left(a: np.ndarray, num_elems: int):
-		return np.roll(a, -num_elems, axis=0)
-
-	@staticmethod
-	def _shift_right(a: np.ndarray, num_elems: int):
-		return np.roll(a, num_elems, axis=0)
-
 	@classmethod
 	def rotate(cls, state: np.ndarray, face: int, direction: int):
 		"""
@@ -351,6 +344,6 @@ class _Cube686:
 		state68 = np.where(state == 1)[2].reshape((6, 8))
 		state69 = (np.ones((9, 6)) * np.arange(6)).astype(int).T  # Nice
 		for i in range(6):
-			state69[i, cls.map633] = cls._shift_left(state68[i], cls.shifts[i])
+			state69[i, cls.map633] = np.roll(state68[i], -cls.shifts[i], axis=0)
 		return state69.reshape((6, 3, 3))
 
