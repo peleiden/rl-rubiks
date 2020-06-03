@@ -8,10 +8,11 @@ def _repstr():
 
 def _get_states(shape: tuple):
 	shape = (*shape, *cube.shape()) if len(shape) > 1 else (1, *shape, *cube.shape())
+	n, n_states = shape[0], shape[1]
 	states = np.empty(shape, dtype=cube.dtype)
-	states[0] = cube.repeat_state(cube.get_solved(), shape[1])
+	states[0] = cube.repeat_state(cube.get_solved(), n_states)
 	for i in range(1, len(states)):
-		faces, dirs = np.random.randint(0, 6, shape[1]), np.random.randint(0, 2, shape[1])
+		faces, dirs = np.random.randint(0, 6, n_states), np.random.randint(0, 2, n_states)
 		states[i] = cube.multi_rotate(states[i-1], faces, dirs)
 	return states
 
@@ -65,6 +66,27 @@ class CubeBench:
 			self.tt.end_profile()
 		self._log_method_results("Average state encoding time", pname, n_states)
 	
+	def check_solution(self, n: int):
+		self.log.section(f"Benchmarking {TickTock.thousand_seps(n)} single solution checks, {_repstr()}")
+		states = _get_states((n,))
+		pname = f"Checking single solution, {_repstr()}"
+		for state in states.squeeze():
+			self.tt.profile(pname)
+			cube.is_solved(state)
+			self.tt.end_profile()
+		self._log_method_results("Average solution check time", pname)
+	
+	def check_multi_solution(self, n: int, n_states: int):
+		self.log.section(f"Benchmarking {TickTock.thousand_seps(n)} solution checks of "
+						 f"{TickTock.thousand_seps(n_states)} states each")
+		all_states = _get_states((n, n_states))
+		pname = f"Solution checks for {TickTock.thousand_seps(n_states)} states, {_repstr()}"
+		for states in all_states:
+			self.tt.profile(pname)
+			cube.multi_is_solved(states)
+			self.tt.end_profile()
+		self._log_method_results("Average solution check time", pname, n_states)
+	
 	def _log_method_results(self, description: str, pname: str, divider=1):
 		self.log("\n".join([
 			description + ": " + TickTock.stringify_time(self.tt.profiles[pname].mean() / divider, "mus"),
@@ -79,7 +101,7 @@ def benchmark():
 
 	# Cube config variables
 	cn = int(1e7)
-	multi_op_size = 1000  # Number of states used in multi operations
+	multi_op_size = int(1e4)  # Number of states used in multi operations
 
 	store_repr()
 	for repr_ in [True, False]:
@@ -90,6 +112,8 @@ def benchmark():
 		cube_bench.multi_rotate(int(cn/multi_op_size), multi_op_size)
 		cube_bench.onehot(cn)
 		cube_bench.multi_onehot(int(cn/multi_op_size), multi_op_size)
+		cube_bench.check_solution(cn)
+		cube_bench.check_multi_solution(int(cn/multi_op_size), multi_op_size)
 		tt.end_profile(f"Benchmarking cube environment, {_repstr()}")
 	
 	restore_repr()
