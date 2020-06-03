@@ -111,14 +111,14 @@ class TestRubiksCube(MainTest):
 		state = cube.get_solved()
 		state, faces, dirs = cube.scramble(20)
 		assert not cube.is_solved(state)
-		for f, d in zip(reversed(faces), reversed([not item for item in dirs])):
+		for f, d in zip(reversed(faces), reversed([int(not item) for item in dirs])):
 			state = cube.rotate(state, *(f, d))
 		assert cube.is_solved(state)
 
 	def test_iter_actions(self):
 		actions = np.array([
 			[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5] * 2,
-			[True, False, True, False, True, False, True, False, True, False, True, False] * 2,
+			[1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0] * 2,
 		], dtype=np.uint8)
 		assert np.all(actions==cube.iter_actions(2))
 

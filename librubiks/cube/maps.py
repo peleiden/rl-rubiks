@@ -139,8 +139,22 @@ def get_tensor_map(dtype):
 				neg[1, to_idx] = from_idx - to_idx
 		map_pos.append(pos)
 		map_neg.append(neg)
+	
+	maps = np.array([map_neg, map_pos])
 
-	return map_pos, map_neg
+	return maps
+
+# Maps for 6x8x6 representation
+# The i'th index contain the neighbors of the i'th side in positive direction
+neighbors_686 = np.array([
+	[4, 3, 5, 2],  # Front
+	[3, 4, 2, 5],  # Back
+	[0, 5, 1, 4],  # Top
+	[5, 0, 4, 1],  # Down
+	[2, 1, 3, 0],  # Left
+	[1, 2, 0, 3],  # Right
+])
+
 
 if __name__ == "__main__":
 	# Pretty print of tensor maps

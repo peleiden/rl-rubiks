@@ -11,7 +11,7 @@ def _get_states(shape: tuple):
 	states = np.empty(shape, dtype=cube.dtype)
 	states[0] = cube.repeat_state(cube.get_solved(), shape[1])
 	for i in range(1, len(states)):
-		faces, dirs = np.random.randint(0, 6, shape[1]), np.random.randint(0, 2, shape[1], dtype=bool)
+		faces, dirs = np.random.randint(0, 6, shape[1]), np.random.randint(0, 2, shape[1])
 		states[i] = cube.multi_rotate(states[i-1], faces, dirs)
 	return states
 
@@ -23,7 +23,7 @@ class CubeBench:
 	
 	def rotate(self, n: int):
 		self.log.section(f"Benchmarking {TickTock.thousand_seps(n)} single rotations, {_repstr()}")
-		faces, dirs = np.random.randint(0, 6, n), np.random.randint(0, 2, n, dtype=bool)
+		faces, dirs = np.random.randint(0, 6, n), np.random.randint(0, 2, n)
 		state = cube.get_solved()
 		pname = f"Single rotation, {_repstr()}"
 		for f, d in zip(faces, dirs):
@@ -78,7 +78,7 @@ def benchmark():
 	cube_bench = CubeBench(log, tt)
 
 	# Cube config variables
-	cn = int(1e5)
+	cn = int(1e7)
 	multi_op_size = 1000  # Number of states used in multi operations
 
 	store_repr()

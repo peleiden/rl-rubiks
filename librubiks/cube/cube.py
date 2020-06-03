@@ -15,10 +15,11 @@ The solution to this is this quite large module with these features
 - Some global constants are maintained
 """
 import numpy as np
+from numpy import arange, arange, repeat
 import torch
 
 from librubiks import cpu, gpu, get_is2024, set_is2024
-from librubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps
+from librubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps, neighbors_686
 
 
 ####################
@@ -30,24 +31,25 @@ F, B, T, D, L, R = 0, 1, 2, 3, 4, 5
 action_names = ('F', 'B', 'T', 'D', 'L', 'R')
 
 action_space = list()
-for i in range(6): action_space.extend( [(i, True), (i, False)] )
+for i in range(6): action_space.extend( [(i, 1), (i, 0)] )
 action_dim = len(action_space)
 
 ################
 # Rotate logic #
 ################
 
-def rotate(state: np.ndarray, face: int, pos_rev: bool) -> np.ndarray:
+def rotate(state: np.ndarray, face: int, direction: int) -> np.ndarray:
 	"""
-	Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
+	Performs one move on the cube, specified by the side (0-5),
+	and if the direction is negative (0) or positive (1)
 	"""
 	method = _Cube2024.rotate if get_is2024() else _Cube686.rotate
-	return method(state, face, pos_rev)
+	return method(state, face, direction)
 
-def multi_rotate(states: np.ndarray, faces: np.ndarray, pos_rev: np.ndarray) -> np.ndarray:
-	# Performs action (faces[i], pos_revs[i]) on states[i]
+def multi_rotate(states: np.ndarray, faces: np.ndarray, directions: np.ndarray) -> np.ndarray:
+	# Performs action (faces[i], directions[i]) on states[i]
 	method = _Cube2024.multi_rotate if get_is2024() else _Cube686.multi_rotate
-	return method(states, faces, pos_rev)
+	return method(states, faces, directions)
 
 #################
 # Solving logic #
@@ -171,7 +173,7 @@ def rev_actions(actions: np.ndarray) -> np.ndarray:
 
 def scramble(depth: int, force_not_solved=False) -> (np.ndarray, np.ndarray, np.ndarray):
 	faces = np.random.randint(6, size=(depth,))
-	dirs = np.random.randint(2, size=(depth,)).astype(bool)
+	dirs = np.random.randint(2, size=(depth,))
 	state = get_solved()
 	for face, d in zip(faces, dirs):
 		state = rotate(state, face, d)
@@ -202,27 +204,28 @@ def sequence_scrambler(games: int, depth: int, with_solved: bool) -> (np.ndarray
 
 class _Cube2024:
 
-	map_pos, map_neg = get_tensor_map(dtype)
+	maps = get_tensor_map(dtype)
 	corner_633map, side_633map = get_633maps(F, B, T, D, L, R)
 
 	@classmethod
-	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool):
+	def rotate(cls, state: np.ndarray, face: int, direction: int):
 		"""
-		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
+		Performs one move on the cube, specified by the side (0-5),
+		and whether the rotation is in a positive direction (0 for negative and 1 for positive)
 		"""
 		altered_state = state.copy()
-		map_ = cls.map_pos[face] if pos_rev else cls.map_neg[face]
+		map_ = cls.maps[direction, face]
 		altered_state[:8] += map_[0, altered_state[:8]]
 		altered_state[8:] += map_[1, altered_state[8:]]
 		return altered_state
 
 	@classmethod
-	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
-		# Performs action (faces[i], pos_revs[i]) on states[i]
+	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, directions: np.ndarray):
+		# Performs action (faces[i], directions[i]) on states[i]
 		altered_states = states.copy()
-		maps = np.array([cls.map_pos[face] if pos_rev else cls.map_neg[face] for face, pos_rev in zip(faces, pos_revs)])
-		idcs8 = np.repeat(np.arange(len(states)), 8)
-		idcs12 = np.repeat(np.arange(len(states)), 12)
+		maps = cls.maps[directions, faces]
+		idcs8 = repeat(arange(len(states)), 8)
+		idcs12 = repeat(arange(len(states)), 12)
 		altered_states[:, :8] += maps[idcs8, 0, altered_states[:, :8].ravel()].reshape((-1, 8))
 		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
 		return altered_states
@@ -274,22 +277,8 @@ class _Cube2024:
 
 
 class _Cube686:
-
-	# The i'th index contain the neighbors of the i'th side in positive direction
-	neighbors = np.array([
-		[4, 3, 5, 2],  # Front
-		[3, 4, 2, 5],  # Back
-		[0, 5, 1, 4],  # Top
-		[5, 0, 4, 1],  # Down
-		[2, 1, 3, 0],  # Left
-		[1, 2, 0, 3],  # Right
-	])
-	adjacents_classic = np.array([
-		[6, 7, 0],
-		[2, 3, 4],
-		[4, 5, 6],
-		[0, 1, 2],
-	])
+	
+	# No shame
 	adjacents = np.array([6, 7, 0, 2, 3, 4, 4, 5, 6, 0, 1, 2])
 	rolled_adjecents = np.roll(adjacents, 3)
 	n3_03 = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
@@ -313,28 +302,29 @@ class _Cube686:
 		return np.roll(a, num_elems, axis=0)
 
 	@classmethod
-	def rotate(cls, state: np.ndarray, face: int, pos_rev: bool):
+	def rotate(cls, state: np.ndarray, face: int, direction: int):
 		"""
-		Performs one move on the cube, specified by the side (0-5) and whether the revolution is positive (boolean)
+		Performs one move on the cube, specified by the side (0-5),
+		and if the direction is negative (0) or positive (1)
 		"""
 
 		altered_state = state.copy()
-		ini_state = state[cls.neighbors[face]]
+		ini_state = state[neighbors_686[face]]
 
-		if pos_rev:
+		if direction:
 			altered_state[face] = state[face, cls.roll_right]
-			as_idcs0 = cls.neighbors[[face]*12, cls.n3_03]
+			as_idcs0 = neighbors_686[[face]*12, cls.n3_03]
 			altered_state[as_idcs0, cls.adjacents] = ini_state[cls.n3_n13, cls.rolled_adjecents]
 		else:
 			altered_state[face] = state[face, cls.roll_left]
-			as_idcs0 = cls.neighbors[[face]*12, cls.n3_n13]
+			as_idcs0 = neighbors_686[[face]*12, cls.n3_n13]
 			altered_state[as_idcs0, cls.rolled_adjecents] = ini_state[cls.n3_03, cls.adjacents]
 
 		return altered_state
 
 	@staticmethod
-	def multi_rotate(states: np.ndarray, faces: np.ndarray, pos_revs: np.ndarray):
-		return np.array([rotate(state, face, pos_rev) for state, face, pos_rev in zip(states, faces, pos_revs)], dtype=dtype)
+	def multi_rotate(states: np.ndarray, faces: np.ndarray, directions: np.ndarray):
+		return np.array([rotate(state, face, direction) for state, face, direction in zip(states, faces, directions)], dtype=dtype)
 
 	@staticmethod
 	def as_oh(states: np.ndarray) -> torch.tensor:
