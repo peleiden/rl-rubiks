@@ -222,13 +222,11 @@ class _Cube2024:
 	@classmethod
 	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, directions: np.ndarray):
 		# Performs action (faces[i], directions[i]) on states[i]
-		altered_states = states.copy()
 		maps = cls.maps[directions, faces]
-		idcs8 = np.repeat(np.arange(len(states)), 8)
-		idcs12 = np.repeat(np.arange(len(states)), 12)
-		altered_states[:, :8] += maps[idcs8, 0, altered_states[:, :8].ravel()].reshape((-1, 8))
-		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
-		return altered_states
+		idcs = np.broadcast_to(np.arange(len(states)), (20, len(states))).T.ravel()
+		corners_sides = np.broadcast_to(cls.corner_side_idcs, (len(states), 20)).ravel()
+		states = states + maps[idcs, corners_sides, states.ravel()].reshape((len(states), 20))
+		return states
 
 	@staticmethod
 	def as_oh(states: np.ndarray):
