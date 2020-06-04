@@ -470,8 +470,10 @@ class MCTS(DeepAgent):
 
 		oh = cube.as_oh(state)
 		p, v = self.net(oh)
-		self.V[1] = v.cpu().numpy()
-		self.P[1] = p.softmax(dim=1).cpu().numpy()
+		p, v = p.softmax(dim=1).cpu().numpy(), v.cpu().numpy()
+		self.P[1] = p
+		self.V[1] = v
+		self.W[1] = v
 		indices_visited = [1]
 		actions_taken = []
 		while self.tt.tock() < time_limit and len(self) + cube.action_dim <= max_states:
@@ -563,8 +565,8 @@ class MCTS(DeepAgent):
 		# Data structure: First row has all existing W's and second has the highest value value of the substates
 		W = np.vstack([
 			self.W[visited_states_idcs, actions_taken],
-			np.repeat(best_v, len(visited_states_idcs))]
-		)
+			[best_v] * len(visited_states_idcs),
+		])
 		self.W[visited_states_idcs, actions_taken] = W.max(axis=0)
 		self.tt.end_profile("Update P, V, and W")
 
