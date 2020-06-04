@@ -15,7 +15,6 @@ The solution to this is this quite large module with these features
 - Some global constants are maintained
 """
 import numpy as np
-from numpy import arange, arange, repeat
 import torch
 
 from librubiks import cpu, gpu, get_is2024, set_is2024
@@ -225,8 +224,8 @@ class _Cube2024:
 		# Performs action (faces[i], directions[i]) on states[i]
 		altered_states = states.copy()
 		maps = cls.maps[directions, faces]
-		idcs8 = repeat(arange(len(states)), 8)
-		idcs12 = repeat(arange(len(states)), 12)
+		idcs8 = np.repeat(np.arange(len(states)), 8)
+		idcs12 = np.repeat(np.arange(len(states)), 12)
 		altered_states[:, :8] += maps[idcs8, 0, altered_states[:, :8].ravel()].reshape((-1, 8))
 		altered_states[:, 8:] += maps[idcs12, 1, altered_states[:, 8:].ravel()].reshape((-1, 12))
 		return altered_states
