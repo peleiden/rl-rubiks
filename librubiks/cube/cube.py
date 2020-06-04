@@ -276,15 +276,18 @@ class _Cube2024:
 		return state633
 
 
+
+_Cube686_n3_03 = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
+_Cube686_n3_n13 = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1, 2, 2, 2])
 class _Cube686:
 	
 	# No shame
 	adjacents = np.array([6, 7, 0, 2, 3, 4, 4, 5, 6, 0, 1, 2])
 	rolled_adjecents = np.roll(adjacents, 3)
-	n3_03 = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
-	n3_n13 = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1, 2, 2, 2])
 	roll_left = np.array([2, 3, 4, 5, 6, 7, 0, 1])
 	roll_right = np.array([6, 7, 0, 1, 2, 3, 4, 5])
+	neighbor_idcs_pos = [neighbors_686[[face]*12, _Cube686_n3_03] for face in np.arange(6)]
+	neighbor_idcs_neg = [neighbors_686[[face]*12, _Cube686_n3_n13] for face in np.arange(6)]
 
 	# Maps an 8 long vector starting at (0, 0) in 3x3 onto a 9 long vector which can be reshaped to 3x3
 	map633 = np.array([0, 3, 6, 7, 8, 5, 2, 1])
@@ -305,18 +308,16 @@ class _Cube686:
 
 		if direction:
 			altered_state[face] = state[face, cls.roll_right]
-			as_idcs0 = neighbors_686[[face]*12, cls.n3_03]
-			altered_state[as_idcs0, cls.adjacents] = ini_state[cls.n3_n13, cls.rolled_adjecents]
+			altered_state[cls.neighbor_idcs_pos[face], cls.adjacents] = ini_state[_Cube686_n3_n13, cls.rolled_adjecents]
 		else:
 			altered_state[face] = state[face, cls.roll_left]
-			as_idcs0 = neighbors_686[[face]*12, cls.n3_n13]
-			altered_state[as_idcs0, cls.rolled_adjecents] = ini_state[cls.n3_03, cls.adjacents]
+			altered_state[cls.neighbor_idcs_neg[face], cls.rolled_adjecents] = ini_state[_Cube686_n3_03, cls.adjacents]
 
 		return altered_state
 
-	@staticmethod
-	def multi_rotate(states: np.ndarray, faces: np.ndarray, directions: np.ndarray):
-		return np.array([rotate(state, face, direction) for state, face, direction in zip(states, faces, directions)], dtype=dtype)
+	@classmethod
+	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, directions: np.ndarray):
+		return np.array([cls.rotate(state, face, direction) for state, face, direction in zip(states, faces, directions)], dtype=dtype)
 
 	@staticmethod
 	def as_oh(states: np.ndarray) -> torch.tensor:
@@ -332,7 +333,6 @@ class _Cube686:
 		oh is a one-hot encoded tensor of shape n x 288 as produced by _Cube686.as_oh
 		This methods creates a correctness representation of the tensor of shape n x 6 x 8
 		"""
-		# TODO: Write tests for this method
 		oh = t.reshape(len(t), 6, 8, 6).to(gpu)
 		correct_repr = torch.all(oh[:] == cls.solved_cuda, dim=3).long()
 		correct_repr[correct_repr==0] = -1
