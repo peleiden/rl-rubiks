@@ -567,9 +567,10 @@ class MCTS(DeepAgent):
 
 		# Update N and L
 		self.tt.profile("Update N and L")
-		self.N[visited_states_idcs[:-1], actions_taken[:-1]] += 1
-		self.L[visited_states_idcs[:-1], actions_taken[:-1]] = 0
-		self.L[visited_states_idcs[1:], cube.rev_actions(actions_taken[:-1])] = 0
+		if actions_taken:  # Crashes if actions_taken is empty, which happens on the first run
+			self.N[visited_states_idcs[:-1], actions_taken] += 1
+			self.L[visited_states_idcs[:-1], actions_taken] = 0
+			self.L[visited_states_idcs[1:], cube.rev_actions(np.array(actions_taken))] = 0
 		self.tt.end_profile("Update N and L")
 
 		return solve_leaf, solve_action
