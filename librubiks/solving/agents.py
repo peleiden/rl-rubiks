@@ -557,18 +557,22 @@ class MCTS(DeepAgent):
 		self.P[new_substate_idcs] = p
 		self.V[new_substate_idcs] = v
 		self.W[new_substate_idcs] = np.tile(v, (cube.action_dim, 1)).T
-		self.W[leaf_index] = self.V[self.neighbors[leaf_index]]
-		# Data structure: First row has all existing W's and second has value of leaf that is expanded from
-		W = np.vstack([self.W[visited_states_idcs[:-1], actions_taken], np.repeat(self.V[leaf_index], len(visited_states_idcs)-1)])
-		self.W[visited_states_idcs[:-1], actions_taken] = W.max(axis=0)
+		best_action = v.argmax()
+		best_v = v[best_action]
+		actions_taken = np.array(actions_taken + [best_action])
+		# Data structure: First row has all existing W's and second has the highest value value of the substates
+		W = np.vstack([
+			self.W[visited_states_idcs, actions_taken],
+			np.repeat(best_v, len(visited_states_idcs))]
+		)
+		self.W[visited_states_idcs, actions_taken] = W.max(axis=0)
 		self.tt.end_profile("Update P, V, and W")
 
 		# Update N and L
 		self.tt.profile("Update N and L")
-		if actions_taken:  # Crashes if actions_taken is empty, which happens on the first run
-			self.N[visited_states_idcs[:-1], actions_taken] += 1
-			self.L[visited_states_idcs[:-1], actions_taken] = 0
-			self.L[visited_states_idcs[1:], cube.rev_actions(np.array(actions_taken))] = 0
+		self.N[visited_states_idcs[:-1], actions_taken[:-1]] += 1
+		self.L[visited_states_idcs[:-1], actions_taken[:-1]] = 0
+		self.L[visited_states_idcs[1:], cube.rev_actions(actions_taken[:-1])] = 0
 		self.tt.end_profile("Update N and L")
 
 		return solve_leaf, solve_action
