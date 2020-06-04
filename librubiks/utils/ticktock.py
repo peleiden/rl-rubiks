@@ -29,8 +29,11 @@ class Profile:
 	
 	def remove_outliers(self, threshold=2):
 		# Remove all hits larger than threshold * average
+		# Returns number of removed outliers
 		mu = self.mean()
+		original_length = len(self)
 		self.hits = [x for x in self.hits if x <= threshold * mu]
+		return original_length - len(self)
 	
 	def __str__(self):
 		return self.name

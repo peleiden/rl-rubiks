@@ -88,10 +88,13 @@ class CubeBench:
 		self._log_method_results("Average solution check time", pname, n_states)
 	
 	def _log_method_results(self, description: str, pname: str, divider=1):
+		threshold = 2
+		removed = self.tt.profiles[pname].remove_outliers(threshold)
 		self.log("\n".join([
 			description + ": " + TickTock.stringify_time(self.tt.profiles[pname].mean() / divider, "mus"),
 			"Mean: " + TickTock.stringify_time(self.tt.profiles[pname].mean(), "mus"),
 			"Std.: " + TickTock.stringify_time(self.tt.profiles[pname].std(), "mus"),
+			f"Removed {TickTock.thousand_seps(removed)} outliers with threshold {threshold} * mean",
 		]))
 
 def benchmark():
@@ -119,7 +122,6 @@ def benchmark():
 	restore_repr()
 	
 	log.section("Benchmark runtime distribution")
-	tt.remove_outliers()
 	log(tt)
 
 
