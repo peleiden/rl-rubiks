@@ -26,8 +26,8 @@ options = {
 		'default':  '10 25',
 		'help':     'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 25")\n'
 		            'Denoting interval of number of scramblings to be run.',
-		# Ugly way to define list of two numbers
-		'type':     lambda args: [int(args.split()[0]), int(args.split()[1])],
+		# Ugly way to define list of two numbers or single number input
+		'type':     lambda args: [int(args.split()[0]), int(args.split()[1])] if len(args.split()) > 1 else [int(args), int(args)+1],
 	},
 	'games': {
 		'default':  10,
