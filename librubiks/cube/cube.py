@@ -315,7 +315,17 @@ class _Cube686:
 
 	@classmethod
 	def multi_rotate(cls, states: np.ndarray, faces: np.ndarray, directions: np.ndarray):
-		return np.array([cls.rotate(state, face, direction) for state, face, direction in zip(states, faces, directions)], dtype=dtype)
+		altered_states = states.copy()
+		ini_states = np.array([state[n] for state, n in zip(states, neighbors_686[faces])])
+		for altered_state, state, ini_state, face, direction in zip(altered_states, states, ini_states, faces, directions):
+			if direction:
+				altered_state[face] = state[face, cls.roll_right]
+				altered_state[cls.neighbor_idcs_pos[face], cls.adjacents] = ini_state[_Cube686_n3_n13, cls.rolled_adjecents]
+			else:
+				altered_state[face] = state[face, cls.roll_left]
+				altered_state[cls.neighbor_idcs_neg[face], cls.rolled_adjecents] = ini_state[_Cube686_n3_03, cls.adjacents]
+
+		return altered_states
 
 	@staticmethod
 	def as_oh(states: np.ndarray) -> torch.tensor:
