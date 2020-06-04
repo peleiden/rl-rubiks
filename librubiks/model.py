@@ -13,46 +13,34 @@ from librubiks import gpu
 from librubiks.utils import NullLogger
 
 
-
-@dataclass
 class ModelConfig:
-	activation_function: torch.nn.functional = torch.nn.ELU()
-	batchnorm: bool = True
-	architecture: str = 'fc'  # Options: 'fc', 'res', 'convo'
-	init: str = 'glorot' # Options: glorot, he or a number
 
-	# Hidden layer sizes in shared network and in the two part networks given as lists. If None: The value is controlled by architecture (often wanted)
-	shared_sizes: list = None
-	part_sizes: list = None
-	conv_channels: list = None
-	cat_sizes: list = None
-	res_blocks: int = None
-	res_size: int = None
+	_fc_small_arch  = { "shared_sizes": [4096, 2048], "part_sizes": [512] }
+	_fc_big_arch    = { "shared_sizes": [8192, 4096, 2048], "part_sizes": [1024, 512] }
+	_res_small_arch = { "shared_sizes": [4096, 1024], "part_sizes": [512], "res_blocks": 4, "res_size": 1024 }
+	_res_big_arch   = { "shared_sizes": [8192, 4096, 2048], "part_sizes": [1024, 512], "res_blocks": 6, "res_size": 2048 }
+	_conv_arch      = { "shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [32, 64, 128], "cat_sizes": [2048] }
 
-	_fc_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512]}
-	_res_arch: ClassVar[dict] = {"shared_sizes": [4096, 1024], "part_sizes": [512], "res_blocks": 4, "res_size": 1024,}
-	_conv_arch: ClassVar[dict] = {"shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [32, 64, 128], "cat_sizes": [2048]}
+	def __init__(self, activation_function=torch.nn.ELU(), batchnorm=True, architecture="fc_small", init="glorot", is2024=True):
+		self.activation_function = activation_function
+		self.batchnorm = batchnorm
+		self.architecture = architecture  # Options: 'fc_small', 'fc_big', 'res_small', 'res_big', 'conv'
+		self.init = init  # Options: glorot, he or a number
+		self.is2024 = is2024
 
-	is2024: bool = True
+		# General purpose values
+		self.shared_sizes = self._get_arch()["shared_sizes"]
+		self.part_sizes = self._get_arch()["part_sizes"]
 
-	def __post_init__(self):
-		# General standard values
-		if self.shared_sizes is None:
-			self.shared_sizes = self._get_arch()["shared_sizes"]
-		if self.part_sizes is None:
-			self.part_sizes = self._get_arch()["part_sizes"]
-
-		# CNN standard values
-		if self.conv_channels is None and self.architecture == "conv":
-			self.conv_channels = self._get_arch()["conv_channels"]
-		if self.cat_sizes is None and self.architecture == "conv":
-			self.cat_sizes = self._get_arch()["cat_sizes"]
-
-		# ResNet standard values
-		if self.res_blocks is None and self.architecture == "res":
+		# ResNet values
+		if self.architecture.startswith("res"):
 			self.res_blocks = self._get_arch()["res_blocks"]
-		if self.res_size is None and self.architecture == "res":
 			self.res_size = self._get_arch()["res_size"]
+
+		# CNN values
+		if self.architecture.startswith("conv"):
+			self.conv_channels = self._get_arch()["conv_channels"]
+			self.cat_sizes = self._get_arch()["cat_sizes"]
 
 	def _get_arch(self):
 		return getattr(self, f"_{self.architecture}_arch")
@@ -63,6 +51,8 @@ class ModelConfig:
 
 	def as_json_dict(self):
 		d = deepcopy(self.__dict__)
+		for key in ["shared_sizes", "part_sizes", "res_blocks", "res_size", "conv_channels", "cat_sizes"]:
+			d.pop(key, None)
 		for a, f in self._get_non_serializable().items():
 			d[a] = f(d[a], False)
 		return d
@@ -105,11 +95,11 @@ class Model(nn.Module):
 		Allows this class to be used to instantiate other Network architectures based on the content
 		of the configuartion file.
 		"""
-		if config.architecture == "fc": return Model(config, logger).to(gpu)
-		if config.architecture == "res": return ResNet(config, logger).to(gpu)
-		if config.architecture == "conv": return ConvNet(config, logger).to(gpu)
+		if config.architecture.startswith("fc"):  return Model(config, logger).to(gpu)
+		if config.architecture.startswith("res"): return ResNet(config, logger).to(gpu)
+		if config.architecture == "conv":         return ConvNet(config, logger).to(gpu)
 
-		raise KeyError(f"Network architecture should be 'fc', 'res', or 'conv', but '{config.architecture}' was given")
+		raise KeyError(f"Network architecture should be 'fc_small', 'fc_big', 'res_small', 'res_big', 'conv', but '{config.architecture}' was given")
 
 	def _construct_net(self, pv_input_size: int=None):
 		"""

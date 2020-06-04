@@ -30,10 +30,10 @@ options = {
 		"type":     int,
 	},
 	'arch': {
-		'default':  'fc',
-		'help':     'Network architecture. fc for fully connected, res for fully connected with residual blocks, and conv for convolutional blocks',
+		'default':  'fc_small',
+		'help':     'Network architecture. fc_small or fc_big for fully connected, res_small or res_big for fully connected with residual blocks, and conv for convolutional blocks',
 		'type':     str,
-		'choices':  ['fc', 'res', 'conv'],
+		'choices':  ['fc_small', 'fc_big', 'res_small', 'res_big', 'conv'],
 	},
 	'alpha_update': {
 		'default':  0,
@@ -57,11 +57,11 @@ options = {
 	'batch_size': {
 		'default':  50,
 		'help':     'Number of training examples to be used in each parameter update, e.g. minibatch size for gradient descent' +
-			    'Note: Training is done on rollout_games*rollout_depth examples, so batch_size must be <= this',
+		            'Note: Training is done on rollout_games*rollout_depth examples, so batch_size must be <= this',
 		'type':     int
 	},
 	'optim_fn': {
-		'default':  'RMSprop',
+		'default':  'Adam',
 		'help':     'Name of optimization function corresponding to class in torch.optim',
 		'type':     str,
 	},

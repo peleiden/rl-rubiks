@@ -21,7 +21,7 @@ class TestModel(MainTest):
 		model(x)
 
 	def test_resnet(self):
-		config = ModelConfig(architecture = 'res')
+		config = ModelConfig(architecture = 'res_big')
 		model = Model.create(config)
 		assert next(model.parameters()).device.type == gpu.type
 		model.eval()

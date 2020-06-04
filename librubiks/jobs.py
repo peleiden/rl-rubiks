@@ -48,7 +48,7 @@ class TrainJob:
 				 agent = PolicySearch(net=None),
 				 scrambling_depths: tuple = (10,),
 				 verbose: bool = True,
-				 ):
+			):
 
 		self.name = name
 		assert isinstance(self.name, str)
@@ -96,7 +96,7 @@ class TrainJob:
 		self.reward_method = reward_method
 		assert self.reward_method in ["paper", "lapanfix", "schultzfix", "reward0"]
 
-		assert arch in ["fc", "res", "conv"]
+		assert arch in ["fc_small", "fc_big", "res_small", "res_big", "conv"]
 		if arch == "conv": assert not self.is2024
 		assert isinstance(self.model_cfg, ModelConfig)
 
