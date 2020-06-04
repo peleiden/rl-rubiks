@@ -560,7 +560,10 @@ class MCTS(DeepAgent):
 		self.V[new_substate_idcs] = v
 		self.W[new_substate_idcs] = np.tile(v, (cube.action_dim, 1)).T
 		best_action = v.argmax()
-		best_v = v[best_action]
+		try:
+			best_v = v[best_action]
+		except:
+			print(v.shape, best_action, new_substates_oh.shape, substates.shape)
 		actions_taken = np.array(actions_taken + [best_action])
 		# Data structure: First row has all existing W's and second has the highest value value of the substates
 		W = np.vstack([
