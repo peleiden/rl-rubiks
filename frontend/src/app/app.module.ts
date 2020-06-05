@@ -8,6 +8,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { CubeComponent } from './cube/cube.component';
 import { AppendixComponent } from './appendix/appendix.component';
 import { DocumentationComponent } from './documentation/documentation.component';
+import { MethodsComponent } from './methods/methods.component';
 
 @NgModule({
   declarations: [
@@ -15,6 +16,7 @@ import { DocumentationComponent } from './documentation/documentation.component'
     CubeComponent,
     AppendixComponent,
     DocumentationComponent,
+    MethodsComponent,
   ],
   imports: [
     BrowserModule,
