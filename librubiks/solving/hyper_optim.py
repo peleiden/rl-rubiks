@@ -3,6 +3,7 @@ from glob import glob as glob # glob
 from dataclasses import dataclass, field
 from typing import Callable, List
 from ast import literal_eval
+from copy import copy
 import argparse
 import json # For print
 
@@ -34,6 +35,7 @@ class Optimizer:
 		self.evaluator = None
 		self.persistent_agent_params = None
 		self.agent_class = None
+		self.param_prepper = None
 
 		self.score_history = list()
 		self.parameter_history = list()
@@ -48,9 +50,10 @@ class Optimizer:
 		self.evaluator = evaluator
 		self.agent_class = agent_class
 		self.persistent_agent_params = persistent_agent_params
+		self.param_prepper = param_prepper
 
 		def target_function(agent_params):
-			param_prepper(agent_params)
+			self.param_prepper(agent_params)
 			agent = self.agent_class(**self.persistent_agent_params, **agent_params)
 			res, _= self.evaluator.eval(agent)
 			won = res != -1
@@ -64,7 +67,10 @@ class Optimizer:
 		raise NotImplementedError
 
 	@staticmethod
-	def _format_params(params: str):
+	def _format_params(params: str, prepper = None):
+		if prepper is not None:
+			params = copy(params)
+			prepper(params)
 		return json.dumps(params, indent=4, sort_keys=True)
 
 class BayesianOptimizer(Optimizer):
@@ -102,7 +108,7 @@ class BayesianOptimizer(Optimizer):
 		for i in range(iterations):
 			next_params = self.optimizer.suggest(self.utility)
 			self.parameter_history.append(next_params)
-			self.logger(f"Optimization {i}: Chosen parameters:\t: {self._format_params(next_params)}")
+			self.logger(f"Optimization {i}: Chosen parameters:\t: {self._format_params(next_params, prepper=self.param_prepper)}")
 
 			score = self.target_function(next_params)
 			self.score_history.append(score)
@@ -117,6 +123,7 @@ class BayesianOptimizer(Optimizer):
 		self.logger(f"Optimization done. Best parameters: {self._format_params(self.optimal)} with score {self.highscore}")
 
 		return self.optimal
+
 	def __str__(self):
 		return f"BayesianOptimizer()"
 
@@ -143,7 +150,7 @@ def agent_optimize():
 	if train_folders:
 		for folder in [train_folders[-1]] + glob(f"{train_folders[-1]}/*/"):
 			if os.path.isfile(os.path.join(folder, 'model.pt')):
-				model_path  = os.path.join(folder)
+				model_path = os.path.join(folder)
 				break
 
 	parser = argparse.ArgumentParser(description='Optimize Monte Carlo Tree Search for one model')
@@ -179,10 +186,10 @@ def agent_optimize():
 		}
 	elif agent_name == 'AStar':
 		params = {
-			'lambda_': (0.01, 1),
-			'expansions': (1, 250),
+			'lambda_': (0, 1),
+			'expansions': (0, 4),
 		}
-		def prepper(params): params['expansions'] = int(params['expansions'])
+		def prepper(params): params['expansions'] = int(10** params['expansions'])
 
 		persistent_params = {
 			'net' : Model.load(args.location, load_best=args.use_best),
@@ -204,6 +211,7 @@ def agent_optimize():
 
 	if args.save_optimal:
 		with open(os.path.join(args.location, f'{agent_name}_params.json'), 'w') as outfile:
+			prepper(optimizer.optimal)
 			json.dump(optimizer.optimal, outfile)
 
 if __name__ == '__main__':
