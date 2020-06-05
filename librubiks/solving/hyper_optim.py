@@ -44,7 +44,7 @@ class Optimizer:
 	def optimize(self, iterations: int):
 		raise NotImplementedError("To be implemented in child class")
 
-	def objective_from_evaluator(self, evaluator: Evaluator, agent_class, persistent_agent_params: dict, param_prepper: Callable=lambda x: None):
+	def objective_from_evaluator(self, evaluator: Evaluator, agent_class, persistent_agent_params: dict, param_prepper: Callable=lambda x: None, optim_lengths: bool=False):
 		self.evaluator = evaluator
 		self.agent_class = agent_class
 		self.persistent_agent_params = persistent_agent_params
@@ -54,7 +54,9 @@ class Optimizer:
 			agent = self.agent_class(**self.persistent_agent_params, **agent_params)
 			res, _= self.evaluator.eval(agent)
 			won = res != -1
-			return won.mean() if won.any() else 0
+			solve = won.mean() if won.any() else 0
+			if optim_lengths: return solve/res[won].mean()
+			return solve
 
 		self.target_function = target_function
 
@@ -159,9 +161,10 @@ def agent_optimize():
 			type=literal_eval, default=True, choices = [True, False])
 	parser.add_argument('--use_best', help="Set to True to use model-best.pt instead of model.pt.", type=literal_eval, default=False,
 			choices = [True, False])
+	parser.add_argument('--optim_lengths', help="Set to true to optimize against sol percentage / solution length. Else, simply use sol %", type=literal_eval,
+			default=True, choices = [True, False])
 
 	args = parser.parse_args()
-	assert args.save_optimal or not args.save_optimal # that is the question
 
 	agent_name = args.agent
 	if agent_name == 'MCTS':
@@ -196,7 +199,7 @@ def agent_optimize():
 
 	evaluator = Evaluator(n_games=args.eval_games, max_time=1, scrambling_depths=[args.depth])
 	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
-	optimizer.objective_from_evaluator(evaluator, agent, persistent_params, param_prepper=prepper)
+	optimizer.objective_from_evaluator(evaluator, agent, persistent_params, param_prepper=prepper, optim_lengths=args.optim_lengths)
 	optimizer.optimize(args.iterations)
 
 	if args.save_optimal:
