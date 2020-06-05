@@ -32,9 +32,14 @@
 
     <!-- Reset and scrambling -->
     <form class="form-inline my-1" (ngSubmit)="commonService.scramble(commonService.scrambleDepth)">
-      <button class="btn btn-secondary my-1" type="button" (click)="commonService.reset()" [disabled]="commonService.status.loading">Reset</button>
+      <button class="btn btn-secondary my-1"
+              type="button"
+              (click)="commonService.reset()"
+              [disabled]="commonService.status.loading && commonService.status.connectedToServer">Reset</button>
       <span class="mx-2">or</span>
-      <button class="btn btn-secondary" type="submit" [disabled]="commonService.status.loading">perform</button>
+      <button class="btn btn-secondary"
+              type="submit"
+              [disabled]="commonService.status.loading && commonService.status.connectedToServer">perform</button>
       <div class="form-group mx-2">
         <input type="number" class="form-control" style="width: 6rem;" [(ngModel)]="commonService.scrambleDepth" [ngModelOptions]="{standalone: true}">
       </div>
@@ -67,7 +72,7 @@
         <option *ngFor="let agent of commonService.agents; let i = index" [ngValue]="i">{{agent}}</option>
       </select>
     </form>
-    <div *ngIf="commonService.hasSearchedForSolution" class="mt-2">
+    <div *ngIf="commonService.hasSearchedForSolution && !commonService.error" class="mt-2">
       <p>
         {{commonService.exploredStates || "A number of"}} states were explored,
         <span *ngIf="commonService.hasSolution">and a solution of {{commonService.solveLength}} steps was found.</span>
@@ -88,6 +93,7 @@
       <div class="progress-bar" role="progressbar" [ngStyle]="{'width': commonService.getTimeSearchedStyle()}"></div>
     </div>
     <p *ngIf="!commonService.status.connectedToServer">Connecting to server (this may take a while the first time)...</p>
+    <p *ngIf="commonService.error">{{commonService.error}}</p>
   </div>
 
   <!-- Cube -->
@@ -118,7 +124,7 @@
       <div></div>
       <div></div>
     </div>
-    <div *ngIf="!commonService.status.connectedToServer" style="padding-right: 112px;">
+    <div *ngIf="!commonService.status.connectedToServer" style="padding-right: 114px;">
       <div class="loader"></div>
     </div>
   </div>

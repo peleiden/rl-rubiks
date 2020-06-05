@@ -12,6 +12,6 @@ export class AppComponent implements OnInit {
   constructor(public commonService: CommonService, public cubeService: CubeService, public httpService: HttpService) { }
 
   ngOnInit() {
-    this.commonService.getInfo();
+    this.commonService.setSelectedHost(this.httpService.selectedHost);
   }
 }

@@ -25,6 +25,7 @@ export class CommonService {
   exploredStates: number;
   actionQueue: number[];
   solveLength: number;
+  error: string;
 
   private breakProgress = false;
 
@@ -44,8 +45,7 @@ export class CommonService {
     try {
       await this.getInfo();
     } catch {  // If it cannot connect to a server
-      this.httpService.selectedHost = this.httpService.previousHost;
-      this.status.loading = false;
+      window.location.reload();
     }
   }
 
@@ -61,7 +61,7 @@ export class CommonService {
     this.animateStates(actions);
   }
 
-  public async getInfo() {
+  private async getInfo() {
     const callId = this.status.serverCallId;
     this.status.loading = true;
     const { cuda, agents } = await this.httpService.getInfo();
@@ -71,6 +71,7 @@ export class CommonService {
       this.selectedSearcher = 0;
       this.status.loading = false;
       this.status.connectedToServer = true;
+      this.error = "";
     }
   }
 
@@ -84,15 +85,20 @@ export class CommonService {
     };
     this.breakProgress = false;
     this.updateSearchProgress(this.timeLimit);
-    const { solution, actions, exploredStates } = await this.httpService.solve(solveRequest);
+    this.error = "";
+    try {
+      const { solution, actions, exploredStates } = await this.httpService.solve(solveRequest);
+      this.hasSolution = solution;
+      this.exploredStates = exploredStates;
+      this.actionQueue = actions;
+      this.actionQueue.reverse();  // Allows pop to be used instead of shift which changes runtime complexity from O(n**2) to O(n)
+      this.solveLength = this.actionQueue.length;
+    } catch (e) {
+      this.error = "An error occured. It is most likely caused by a timeout or memory overflow. Try a different searcher or a smaller time limit.";
+    }
+    this.status.loading = false;
     this.breakProgress = true;
     this.hasSearchedForSolution = true;
-    this.hasSolution = solution;
-    this.exploredStates = exploredStates;
-    this.actionQueue = actions;
-    this.actionQueue.reverse();  // Allows pop to be used instead of shift which changes runtime complexity from O(n**2) to O(n)
-    this.solveLength = this.actionQueue.length;
-    this.status.loading = false;
   }
 
   private async updateSearchProgress(timeLimit: number) {

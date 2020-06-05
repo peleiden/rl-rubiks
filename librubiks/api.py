@@ -22,7 +22,7 @@ url = "https://github.com/peleiden/rubiks-models/blob/master/fcnew/%s?raw=true"
 download(url % "model.pt", net_loc)
 download(url % "config.json", net_loc)
 
-searchers = [
+agents = [
 	{ "name": "AStar", "agent": AStar.from_saved(net_loc, use_best=False, lambda_=0.2, expansions=50) },
 	{ "name": "MCTS", "agent": MCTS.from_saved(net_loc, use_best=False, c=0.6, search_graph=True) },
 	{ "name": "Greedy policy", "agent": PolicySearch.from_saved(net_loc, use_best=False) },
@@ -39,21 +39,20 @@ def index():
 def get_info():
 	return jsonify({
 		"cuda": torch.cuda.is_available(),
-		"agents": [x["name"] for x in searchers],
+		"agents": [x["name"] for x in agents],
 	})
 
 @app.route("/solve", methods=["POST"])
 def solve():
 	data = literal_eval(request.data.decode("utf-8"))
 	time_limit = data["timeLimit"]
-	searcher = searchers[data["agentIdx"]]["agent"]
+	agent = agents[data["agentIdx"]]["agent"]
 	state = np.array(data["state"], dtype=cube.dtype)
-	solution_found = searcher.search(state, time_limit)
-	print([int(x) for x in searcher.action_queue])
+	solution_found = agent.search(state, time_limit)
 	return jsonify({
 		"solution": solution_found,
-		"actions": [int(x) for x in searcher.action_queue],
-		"exploredStates": len(searcher),
+		"actions": [int(x) for x in agent.action_queue],
+		"exploredStates": len(agent),
 	})
 
 
