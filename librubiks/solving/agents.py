@@ -470,10 +470,8 @@ class MCTS(DeepAgent):
 
 		oh = cube.as_oh(state)
 		p, v = self.net(oh)
-		p, v = p.softmax(dim=1).cpu().numpy(), v.cpu().numpy()
-		self.P[1] = p
-		self.V[1] = v
-		self.W[1] = v
+		self.P[1] = p.softmax(dim=1).cpu().numpy()
+		self.V[1] = v.cpu().numpy()
 		indices_visited = [1]
 		actions_taken = []
 		while self.tt.tock() < time_limit and len(self) + cube.action_dim <= max_states:
