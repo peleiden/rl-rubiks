@@ -21,10 +21,16 @@ class ModelConfig:
 	_res_big_arch   = { "shared_sizes": [8192, 4096, 2048], "part_sizes": [1024, 512], "res_blocks": 6, "res_size": 2048 }
 	_conv_arch      = { "shared_sizes": [4096, 2048], "part_sizes": [512], "conv_channels": [32, 64, 128], "cat_sizes": [2048] }
 
-	def __init__(self, activation_function=torch.nn.ELU(), batchnorm=True, architecture="fc_small", init="glorot", is2024=True):
+	def __init__(self,
+				 activation_function=torch.nn.ELU(),
+				 batchnorm=True, architecture="fc_small",
+				 init="glorot",
+				 is2024=True,
+				 **kwargs,  # For backwardscompatibility
+			):
 		self.activation_function = activation_function
 		self.batchnorm = batchnorm
-		self.architecture = architecture  # Options: 'fc_small', 'fc_big', 'res_small', 'res_big', 'conv'
+		self.architecture = self._backward_comp_arch(architecture)  # Options: 'fc_small', 'fc_big', 'res_small', 'res_big', 'conv'
 		self.init = init  # Options: glorot, he or a number
 		self.is2024 = is2024
 
@@ -41,6 +47,12 @@ class ModelConfig:
 		if self.architecture.startswith("conv"):
 			self.conv_channels = self._get_arch()["conv_channels"]
 			self.cat_sizes = self._get_arch()["cat_sizes"]
+	
+	def _backward_comp_arch(self, arch: str):
+		# Ensure backwards compatibility with older model configs
+		if arch in ["fc", "res"]:
+			return arch + "_small"
+		return arch
 
 	def _get_arch(self):
 		return getattr(self, f"_{self.architecture}_arch")
