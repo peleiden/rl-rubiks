@@ -1,8 +1,8 @@
 import json
 import os
+from time import time
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import ClassVar
 
 import torch
 import torch.nn as nn
@@ -34,6 +34,8 @@ class ModelConfig:
 		self.init = init  # Options: glorot, he or a number
 		self.is2024 = is2024
 
+		self.id = hash(time())
+
 		# General purpose values
 		self.shared_sizes = self._get_arch()["shared_sizes"]
 		self.part_sizes = self._get_arch()["part_sizes"]
@@ -59,7 +61,7 @@ class ModelConfig:
 
 	@classmethod
 	def _get_non_serializable(cls):
-		return {"activation_function": cls._get_activation_function}
+		return { "activation_function": cls._get_activation_function }
 
 	def as_json_dict(self):
 		d = deepcopy(self.__dict__)
