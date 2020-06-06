@@ -556,11 +556,11 @@ class MCTS(DeepAgent):
 		self.tt.profile("Update P, V, and W")
 		self.P[new_substate_idcs] = p
 		self.V[new_substate_idcs] = v
+		
+		best_substate_v = v.max()
+		self.W[leaf_index] = np.maximum(self.V[self.neighbors[leaf_index]], self.V[leaf_index])
 		self.W[new_substate_idcs] = np.tile(v, (cube.action_dim, 1)).T
-		self.W[leaf_index] = self.V[self.neighbors[leaf_index]]
-		# Data structure: First row has all existing W's and second has value of leaf that is expanded from
-		W = np.vstack([self.W[visited_states_idcs[:-1], actions_taken], np.repeat(self.V[leaf_index], len(visited_states_idcs)-1)])
-		self.W[visited_states_idcs[:-1], actions_taken] = W.max(axis=0)
+		self.W[visited_states_idcs[:-1], actions_taken] = np.maximum(self.W[visited_states_idcs[:-1], actions_taken], best_substate_v)
 		self.tt.end_profile("Update P, V, and W")
 
 		# Update N and L
