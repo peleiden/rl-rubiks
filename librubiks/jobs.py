@@ -20,7 +20,7 @@ from librubiks.solving.evaluation import Evaluator
 
 class TrainJob:
 	eval_games = 200  # Not given as arguments to __init__, as they should be accessible in runtime_estim
-	max_time = 0.01
+	max_time = 0.05
 	is2024: bool
 
 	def __init__(self,
