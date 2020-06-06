@@ -1,12 +1,10 @@
 <div class="row">
   <div class="col-5">
-    <p>
-      Developed by Asger Schultz (<a href="mailto:s183912@student.dtu.dk">s183912@student.dtu.dk</a>),
-      Søren Winkel Holm (<a href="mailto:s183911@student.dtu.dk">s183911@student.dtu.dk</a>), and
-      Anne Agathe Pedersen (<a href="mailto:s174300@student.dtu.dk">s174300@student.dtu.dk</a>).
-      Repository available on <a href="https://github.com/peleiden/rl-rubiks">GitHub</a>.
-    </p>
-
+    Developed at the Technical University of Denmark by
+        <a href="mailto:s183912@student.dtu.dk">Asger Schultz</a>,
+        <a href="mailto:s183911@student.dtu.dk">Søren Winkel Holm</a> and
+        <a href="mailto:s174300@student.dtu.dk">Anne Agathe Pedersen</a> <br>
+    Visit our <a href="https://github.com/peleiden/rl-rubiks" target="_blank">repository on GitHub</a> to try the methods for yourself.
     <h2 class="h5 mt-2">Perform action</h2>
     <!-- Actions -->
     <div style="max-width: 450px;">
@@ -46,17 +44,8 @@
       random actions.
     </form>
 
-    <h2 class="h5 mt-4">Agents</h2>
-    <p>All agents create an an action queue, which if followed produces the solved states, insofar as it was found.</p>
-    <p *ngIf="!commonService.cuda">
-      Be aware that CUDA is not available on the selected server.
-      Agents using a neural network will need more time to search.
-    </p>
-    <p *ngIf="!commonService.cuda && httpService.selectedHost.name !== 'Local'">
-      If CUDA is available on your machine, you can start start a local server by running <code>python librubiks/api.py</code>.
-      Apart from <code>pip install -r rlrequirements.txt</code>, you will need to run
-      <code>pip install wget flask flask_cors flask_restful</code> to install the necessary dependencies.
-    </p>
+    <h2 class="h5 mt-4">🤖 Agents</h2>
+    <p>Choose a solver from one of our agents. Read about them under <a routerLink="/methods">methods</a>.</p>
     <form class="form-inline" (ngSubmit)="commonService.solve()" *ngIf="commonService.status.connectedToServer">
       <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Try</button>
       to solve in
@@ -87,6 +76,24 @@
         <button class="btn btn-secondary"
                 (click)="commonService.animateStates()"
                 [disabled]="commonService.status.loading">Perform remaining actions</button>
+      </div>
+    </div>
+    <div *ngIf="!commonService.cuda" class="mt-2">
+      <div *ngIf="httpService.selectedHost.name == 'Local'">
+          <p><b>Note:</b> No CUDA available on your local server. <br>
+          Agents will need more time to solve the cube.  </p>
+      </div>
+      <div *ngIf="httpService.selectedHost.name !== 'Local'">
+        <b>Note:</b>
+        We are using a free backend server without CUDA so the agents will need considerable time. <br><br>
+        To speed them up, you can run the solver backend on your machine by
+        <ol>
+            <li> Getting <code>librubiks</code> and dependencies, see the <a href="https://github.com/peleiden/rl-rubiks#setup" target="_blank">repo</a>.</li>
+            <li> Running <code>pip install wget flask flask_cors flask_restful</code></li>
+            <li> From the <code>librubiks</code> folder, run <code>python librubiks/api </code></li>
+            <li> Choose Local in the top right corner. </li>
+        </ol>
+        You will need a PyTorch compatible GPU to realize the full potential of the agents.
       </div>
     </div>
     <div class="progress mt-2" *ngIf="commonService.progress">

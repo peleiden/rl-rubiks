@@ -38,9 +38,10 @@ def sort_patterns(patterns):
 
 def generate_actions(agent: Agent, games: int, max_time: float, scramble: int = 100):
 	actions_taken = list()
-	for _ in range(games):
+	for i in range(games):
 		state, _, _ = cube.scramble(scramble, True)
-		agent.search(state, max_time, None)
+		won = agent.search(state, max_time, None)
+		if not won: log(f"Game {i} was not won")
 		for action_num in agent.action_queue:
 			action_tup = cube.action_space[action_num]
 			actions_taken.append(cube.action_names[action_tup[0]].lower() if action_tup[1] else cube.action_names[action_tup[0]])
@@ -51,8 +52,8 @@ def generate_actions(agent: Agent, games: int, max_time: float, scramble: int = 
 if __name__ == "__main__":
 	### Hyper parameters ###
 	net_path, use_best = '../rubiks-models/somerolloutcompare/smallroll', False
-	max_time = 1
-	lambda_, N = 0.2, 100
+	max_time = 10
+	lambda_, N = 0.2, 10
 
 	output_path = 'data/patterns.log'
 	games = 10
@@ -62,11 +63,12 @@ if __name__ == "__main__":
 	agent = AStar.from_saved(net_path, use_best, lambda_, N)
 	log(f"Loaded agent {agent} with network {net_path}")
 
-	log("Playing {games} games")
+	log(f"Playing {games} games")
 	actions = generate_actions(agent, games, max_time)
 	log("Finding patterns...")
 	patterns = find_patterns(actions, support)
 	patterns = trim_patterns(patterns)
+	log("Found patterns:")
 	log(sort_patterns(patterns))
 
 	# eksempel på løsninger af forskellige længder og handlinger
