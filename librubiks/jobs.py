@@ -296,5 +296,5 @@ class EvalJob:
 					}
 				)
 		savepaths = Evaluator.plot_evaluators(results, save_location, settings)
-		for job in jobs: job.logger(f"Saved plots to {savepaths}")
+		job.logger(f"Saved plots to {savepaths}")
 
