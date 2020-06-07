@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 from librubiks import cube
-from librubiks.solving.agents import RandomSearch, BFS, PolicySearch, MCTS, AStar, EGVM
+from librubiks.solving.agents import RandomSearch, BFS, PolicySearch, MCTS, AStar, EGVM, ValueSearch
 
 app = Flask(__name__)
 api = Api(app)
@@ -26,9 +26,10 @@ agents = [
 	{ "name": "AStar", "agent": AStar.from_saved(net_loc, use_best=False, lambda_=0.2, expansions=50) },
 	{ "name": "MCTS", "agent": MCTS.from_saved(net_loc, use_best=False, c=0.6, search_graph=True) },
 	{ "name": "Greedy policy", "agent": PolicySearch.from_saved(net_loc, use_best=False) },
+	{ "name": "Greedy value", "agent": ValueSearch.from_saved(net_loc, use_best=False) },
+	{ "name": "EGVM", "agent": EGVM.from_saved(net_loc, use_best=False, epsilon=0.5, workers=10, depth=100) },
 	{ "name": "BFS", "agent": BFS() },
 	{ "name": "Random actions", "agent": RandomSearch()},
-	{ "name": "Stochastic policy", "agent": PolicySearch.from_saved(net_loc, use_best=True) },
 ]
 
 @app.route("/")

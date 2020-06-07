@@ -1,10 +1,5 @@
 <div class="row">
-  <div class="col-5">
-    Developed at the Technical University of Denmark by
-        <a href="mailto:s183912@student.dtu.dk">Asger Schultz</a>,
-        <a href="mailto:s183911@student.dtu.dk">Søren Winkel Holm</a>, and
-        <a href="mailto:s174300@student.dtu.dk">Anne Agathe Pedersen</a>.<br>
-    Visit our <a href="https://github.com/peleiden/rl-rubiks" target="_blank">repository on GitHub</a> to try the methods for yourself.
+  <div class="col-12 col-md-5">
     <h2 class="h5 mt-2">Perform action</h2>
     <!-- Actions -->
     <div style="max-width: 450px;">
@@ -61,6 +56,9 @@
         <option *ngFor="let agent of commonService.agents; let i = index" [ngValue]="i">{{agent}}</option>
       </select>
     </form>
+    <p *ngIf="commonService.timeLimit >= 30 && httpService.selectedHost.name === 'Heroku'">
+      Be aware that the server will time out after 30 seconds of attempting to solve.
+    </p>
     <div *ngIf="commonService.hasSearchedForSolution && !commonService.error" class="mt-2">
       <p>
         {{commonService.exploredStates || "A number of"}} states were explored,
@@ -91,17 +89,24 @@
         <p>
           <strong>Note:</strong>
           We are using a free backend server without CUDA so the agents will need considerable time, and memory overflow is common for some agents if given too much time.
-          To speed them up, you can <a [routerLink]="['/documentation']">start a local server.</a>
+          To speed them up, you can <a [routerLink]="['/documentation']">start a local server</a>.
         </p>
       </div>
     </div>
     <p *ngIf="!commonService.status.connectedToServer">Connecting to server (this may take a while the first time)...</p>
     <p *ngIf="commonService.error">{{commonService.error}}</p>
+    <p>
+      Developed at the Technical University of Denmark by
+        <a href="mailto:s183912@student.dtu.dk">Asger Schultz</a>,
+        <a href="mailto:s183911@student.dtu.dk">Søren Winkel Holm</a>, and
+        <a href="mailto:s174300@student.dtu.dk">Anne Agathe Pedersen</a>.<br>
+      Visit our <a href="https://github.com/peleiden/rl-rubiks" target="_blank">repository on GitHub</a> to try the methods for yourself.
+    </p>
   </div>
 
   <!-- Cube -->
-  <div class="col-7">
-    <div class="container grid mb-4">
+  <div class="col-12 col-md-7">
+    <div class="container grid" id="cube">
       <div></div>
       <div class="side">
         <div *ngFor="let j of indices" [class]="getStickerClass(2, j)"></div>

@@ -35,3 +35,13 @@ button.btn-action {
 .yellow { background-color: yellow; }
 .green  { background-color: rgb(0, 200, 0); }
 .blue   { background-color: rgb(0, 110, 255); }
+
+#cube {
+	margin-left: 0;
+}
+
+@media screen and (min-width: 768px) {
+	#cube {
+		margin: auto;
+	}
+}
