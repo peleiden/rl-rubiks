@@ -277,8 +277,12 @@ class EvalJob:
 	def _single_exec(self, name: str, agent: Agent):
 		self.logger.section(f'Evaluationg agent {name}')
 		res, states = self.evaluator.eval(agent)
-		np.save(f"{self.location}/{name}_results.npy", res)
-		np.save(f"{self.location}/{name}_states_seen.npy", states)
+		subfolder = os.path.join(self.location, "evaluation_results")
+		os.makedirs(subfolder, exist_ok=True)
+		paths = [os.path.join(subfolder, f"{name}_results.npy"), os.path.join(subfolder, f"{name}_states_seen.npy")]
+		np.save(paths[0], res)
+		np.save(paths[1], states)
+		self.logger.log("Saved evaluation results to\n" + "\n".join(paths))
 		return res
 
 	@staticmethod

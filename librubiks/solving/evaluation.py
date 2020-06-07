@@ -140,16 +140,6 @@ class Evaluator:
 		z = stats.norm.ppf(1 - alpha / 2)
 		return mu, z * std / np.sqrt(len(S_dist))
 
-	# def plot_this_eval(self, eval_results: dict, save_dir: str, **kwargs):
-	# 	self.log("Creating plot of evaluation")
-	# 	settings = {
-	# 		'n_games': self.n_games,
-	# 		'max_time': self.max_time,
-	# 		'scrambling_depths': self.scrambling_depths
-	# 	}
-	# 	save_paths = self.plot_evaluators(eval_results, save_dir, [settings] * len(eval_results), **kwargs)
-	# 	self.log(f"Saved evaluation plots to {save_paths}")
-
 	@classmethod
 	def plot_evaluators(cls, eval_results: dict, save_dir: str, eval_settings: list, title: str='') -> list:
 		"""
