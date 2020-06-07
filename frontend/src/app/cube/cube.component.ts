@@ -18,7 +18,12 @@ export class CubeComponent implements OnInit {
 
   ngOnInit(): void { }
 
-  public getClass(i: number, j: number) {
+  public getActionButtonClass(i: number) {
+    const colour = this.colours[Math.floor(i/2)];
+    return `btn btn-secondary btn-action ${colour}`;
+  }
+
+  public getStickerClass(i: number, j: number) {
     const colour = this.colours[this.cubeService.currentState69[i][j]];
     return `sticker ${colour}`;
   }
