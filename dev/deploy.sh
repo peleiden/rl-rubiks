@@ -1,5 +1,6 @@
 cd "$(dirname "$0")"
 cd ../frontend
+
 git checkout master
 git rebase develop
 git push
