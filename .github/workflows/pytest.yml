@@ -3,7 +3,7 @@ name: pytest_master
 
 on:
   push:
-    branches: [ master, prod ]
+    branches: [ master ]
     paths:
         - librubiks/**.py
         - tests/**.py
