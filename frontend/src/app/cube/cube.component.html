@@ -102,7 +102,7 @@
   <!-- Cube -->
   <div class="col-7">
     <div class="container grid mb-4">
-      <div class="filler"></div>
+      <div></div>
       <div class="side">
         <div *ngFor="let j of indices" [class]="getStickerClass(2, j)"></div>
       </div>
@@ -120,15 +120,14 @@
       <div class="side">
         <div *ngFor="let j of indices" [class]="getStickerClass(1, j)"></div>
       </div>
-      <div class="filler"></div>
+      <div style="height: 150px; padding-top: 4px">
+        <div class="loader"*ngIf="!commonService.status.connectedToServer"></div>
+      </div>
       <div class="side">
         <div *ngFor="let j of indices" [class]="getStickerClass(3, j)"></div>
       </div>
       <div></div>
       <div></div>
-    </div>
-    <div *ngIf="!commonService.status.connectedToServer" style="padding-right: 114px;">
-      <div class="loader"></div>
     </div>
   </div>
 </div>
