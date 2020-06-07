@@ -20,7 +20,7 @@ from librubiks.solving.evaluation import Evaluator
 
 class TrainJob:
 	eval_games = 200  # Not given as arguments to __init__, as they should be accessible in runtime_estim
-	max_time = 0.01
+	max_time = 0.05
 	is2024: bool
 
 	def __init__(self,
@@ -277,8 +277,12 @@ class EvalJob:
 	def _single_exec(self, name: str, agent: Agent):
 		self.logger.section(f'Evaluationg agent {name}')
 		res, states = self.evaluator.eval(agent)
-		np.save(f"{self.location}/{name}_results.npy", res)
-		np.save(f"{self.location}/{name}_states_seen.npy", states)
+		subfolder = os.path.join(self.location, "evaluation_results")
+		os.makedirs(subfolder, exist_ok=True)
+		paths = [os.path.join(subfolder, f"{name}_results.npy"), os.path.join(subfolder, f"{name}_states_seen.npy")]
+		np.save(paths[0], res)
+		np.save(paths[1], states)
+		self.logger.log("Saved evaluation results to\n" + "\n".join(paths))
 		return res
 
 	@staticmethod
@@ -296,5 +300,5 @@ class EvalJob:
 					}
 				)
 		savepaths = Evaluator.plot_evaluators(results, save_location, settings)
-		for job in jobs: job.logger(f"Saved plots to {savepaths}")
+		job.logger(f"Saved plots to {savepaths}")
 

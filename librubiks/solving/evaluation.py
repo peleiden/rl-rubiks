@@ -111,6 +111,7 @@ class Evaluator:
 			f"\tStates seen: Pr. game: {states.mean():.2f} +/- {states.std():.0f} (std.), "\
 			f"Pr. sec.: {states_per_sec.mean():.2f} +/- {states_per_sec.std():.0f} (std.)", with_timestamp=False)
 		self.log(f"\tTime:  {times.mean():.2f} +/- {times.std():.2f} (std.)", with_timestamp=False)
+	
 	@staticmethod
 	def S_dist(res: np.ndarray, scrambling_depths: np.ndarray) -> np.ndarray:
 		"""
@@ -139,31 +140,34 @@ class Evaluator:
 		z = stats.norm.ppf(1 - alpha / 2)
 		return mu, z * std / np.sqrt(len(S_dist))
 
-	def plot_this_eval(self, eval_results: dict, save_dir: str,  **kwargs):
-		self.log("Creating plot of evaluation")
-		settings = {
-			'n_games': self.n_games,
-			'max_time': self.max_time,
-			'scrambling_depths': self.scrambling_depths
-		}
-		save_paths = self.plot_evaluators(eval_results, save_dir, [settings] * len(eval_results), **kwargs)
-		self.log(f"Saved evaluation plots to {save_paths}")
-
-	@staticmethod
-	def plot_evaluators(eval_results: dict, save_dir: str, eval_settings: list, show: bool=False, title: str=''):
+	@classmethod
+	def plot_evaluators(cls, eval_results: dict, save_dir: str, eval_settings: list, title: str='') -> list:
 		"""
 		{agent: results from eval}
 		"""
-		save_paths = []
-		#depth, win%-graph
+
+		tab_colours = list(mcolour.TABLEAU_COLORS)
+		colours = [tab_colours[i%len(tab_colours)] for i in range(len(eval_results))]
+
+		save_paths = [
+			cls._plot_depth_win(eval_results, save_dir, eval_settings, colours, title),
+			cls._sol_length_boxplots(eval_results, save_dir, eval_settings, colours),
+		]
+		# Only plot S if shapes are similar
+		all_results = list(eval_results.values())
+		if all(all_results[0].shape == x.shape for x in all_results):
+			save_paths.append(cls._S_hist(eval_results, save_dir, eval_settings, colours))
+		
+		return save_paths
+	
+	@staticmethod
+	def _plot_depth_win(eval_results: dict, save_dir: str, eval_settings: list, colours: list, title: str='') -> str:
+		# depth, win%-graph
 		games_equal, times_equal = Evaluator.check_equal_settings(eval_settings)
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		ax.set_ylabel(f"Percentage of {eval_settings[0]['n_games']} games won" if games_equal else "Percentage of games won")
 		ax.set_xlabel(f"Scrambling depth: Number of random rotations applied to cubes")
 		ax.locator_params(axis='x', integer=True, tight=True)
-
-		tab_colours = list(mcolour.TABLEAU_COLORS)
-		colours = [tab_colours[i%len(tab_colours)] for i in range(len(eval_results))]
 
 		for i, (agent, results) in enumerate(eval_results.items()):
 			used_settings = eval_settings[i]
@@ -181,11 +185,12 @@ class Evaluator:
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_winrates.png")
 		plt.savefig(path)
-		save_paths.append(path)
-
-		if show: plt.show()
 		plt.clf()
 
+		return path
+
+	@staticmethod
+	def _sol_length_boxplots(eval_results: dict, save_dir: str, eval_settings: list, colours: list) -> str:
 		# solution length boxplots
 		plt.rcParams.update({"font.size": 18})
 		max_width = 2
@@ -196,10 +201,12 @@ class Evaluator:
 
 		max_sollength = 50
 		agents, agent_results = list(zip(*eval_results.items()))
-		agent_results = np.array(agent_results).copy()
-		agent_results[agent_results > max_sollength] = max_sollength  # Clips outlier results to prevent skewing plots
-		ylim = np.array([-0.02, 1.02]) * agent_results.max()
-		min_, max_ = used_settings["scrambling_depths"].min(), used_settings["scrambling_depths"].max()
+		agent_results = tuple(x.copy() for x in agent_results)
+		for res in agent_results:
+			res[res > max_sollength] = max_sollength
+		ylim = np.array([-0.02, 1.02]) * max([res.max() for res in agent_results])
+		min_ = min([x["scrambling_depths"][0] for x in eval_settings])
+		max_ = max([x["scrambling_depths"][-1] for x in eval_settings])
 		xticks = np.arange(min_, max_+1, max(np.ceil((max_-min_+1)/8).astype(int), 1))
 		for i, position in enumerate(positions):
 			# Make sure axes are stored in a matrix, so they are easire to work with
@@ -236,12 +243,14 @@ class Evaluator:
 		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_sollengths.png")
 		plt.savefig(path)
-		save_paths.append(path)
-
-		if show: plt.show()
 		plt.clf()
 
+		return path
+	
+	@staticmethod
+	def _S_hist(eval_results: dict, save_dir: str, eval_settings: list, colours: list) -> str:
 		# Histograms of S
+		games_equal, times_equal = Evaluator.check_equal_settings(eval_settings)
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		sss = np.array([Evaluator.S_dist(results, eval_settings[i]['scrambling_depths']) for i, results in enumerate(eval_results.values())])
@@ -276,12 +285,9 @@ class Evaluator:
 		ax.legend(loc=2)
 		path = os.path.join(save_dir, "eval_S.png")
 		plt.savefig(path)
-		save_paths.append(path)
-
-		if show: plt.show()
 		plt.clf()
 
-		return save_paths
+		return path
 
 	@staticmethod
 	def check_equal_settings(eval_settings: list):

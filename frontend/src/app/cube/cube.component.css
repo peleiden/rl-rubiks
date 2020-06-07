@@ -1,4 +1,9 @@
-button.btn-action { width: 65px; }
+button.btn-action {
+	width: 65px;
+	padding-top: 0.15rem;
+	padding-bottom: 0.15rem;
+	color: black;
+}
 
 .grid {
 	display: grid;
@@ -24,9 +29,9 @@ button.btn-action { width: 65px; }
 	border-radius: 2px;
 }
 
-.red    { background-color: red; }
+.red    { background-color: rgb(255, 55, 0); }
 .orange { background-color: orange; }
 .white  { background-color: white; }
 .yellow { background-color: yellow; }
-.green  { background-color: green; }
-.blue   { background-color: blue; }
+.green  { background-color: rgb(0, 200, 0); }
+.blue   { background-color: rgb(0, 110, 255); }

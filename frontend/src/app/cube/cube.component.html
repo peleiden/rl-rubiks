@@ -2,15 +2,15 @@
   <div class="col-5">
     Developed at the Technical University of Denmark by
         <a href="mailto:s183912@student.dtu.dk">Asger Schultz</a>,
-        <a href="mailto:s183911@student.dtu.dk">Søren Winkel Holm</a> and
-        <a href="mailto:s174300@student.dtu.dk">Anne Agathe Pedersen</a> <br>
+        <a href="mailto:s183911@student.dtu.dk">Søren Winkel Holm</a>, and
+        <a href="mailto:s174300@student.dtu.dk">Anne Agathe Pedersen</a>.<br>
     Visit our <a href="https://github.com/peleiden/rl-rubiks" target="_blank">repository on GitHub</a> to try the methods for yourself.
     <h2 class="h5 mt-2">Perform action</h2>
     <!-- Actions -->
     <div style="max-width: 450px;">
       <div class="row my-1">
         <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
-          <button class="btn btn-secondary btn-action"
+          <button [class]="getActionButtonClass(i)"
                   (click)="cubeService.inplaceRotate(cubeService.actionSpace[i][0], cubeService.actionSpace[i][1])"
                   [disabled]="commonService.status.loading && commonService.status.connectedToServer">
             {{cubeService.actions[i]}}
@@ -19,7 +19,7 @@
       </div>
       <div class="row my-1">
         <div class="col-2" *ngFor="let i of [1, 3, 5, 7, 9, 11]">
-          <button class="btn btn-secondary btn-action"
+          <button [class]="getActionButtonClass(i)"
                   (click)="cubeService.inplaceRotate(cubeService.actionSpace[i][0], cubeService.actionSpace[i][1])"
                   [disabled]="commonService.status.loading && commonService.status.connectedToServer">
             {{cubeService.actions[i]}}
@@ -45,7 +45,7 @@
     </form>
 
     <h2 class="h5 mt-4">🤖 Agents</h2>
-    <p>Choose a solver from one of our agents. Read about them under <a routerLink="/methods">methods</a>.</p>
+    <p>Choose a solver from one of our agents. See <a routerLink="/methods">methods</a>&nbsp;for details.</p>
     <form class="form-inline" (ngSubmit)="commonService.solve()" *ngIf="commonService.status.connectedToServer">
       <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Try</button>
       to solve in
@@ -78,26 +78,22 @@
                 [disabled]="commonService.status.loading">Perform remaining actions</button>
       </div>
     </div>
-    <div *ngIf="!commonService.cuda" class="mt-2">
-      <div *ngIf="httpService.selectedHost.name == 'Local'">
-          <p><b>Note:</b> No CUDA available on your local server. <br>
-          Agents will need more time to solve the cube.  </p>
-      </div>
-      <div *ngIf="httpService.selectedHost.name !== 'Local'">
-        <b>Note:</b>
-        We are using a free backend server without CUDA so the agents will need considerable time. <br><br>
-        To speed them up, you can run the solver backend on your machine by
-        <ol>
-            <li> Getting <code>librubiks</code> and dependencies, see the <a href="https://github.com/peleiden/rl-rubiks#setup" target="_blank">repo</a>.</li>
-            <li> Running <code>pip install wget flask flask_cors flask_restful</code></li>
-            <li> From the <code>librubiks</code> folder, run <code>python librubiks/api </code></li>
-            <li> Choose Local in the top right corner. </li>
-        </ol>
-        You will need a PyTorch compatible GPU to realize the full potential of the agents.
-      </div>
-    </div>
     <div class="progress mt-2" *ngIf="commonService.progress">
       <div class="progress-bar" role="progressbar" [ngStyle]="{'width': commonService.getTimeSearchedStyle()}"></div>
+    </div>
+    <div *ngIf="!commonService.cuda" class="mt-2">
+      <div *ngIf="httpService.selectedHost.name === 'Local'">
+          <p>
+            <strong>Note:</strong> No CUDA available on your local server. Agents will need more time to solve the cube.
+          </p>
+      </div>
+      <div *ngIf="httpService.selectedHost.name === 'Heroku'">
+        <p>
+          <strong>Note:</strong>
+          We are using a free backend server without CUDA so the agents will need considerable time, and memory overflow is common for some agents if given too much time.
+          To speed them up, you can <a [routerLink]="['/documentation']">start a local server.</a>
+        </p>
+      </div>
     </div>
     <p *ngIf="!commonService.status.connectedToServer">Connecting to server (this may take a while the first time)...</p>
     <p *ngIf="commonService.error">{{commonService.error}}</p>
@@ -106,33 +102,32 @@
   <!-- Cube -->
   <div class="col-7">
     <div class="container grid mb-4">
-      <div class="filler"></div>
+      <div></div>
       <div class="side">
-        <div *ngFor="let j of indices" [class]="getClass(2, j)"></div>
+        <div *ngFor="let j of indices" [class]="getStickerClass(2, j)"></div>
       </div>
       <div></div>
       <div></div>
       <div class="side">
-        <div *ngFor="let j of indices" [class]="getClass(4, j)"></div>
+        <div *ngFor="let j of indices" [class]="getStickerClass(4, j)"></div>
       </div>
       <div class="side">
-        <div *ngFor="let j of indices" [class]="getClass(0, j)"></div>
+        <div *ngFor="let j of indices" [class]="getStickerClass(0, j)"></div>
       </div>
       <div class="side">
-        <div *ngFor="let j of indices" [class]="getClass(5, j)"></div>
+        <div *ngFor="let j of indices" [class]="getStickerClass(5, j)"></div>
       </div>
       <div class="side">
-        <div *ngFor="let j of indices" [class]="getClass(1, j)"></div>
+        <div *ngFor="let j of indices" [class]="getStickerClass(1, j)"></div>
       </div>
-      <div class="filler"></div>
+      <div style="height: 150px; padding-top: 4px">
+        <div class="loader"*ngIf="!commonService.status.connectedToServer"></div>
+      </div>
       <div class="side">
-        <div *ngFor="let j of indices" [class]="getClass(3, j)"></div>
+        <div *ngFor="let j of indices" [class]="getStickerClass(3, j)"></div>
       </div>
       <div></div>
       <div></div>
-    </div>
-    <div *ngIf="!commonService.status.connectedToServer" style="padding-right: 114px;">
-      <div class="loader"></div>
     </div>
   </div>
 </div>
