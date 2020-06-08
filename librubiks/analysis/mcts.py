@@ -8,7 +8,7 @@ from librubiks import cube
 from librubiks.model import Model, ModelConfig
 from librubiks.solving.agents import Agent, MCTS, PolicySearch, BFS, ValueSearch
 
-from librubiks.utils import seedsetter, Logger, TickTock
+from librubiks.utils import seedsetter, Logger, TickTock, TimeUnit
 
 tt = TickTock()
 log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")
@@ -61,7 +61,7 @@ def analyse_time_distribution(depth: int, c: float):
 	expand = np.zeros_like(time_limits)
 	explore = np.zeros_like(time_limits)
 	searcher = MCTS(net, c=c, search_graph=False)
-	log.section(f"Analyzing time distribution at depth {depth}\nExpected max time <~ {TickTock.stringify_time(sum(time_limits*n), 'm')}")
+	log.section(f"Analyzing time distribution at depth {depth}\nExpected max time <~ {TickTock.stringify_time(sum(time_limits*n), TimeUnit.minute)}")
 	for i, tl in enumerate(time_limits):
 		log(f"Analyzing with time limit of {tl:.2f} s")
 		sols = np.zeros(n)

@@ -6,7 +6,7 @@ import matplotlib.colors as mcolour
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})
 
-from librubiks.utils import NullLogger, Logger, TickTock, bernoulli_error
+from librubiks.utils import NullLogger, Logger, TickTock, TimeUnit, bernoulli_error
 
 from librubiks.solving import agents
 
@@ -53,8 +53,13 @@ class Evaluator:
 		Each entry contains the number of steps needed to solve the scrambled cube or -1 if not solved
 		"""
 		self.log.section(f"Evaluation of {agent}")
-		self.log(f"{self.n_games*len(self.scrambling_depths)} games with max time per game {self.max_time}\nExpected time <= ~{self.approximate_time()/60:.2f} min")
-
+		self.log("\n".join([
+			f"{self.n_games*len(self.scrambling_depths)} cubes",
+			f"Maximum solve time per cube is {TickTock.stringify_time(self.max_time, TimeUnit.second)} "
+			f"and estimated total time <= {TickTock.stringify_time(self.approximate_time(), TimeUnit.minute)}" if self.max_time else "No time limit given",
+			f"Maximum number of explored states is {TickTock.thousand_seps(self.max_states)}" if self.max_states else "No max states given",
+		]))
+		
 		res = []
 		states = []
 		times = []

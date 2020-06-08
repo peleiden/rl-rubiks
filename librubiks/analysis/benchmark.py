@@ -1,7 +1,7 @@
 import numpy as np
 
 from librubiks import cube, get_is2024, set_is2024, store_repr, restore_repr
-from librubiks.utils import Logger, TickTock
+from librubiks.utils import Logger, TickTock, TimeUnit
 
 def _repstr():
 	return "20x24" if get_is2024() else "6x8x6"
@@ -91,9 +91,9 @@ class CubeBench:
 		threshold = 2
 		removed = self.tt.profiles[pname].remove_outliers(threshold)
 		self.log("\n".join([
-			description + ": " + TickTock.stringify_time(self.tt.profiles[pname].mean() / divider, "mus"),
-			"Mean: " + TickTock.stringify_time(self.tt.profiles[pname].mean(), "mus"),
-			"Std.: " + TickTock.stringify_time(self.tt.profiles[pname].std(), "mus"),
+			description + ": " + TickTock.stringify_time(self.tt.profiles[pname].mean() / divider, TimeUnit.microsecond),
+			"Mean: " + TickTock.stringify_time(self.tt.profiles[pname].mean(), TimeUnit.microsecond),
+			"Std.: " + TickTock.stringify_time(self.tt.profiles[pname].std(), TimeUnit.microsecond),
 			f"Removed {TickTock.thousand_seps(removed)} outliers with threshold {threshold} * mean",
 		]))
 

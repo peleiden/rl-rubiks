@@ -191,7 +191,7 @@ class EvalJob:
 		self.location = location
 
 		assert isinstance(games, int) and games
-		assert max_time > 0
+		assert max_time >= 0
 		assert max_states >= 0
 		assert max_time or max_states
 		scrambling = range(*scrambling)
@@ -219,7 +219,7 @@ class EvalJob:
 				agents_args = { 'sample_policy': policy_sample }
 			elif agent == agents.AStar:
 				assert isinstance(astar_lambda, float) and 0 <= astar_lambda <= 1, "AStar lambda must be float in [0, 1]"
-				assert isinstance(astar_expansions, int) and  astar_expansions >= 1 and (not max_states or astar_expansions < max_states) , "Expansions must be int < max states"
+				assert isinstance(astar_expansions, int) and astar_expansions >= 1 and (not max_states or astar_expansions < max_states) , "Expansions must be int < max states"
 
 				agents_args = { 'lambda_': astar_lambda, 'expansions': astar_expansions }
 			elif agent == agents.EGVM:

@@ -36,12 +36,12 @@ options = {
 	},
 	'max_time': {
 		'default':  30,
-		'help':     'Max searching time for agent. Evaluation is terminated when either max_time or max_states is reached.',
+		'help':     'Max searching time for agent. 0 for unlimited. Evaluation is terminated when either max_time or max_states is reached.',
 		'type':     float,
 	},
 	'max_states': {
 		'default':  0,
-		'help':     'Max number of searched states for agent per configuration. 0 for unlimited. Evaluation is terminated when either max_time or max_states is reached.  ',
+		'help':     'Max number of searched states for agent per configuration. 0 for unlimited. Evaluation is terminated when either max_time or max_states is reached.',
 		'type':     lambda arg: int(float(arg)),
 	},
 	'use_best': {

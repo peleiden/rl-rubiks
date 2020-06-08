@@ -12,7 +12,7 @@ class TestRuneval(MainTest):
 		run_settings = {'location': location, 'agent': 'BFS', 'games': 2, 'max_time': 1, 'scrambling': '2 4',
 				'mcts_c': 0.6123, 'mcts_graph_search': False, 'policy_sample': True}
 		args = [sys.executable, run_path,]
-		for k,v in run_settings.items(): args.extend([f'--{k}', str(v)])
+		for k, v in run_settings.items(): args.extend([f'--{k}', str(v)])
 		subprocess.check_call(args) #Raises error on problems in call
 
 		expected_files = ['evaluation_results', 'eval_sollengths.png', 'eval_winrates.png']
@@ -28,7 +28,7 @@ class TestRuneval(MainTest):
 		run_settings = {'location': location, 'agent': 'AStar', 'games': 1, 'max_time': 1, 'scrambling': '1 3',
 				'astar_lambda':  dank_unlikely_number, 'optimized_params' : True}
 		args = [sys.executable, run_path,]
-		for k,v in run_settings.items(): args.extend([f'--{k}', str(v)])
+		for k, v in run_settings.items(): args.extend([f'--{k}', str(v)])
 		subprocess.check_call(args) #Raises error on problems in call
 
 		expected_files = ['eval_sollengths.png', 'eval_winrates.png']

@@ -1,5 +1,13 @@
 from time import perf_counter
-from typing import List, Dict
+from typing import List, Dict, Tuple
+
+class TimeUnit:
+	nanosecond  = ("ns",  1e9)
+	microsecond = ("mus", 1e6)
+	millisecond = ("ms",  1e3)
+	second      = ("s",   1)
+	minute      = ("min", 1/60)
+	hour        = ("h",   1/3600)
 
 class Profile:
 
@@ -45,7 +53,6 @@ class Profile:
 class TickTock:
 
 	_start = 0
-	_units = { "ns": 1e9, "mus": 1e6, "ms": 1e3, "s": 1, "m": 1/60 }
 	profiles: Dict[str, Profile] = {}
 	_profile_depth = 0
 	_latest_profile: str
@@ -104,11 +111,11 @@ class TickTock:
 		return decs + rest
 
 	@classmethod
-	def stringify_time(cls, dt: float, unit="ms"):
-		str_ = f"{dt*cls._units[unit]:.3f} {unit}"
+	def stringify_time(cls, dt: float, unit: Tuple[str, float]=TimeUnit.millisecond):
+		str_ = f"{dt*unit[1]:.3f} {unit[0]}"
 		return cls.thousand_seps(str_)
 
-	def stringify_sections(self, unit="s"):
+	def stringify_sections(self, unit: Tuple[str, float]=TimeUnit.second):
 		# Returns pretty sections
 		strs = [["Execution times", "Total time", "Hits", "Avg. time"]]
 		# std_strs = []
@@ -119,7 +126,7 @@ class TickTock:
 				"- " * v.depth + kw,
 				self.stringify_time(v.sum(), unit),
 				self.thousand_seps(len(v)),
-				self.stringify_time(v.mean(), "ms")# + " p/m ",
+				self.stringify_time(v.mean(), TimeUnit.millisecond)# + " p/m ",
 			])
 		# longest_std = max(len(x) for x in std_strs)
 		# std_strs = [" " * (longest_std-len(x)) + x for x in std_strs]
@@ -136,5 +143,5 @@ class TickTock:
 		return "\n".join(strs)
 
 	def __str__(self):
-		return self.stringify_sections("s")
+		return self.stringify_sections(TimeUnit.second)
 

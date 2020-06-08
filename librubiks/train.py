@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from librubiks import gpu, no_grad, reset_cuda
-from librubiks.utils import Logger, NullLogger, unverbose, TickTock, bernoulli_error
+from librubiks.utils import Logger, NullLogger, unverbose, TickTock, TimeUnit, bernoulli_error
 
 from librubiks.analysis import TrainAnalysis
 from librubiks import cube
@@ -225,6 +225,8 @@ class Train:
 					best_net = net.clone()
 					self.log(f"Updated best net with solve rate {eval_reward*100:.2f} % at depth {self.evaluator.scrambling_depths}")
 
+		if len(self.evaluation_rollouts):
+			self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
 		self.log.verbose("Training time distribution")
 		self.log.verbose(self.tt)
 		total_time = self.tt.tock()
@@ -233,13 +235,11 @@ class Train:
 		adi_time = self.tt.profiles["ADI training data"].sum()
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
-		if len(self.evaluation_rollouts):
-			self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
 		self.log("\n".join([
-			f"Total running time:            {self.tt.stringify_time(total_time, 's')}",
-			f"- Training data for ADI:       {self.tt.stringify_time(adi_time, 's')} or {adi_time/total_time*100:.2f} %",
-			f"- Training time:               {self.tt.stringify_time(train_time, 's')} or {train_time/total_time*100:.2f} %",
-			f"- Evaluation time:             {self.tt.stringify_time(eval_time, 's')} or {eval_time/total_time*100:.2f} %",
+			f"Total running time:            {self.tt.stringify_time(total_time, TimeUnit.second)}",
+			f"- Training data for ADI:       {self.tt.stringify_time(adi_time, TimeUnit.second)} or {adi_time/total_time*100:.2f} %",
+			f"- Training time:               {self.tt.stringify_time(train_time, TimeUnit.second)} or {train_time/total_time*100:.2f} %",
+			f"- Evaluation time:             {self.tt.stringify_time(eval_time, TimeUnit.second)} or {eval_time/total_time*100:.2f} %",
 			f"States witnessed:              {TickTock.thousand_seps(nstates)}",
 			f"- States per training second:  {TickTock.thousand_seps(states_per_sec)}",
 		]))

@@ -8,7 +8,7 @@ from librubiks.model import ModelConfig, Model
 class TestOptimizer(MainTest):
 	# def test_BO(self): #TODO: Find out why this fails with weird arraycheck error in GH actions
 		# def f(params): return -params['x']+42
-#
+
 		# bo = BayesianOptimizer(f, {'x': (0, 42)},  n_restarts=2)
 		# bo.optimize(2)
 		# assert len(bo.score_history) == 2
@@ -25,7 +25,7 @@ class TestOptimizer(MainTest):
 
 			run_settings = { 'location': location, 'agent': agent, 'iterations': 1, 'eval_games': 1, 'depth': 2, 'save_optimal': True, 'use_best': True}
 			args = [sys.executable, run_path,]
-			for k,v in run_settings.items(): args.extend([f'--{k}', str(v)])
+			for k, v in run_settings.items(): args.extend([f'--{k}', str(v)])
 			subprocess.check_call(args) #Raises error on problems in call
 
 			expected_files = [f'{agent}_optimization.log', f'{agent}_params.json']
