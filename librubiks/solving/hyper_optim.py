@@ -41,24 +41,25 @@ class Optimizer:
 		self.parameter_history = list()
 
 		self.logger=logger
-		self.logger.log(f"Optimizer {self} created parameters: {self._format_params(self.parameters)}")
+		self.logger.log(f"Optimizer {self} created parameters: {self.format_params(self.parameters)}")
 
 	def optimize(self, iterations: int):
 		raise NotImplementedError("To be implemented in child class")
 
-	def objective_from_evaluator(self, evaluator: Evaluator, agent_class, persistent_agent_params: dict, param_prepper: Callable=lambda x: None, optim_lengths: bool=False):
+	def objective_from_evaluator(self, evaluator: Evaluator, agent_class, persistent_agent_params: dict, param_prepper: Callable=lambda x: x, optim_lengths: bool=False):
 		self.evaluator = evaluator
 		self.agent_class = agent_class
 		self.persistent_agent_params = persistent_agent_params
 		self.param_prepper = param_prepper
 
 		def target_function(agent_params):
-			self.param_prepper(agent_params)
-			agent = self.agent_class(**self.persistent_agent_params, **agent_params)
+			agent = self.agent_class(**self.persistent_agent_params, **self.param_prepper(copy(agent_params)))
 			res, _= self.evaluator.eval(agent)
 			won = res != -1
 			solve = won.mean() if won.any() else 0
-			if optim_lengths: return solve/res[won].mean()
+			meanlength = solve/res[won].mean() if solve else -1
+			self.logger.log(f"\t Solve percentage: {solve}, Mean solved length {meanlength}")
+			if optim_lengths: return solve/meanlength
 			return solve
 
 		self.target_function = target_function
@@ -67,10 +68,8 @@ class Optimizer:
 		raise NotImplementedError
 
 	@staticmethod
-	def _format_params(params: str, prepper = None):
-		if prepper is not None:
-			params = copy(params)
-			prepper(params)
+	def format_params(params: str, prep=None):
+		if prep is not None: params = prep(copy(params))
 		return json.dumps(params, indent=4, sort_keys=True)
 
 class BayesianOptimizer(Optimizer):
@@ -108,7 +107,7 @@ class BayesianOptimizer(Optimizer):
 		for i in range(iterations):
 			next_params = self.optimizer.suggest(self.utility)
 			self.parameter_history.append(next_params)
-			self.logger(f"Optimization {i}: Chosen parameters:\t: {self._format_params(next_params, prepper=self.param_prepper)}")
+			self.logger(f"Optimization {i}: Chosen parameters:\t: {self.format_params(next_params, prep=self.param_prepper)}")
 
 			score = self.target_function(next_params)
 			self.score_history.append(score)
@@ -120,7 +119,7 @@ class BayesianOptimizer(Optimizer):
 		self.highscore = self.score_history[high_idx]
 		self.optimal = self.parameter_history[high_idx]
 
-		self.logger(f"Optimization done. Best parameters: {self._format_params(self.optimal)} with score {self.highscore}")
+		self.logger(f"Optimization done. Best parameters: {self.format_params(self.optimal, prep=self.param_prepper)} with score {self.highscore}")
 
 		return self.optimal
 
@@ -178,7 +177,7 @@ def agent_optimize():
 		params = {
 			'c': (0.1, 1),
 		}
-		def prepper(params): pass
+		def prepper(params): return params
 
 		persistent_params = {
 			'net' : Model.load(args.location, load_best=args.use_best),
@@ -189,7 +188,9 @@ def agent_optimize():
 			'lambda_': (0, 1),
 			'expansions': (0, 4),
 		}
-		def prepper(params): params['expansions'] = int(10** params['expansions'])
+		def prepper(params):
+			params['expansions'] = int(10**params['expansions'])
+			return params
 
 		persistent_params = {
 			'net' : Model.load(args.location, load_best=args.use_best),
@@ -200,7 +201,7 @@ def agent_optimize():
 	logger = Logger(os.path.join(args.location, f'{agent_name}_optimization.log'), 'Optimization')
 
 	logger.log(f"{agent_name} optimization. Using network from {model_path}.")
-	logger.log(f"Received arguments: {Optimizer._format_params(vars(args))}")
+	logger.log(f"Received arguments: {vars(args)}")
 
 	agent = getattr(agents, agent_name)
 
@@ -211,8 +212,7 @@ def agent_optimize():
 
 	if args.save_optimal:
 		with open(os.path.join(args.location, f'{agent_name}_params.json'), 'w') as outfile:
-			prepper(optimizer.optimal)
-			json.dump(optimizer.optimal, outfile)
+			json.dump(prepper(copy(optimizer.optimal)), outfile)
 
 if __name__ == '__main__':
 	agent_optimize()
