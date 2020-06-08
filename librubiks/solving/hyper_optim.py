@@ -58,7 +58,7 @@ class Optimizer:
 			won = res != -1
 			solve = won.mean() if won.any() else 0
 			meanlength = res[won].mean() if solve else -1
-			self.logger.log(f"\t Solve percentage: {solve}, Mean solved length {meanlength}")
+			self.logger.log(f"\t RESULTS: Solved:: {solve}, Mean length {meanlength}")
 			if optim_lengths: return solve/meanlength
 			return solve
 
