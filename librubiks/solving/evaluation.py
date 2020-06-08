@@ -180,11 +180,11 @@ class Evaluator:
 			win_percentages = (results != -1).mean(axis=1) * 100
 
 			ax.plot(used_settings['scrambling_depths'], win_percentages, linestyle='dashdot', color=color)
-			ax.scatter(used_settings['scrambling_depths'], win_percentages, color=color, label=f"Win % of {agent}")
+			ax.scatter(used_settings['scrambling_depths'], win_percentages, color=color, label=str(agent))
 		ax.legend()
 		ax.set_ylim([-5, 105])
 		ax.grid(True)
-		ax.set_title(title if title else (f"Cubes solved in {eval_settings[0]['max_time']:.2f} seconds" if times_equal else "Cubes solved") )
+		ax.set_title(title if title else (f"Percentage of cubes solved in {eval_settings[0]['max_time']:.2f} seconds" if times_equal else "Cubes solved") )
 		fig.tight_layout()
 
 		os.makedirs(save_dir, exist_ok=True)
