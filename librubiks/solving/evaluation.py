@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 import matplotlib.colors as mcolour
 import matplotlib.pyplot as plt
-plt.rcParams.update({"font.size": 22})
+plt.rcParams.update({"font.size": 22, "legend.fontsize": 18})
 
 from librubiks.utils import NullLogger, Logger, TickTock, TimeUnit, bernoulli_error
 
@@ -46,7 +46,7 @@ class Evaluator:
 		if solution_found: turns_to_complete = len(agent.action_queue)
 		return turns_to_complete
 
-	def eval(self, agent: agents.Agent):
+	def eval(self, agent: agents.Agent) -> (np.ndarray, np.ndarray, np.ndarray):
 		"""
 		Evaluates an agent
 		Returns results which is an a len(self.scrambling_depths) x self.n_games matrix
@@ -86,7 +86,7 @@ class Evaluator:
 		self.log(f"S: {S_mu:.2f} p/m {S_conf:.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
-		return res, states
+		return res, states, times
 
 	def log_this_depth(self, res: np.ndarray, states: np.ndarray, times: np.ndarray, depth: int):
 		"""Logs summary statistics for given deth
@@ -146,7 +146,7 @@ class Evaluator:
 		return mu, z * std / np.sqrt(len(S_dist))
 
 	@classmethod
-	def plot_evaluators(cls, eval_results: dict, save_dir: str, eval_settings: list, title: str='') -> list:
+	def plot_evaluators(cls, eval_results: dict, states: dict, times: dict, save_dir: str, eval_settings: list, title: str='') -> list:
 		"""
 		{agent: results from eval}
 		"""
@@ -157,6 +157,7 @@ class Evaluator:
 		save_paths = [
 			cls._plot_depth_win(eval_results, save_dir, eval_settings, colours, title),
 			cls._sol_length_boxplots(eval_results, save_dir, eval_settings, colours),
+			cls._time_winrate_plot(eval_results, times, save_dir, eval_settings, colours),
 		]
 		# Only plot S if shapes are similar
 		all_results = list(eval_results.values())
@@ -251,7 +252,11 @@ class Evaluator:
 		plt.clf()
 
 		return path
-	
+
+	@staticmethod
+	def _time_winrate_plot(eval_results: dict, times: dict, save_dir: str, eval_settings: list, colours: list) -> str:
+		pass
+
 	@staticmethod
 	def _S_hist(eval_results: dict, save_dir: str, eval_settings: list, colours: list) -> str:
 		# Histograms of S

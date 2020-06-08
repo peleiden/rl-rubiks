@@ -220,7 +220,6 @@ class EvalJob:
 			elif agent == agents.AStar:
 				assert isinstance(astar_lambda, float) and 0 <= astar_lambda <= 1, "AStar lambda must be float in [0, 1]"
 				assert isinstance(astar_expansions, int) and astar_expansions >= 1 and (not max_states or astar_expansions < max_states) , "Expansions must be int < max states"
-
 				agents_args = { 'lambda_': astar_lambda, 'expansions': astar_expansions }
 			elif agent == agents.EGVM:
 				assert isinstance(egvm_epsilon, float) and 0 <= egvm_epsilon <= 1, "EGVM epsilon must be float in [0, 1]"
@@ -276,29 +275,29 @@ class EvalJob:
 	@with_used_repr
 	def _single_exec(self, name: str, agent: Agent):
 		self.logger.section(f'Evaluationg agent {name}')
-		res, states = self.evaluator.eval(agent)
+		res, states, times = self.evaluator.eval(agent)
 		subfolder = os.path.join(self.location, "evaluation_results")
 		os.makedirs(subfolder, exist_ok=True)
 		paths = [os.path.join(subfolder, f"{name}_results.npy"), os.path.join(subfolder, f"{name}_states_seen.npy")]
 		np.save(paths[0], res)
 		np.save(paths[1], states)
 		self.logger.log("Saved evaluation results to\n" + "\n".join(paths))
-		return res
+		return res, states, times
 
 	@staticmethod
 	def plot_all_jobs(jobs: list, save_location: str):
-		results, settings = dict(), list()
+		results, states, times, settings = dict(), dict(), dict(), list()
 		for job in jobs:
-			for agent, result in job.agent_results.items():
+			for agent, (result, states_, times_) in job.agent_results.items():
 				key = agent if len(jobs) == 1 else f"{job.name} - {agent}"
 				results[key] = result
-				settings.append(
-					{
-						'n_games': job.evaluator.n_games,
-						'max_time': job.evaluator.max_time,
-						'scrambling_depths': job.evaluator.scrambling_depths
-					}
-				)
-		savepaths = Evaluator.plot_evaluators(results, save_location, settings)
+				states[key] = states_
+				times[key] = times_
+				settings.append({
+					'n_games': job.evaluator.n_games,
+					'max_time': job.evaluator.max_time,
+					'scrambling_depths': job.evaluator.scrambling_depths
+				})
+		savepaths = Evaluator.plot_evaluators(results, states, times, save_location, settings)
 		job.logger(f"Saved plots to {savepaths}")
 

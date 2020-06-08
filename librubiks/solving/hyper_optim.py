@@ -54,7 +54,7 @@ class Optimizer:
 
 		def target_function(agent_params):
 			agent = self.agent_class(**self.persistent_agent_params, **self.param_prepper(copy(agent_params)))
-			res, _= self.evaluator.eval(agent)
+			res, _, _ = self.evaluator.eval(agent)
 			won = res != -1
 			solve = won.mean() if won.any() else 0
 			meanlength = res[won].mean() if solve else -1

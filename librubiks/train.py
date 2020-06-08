@@ -215,7 +215,7 @@ class Train:
 				self.agent.net = net
 				self.tt.profile(f"Evaluating using agent {self.agent}")
 				with unverbose:
-					eval_results, _ = self.evaluator.eval(self.agent)
+					eval_results, _, _ = self.evaluator.eval(self.agent)
 				eval_reward = (eval_results != -1).mean()
 				self.sol_percents.append(eval_reward)
 				self.tt.end_profile(f"Evaluating using agent {self.agent}")
