@@ -411,7 +411,7 @@ class AStar(DeepAgent):
 		return len(self.indices)
 
 	def __str__(self) -> str:
-		return f'A* (lambda={self.lambda_}, N={self.expansions})'
+		return f'AStar (lambda={self.lambda_}, N={self.expansions})'
 
 class MCTS(DeepAgent):
 
