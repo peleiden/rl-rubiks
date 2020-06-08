@@ -18,16 +18,16 @@ CORS(app)
 
 net_loc = "local_net"
 os.makedirs(net_loc, exist_ok=True)
-url = "https://github.com/peleiden/rubiks-models/blob/master/fcnew/%s?raw=true"
-download(url % "model.pt", net_loc)
+url = "https://github.com/peleiden/rubiks-models/blob/master/somerolloutcompare/smallroll/%s?raw=true"
+download(url % "model-best.pt", net_loc)
 download(url % "config.json", net_loc)
 
 agents = [
-	{ "name": "AStar", "agent": AStar.from_saved(net_loc, use_best=False, lambda_=0.2, expansions=50) },
-	{ "name": "MCTS", "agent": MCTS.from_saved(net_loc, use_best=False, c=0.6, search_graph=True) },
-	{ "name": "Greedy policy", "agent": PolicySearch.from_saved(net_loc, use_best=False) },
-	{ "name": "Greedy value", "agent": ValueSearch.from_saved(net_loc, use_best=False) },
-	{ "name": "EGVM", "agent": EGVM.from_saved(net_loc, use_best=False, epsilon=0.5, workers=10, depth=100) },
+	{ "name": "AStar", "agent": AStar.from_saved(net_loc, use_best=True, lambda_=0.2, expansions=50) },
+	{ "name": "MCTS", "agent": MCTS.from_saved(net_loc, use_best=True, c=0.6, search_graph=True) },
+	{ "name": "Greedy policy", "agent": PolicySearch.from_saved(net_loc, use_best=True) },
+	{ "name": "Greedy value", "agent": ValueSearch.from_saved(net_loc, use_best=True) },
+	{ "name": "EGVM", "agent": EGVM.from_saved(net_loc, use_best=True, epsilon=0.5, workers=10, depth=100) },
 	{ "name": "BFS", "agent": BFS() },
 	{ "name": "Random actions", "agent": RandomSearch()},
 ]

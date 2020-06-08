@@ -45,7 +45,7 @@ options = {
 		'type':     lambda arg: int(float(arg)),
 	},
 	'use_best': {
-		'default':  False,
+		'default':  True,
 		'help':     "Set to True to use model-best.pt instead of model.pt.",
 		'type':     literal_eval,
 		'choices':  [True, False],
