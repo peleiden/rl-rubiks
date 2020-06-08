@@ -57,7 +57,7 @@ class Optimizer:
 			res, _= self.evaluator.eval(agent)
 			won = res != -1
 			solve = won.mean() if won.any() else 0
-			meanlength = solve/res[won].mean() if solve else -1
+			meanlength = res[won].mean() if solve else -1
 			self.logger.log(f"\t Solve percentage: {solve}, Mean solved length {meanlength}")
 			if optim_lengths: return solve/meanlength
 			return solve
