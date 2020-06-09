@@ -3,10 +3,9 @@ plt.rcParams.update({"font.size": 22})
 import numpy as np
 np.set_printoptions(precision=4, threshold=np.inf)
 
-from librubiks import gpu, set_is2024
-from librubiks import cube
-from librubiks.model import Model, ModelConfig
-from librubiks.solving.agents import Agent, MCTS, PolicySearch, BFS, ValueSearch
+from librubiks import gpu, cube
+from librubiks.model import Model
+from librubiks.solving.agents import MCTS
 
 from librubiks.utils import seedsetter, Logger, TickTock, TimeUnit
 

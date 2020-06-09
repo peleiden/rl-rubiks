@@ -1,6 +1,7 @@
 import torch
 from tests import MainTest
-from librubiks import cpu, gpu, get_is2024, set_is2024, store_repr, restore_repr, no_grad, with_used_repr
+from librubiks import no_grad
+from librubiks.cube import get_is2024, set_is2024, store_repr, restore_repr, with_used_repr
 
 
 class TestRubiks(MainTest):

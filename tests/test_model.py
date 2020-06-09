@@ -4,7 +4,7 @@ import torch
 
 from tests import MainTest
 
-from librubiks import cpu, gpu, set_is2024
+from librubiks import gpu
 from librubiks.model import Model, ModelConfig
 from librubiks.utils import NullLogger
 
@@ -42,7 +42,6 @@ class TestModel(MainTest):
 
 		model = Model.load(model_dir).to(gpu)
 		assert next(model.parameters()).device.type == gpu.type
-
 
 	def test_model_config(self):
 		cf = ModelConfig(torch.nn.ReLU())

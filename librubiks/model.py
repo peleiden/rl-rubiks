@@ -2,7 +2,6 @@ import json
 import os
 from time import time
 from copy import deepcopy
-from dataclasses import dataclass
 
 import torch
 import torch.nn as nn

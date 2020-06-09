@@ -1,6 +1,7 @@
 import numpy as np
 
-from librubiks import cube, get_is2024, set_is2024, store_repr, restore_repr
+from librubiks import cube
+from librubiks.cube import get_is2024, set_is2024, store_repr, restore_repr
 from librubiks.utils import Logger, TickTock, TimeUnit
 
 def _repstr():

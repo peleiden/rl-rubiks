@@ -7,7 +7,7 @@ import json
 import numpy as np
 import torch
 
-from librubiks import gpu, get_is2024, with_used_repr, store_repr, restore_repr, set_is2024
+from librubiks.cube import get_is2024, with_used_repr, store_repr, restore_repr, set_is2024
 from librubiks.utils import get_commit, Logger
 
 from librubiks.model import Model, ModelConfig

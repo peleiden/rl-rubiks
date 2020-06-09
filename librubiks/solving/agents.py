@@ -1,14 +1,13 @@
 import heapq
 from collections import deque
-from typing import List
 
 import numpy as np
 import torch
 
 from librubiks.utils import TickTock
 
-from librubiks import gpu, no_grad, softmax
-from librubiks.model import Model, ModelConfig
+from librubiks import gpu, no_grad
+from librubiks.model import Model
 from librubiks import cube
 
 

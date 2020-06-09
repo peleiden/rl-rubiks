@@ -3,11 +3,9 @@ import torch
 
 from tests import MainTest
 
-from librubiks import cube
-from librubiks import gpu, get_is2024, set_is2024, with_used_repr
+from librubiks import gpu, cube
+from librubiks.cube import with_used_repr
 from librubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos
-
-
 
 class TestRubiksCube(MainTest):
 	is2024: bool

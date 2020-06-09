@@ -1,5 +1,4 @@
 import os
-from typing import List
 
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 22})

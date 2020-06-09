@@ -14,10 +14,11 @@ The solution to this is this quite large module with these features
 - Most functions are implemented compactly using numpy or pytorch sacrificing readability for efficiency
 - Some global constants are maintained
 """
+import functools
 import numpy as np
 import torch
 
-from librubiks import cpu, gpu, get_is2024, set_is2024
+from librubiks import gpu
 from librubiks.cube.maps import SimpleState, get_corner_pos, get_side_pos, get_tensor_map, get_633maps, neighbors_686
 
 
@@ -90,6 +91,38 @@ def multi_is_solved( states: np.ndarray) -> np.ndarray:
 ########################
 # Representation logic #
 ########################
+
+
+_is2024 = True
+_stored_repr: bool
+
+def set_is2024(is2024: bool):
+	global _is2024
+	assert type(is2024) is bool
+	_is2024 = is2024
+
+def get_is2024():
+	return _is2024
+
+def store_repr():
+	global _stored_repr
+	_stored_repr = _is2024
+
+def restore_repr():
+	global _is2024
+	_is2024 = _stored_repr
+
+def with_used_repr(fun):
+	# Method decorator. Runs method with representation set to self.is2024
+	functools.wraps(fun)
+	def wrapper(self, *args, **kwargs):
+		store_repr()
+		set_is2024(self.is2024)
+		res = fun(self, *args, **kwargs)
+		restore_repr()
+		return res
+	return wrapper
+
 
 def shape():
 	return get_solved_instance().shape
