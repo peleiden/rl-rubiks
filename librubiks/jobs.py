@@ -186,7 +186,7 @@ class EvalJob:
 				 verbose: bool = True,
 				 in_subfolder: bool = False,  # Should be true if there are multiple experiments
 			 ):
-		
+
 		self.name = name
 		self.location = location
 
@@ -278,9 +278,10 @@ class EvalJob:
 		res, states, times = self.evaluator.eval(agent)
 		subfolder = os.path.join(self.location, "evaluation_results")
 		os.makedirs(subfolder, exist_ok=True)
-		paths = [os.path.join(subfolder, f"{name}_results.npy"), os.path.join(subfolder, f"{name}_states_seen.npy")]
+		paths = [os.path.join(subfolder, f"{name}_results.npy"), os.path.join(subfolder, f"{name}_states_seen.npy"), os.path.join(subfolder, f"{name}_playtimes.npy")]
 		np.save(paths[0], res)
 		np.save(paths[1], states)
+		np.save(paths[2], times)
 		self.logger.log("Saved evaluation results to\n" + "\n".join(paths))
 		return res, states, times
 
