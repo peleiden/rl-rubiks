@@ -287,18 +287,18 @@ class EvalJob:
 
 	@staticmethod
 	def plot_all_jobs(jobs: list, save_location: str):
-		results, states, times, settings = dict(), dict(), dict(), list()
+		results, states, times, settings = dict(), dict(), dict(), dict()
 		for job in jobs:
 			for agent, (result, states_, times_) in job.agent_results.items():
 				key = agent if len(jobs) == 1 else f"{job.name} - {agent}"
 				results[key] = result
 				states[key] = states_
 				times[key] = times_
-				settings.append({
+				settings[key] = {
 					'n_games': job.evaluator.n_games,
 					'max_time': job.evaluator.max_time,
 					'scrambling_depths': job.evaluator.scrambling_depths
-				})
-		savepaths = Evaluator.plot_evaluators(results, states, times, save_location, settings)
+				}
+		savepaths = Evaluator.plot_evaluators(results, states, times, settings, save_location)
 		job.logger(f"Saved plots to {savepaths}")
 

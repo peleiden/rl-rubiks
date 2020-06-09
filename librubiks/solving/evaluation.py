@@ -134,7 +134,7 @@ class Evaluator:
 	@staticmethod
 	def S_confidence(S_dist: np.ndarray, alpha=0.05):
 		"""
-		Calculates mean and confidence interval on a distribution of S values as given by Evaluator.S_dist
+		Calculates mean and confidence interval assuming normality on a distribution of S values as given by Evaluator.S_dist
 		:param S_dist: numpy array of S values
 		:param alpha: confidence interval
 		:return: mean and z * sigma
@@ -145,10 +145,18 @@ class Evaluator:
 		return mu, z * std / np.sqrt(len(S_dist))
 
 	@classmethod
-	def plot_evaluators(cls, eval_results: dict, states: dict, times: dict, save_dir: str, eval_settings: list, title: str='') -> list:
+	def plot_evaluators(cls, eval_results: dict, eval_states: dict, eval_times: dict, eval_settings: dict, save_dir: str, title: str='') -> list:
 		"""
-		{agent: results from eval}
+		Plots evaluation results
+		:param eval_results:   { agent name: [steps to solve, -1 for unfinished] }
+		:param eval_states:    { agent name: [states seen during solving] }
+		:param eval_times:     { agent name: [time spent solving] }
+		:param eval_settings:  { agent name: { 'n_games': int, 'max_time': float, 'scrambling_depths': np.ndarray } }
+		:param save_dir:       Directory in which to save plots
+		:param title:          If given, overrides auto generated title in (depth, winrate) plot
+		:return:               Locations of saved plots
 		"""
+		assert eval_results.keys() == eval_results.keys() == eval_times.keys() == eval_settings.keys(), "Keys of evaluation dictionaries should match"
 
 		tab_colours = list(mcolour.TABLEAU_COLORS)
 		colours = [tab_colours[i%len(tab_colours)] for i in range(len(eval_results))]
@@ -156,9 +164,9 @@ class Evaluator:
 		save_paths = [
 			cls._plot_depth_win(eval_results, save_dir, eval_settings, colours, title),
 			cls._sol_length_boxplots(eval_results, save_dir, eval_settings, colours),
-			cls._time_winrate_plot(eval_results, times, save_dir, eval_settings, colours),
+			cls._time_winrate_plot(eval_results, eval_times, save_dir, eval_settings, colours),
 		]
-		# Only plot S if shapes are similar
+		# Only plot S if shapes are the same
 		all_results = list(eval_results.values())
 		if all(all_results[0].shape == x.shape for x in all_results):
 			save_paths.append(cls._S_hist(eval_results, save_dir, eval_settings, colours))
@@ -166,16 +174,17 @@ class Evaluator:
 		return save_paths
 	
 	@staticmethod
-	def _plot_depth_win(eval_results: dict, save_dir: str, eval_settings: list, colours: list, title: str='') -> str:
+	def _plot_depth_win(eval_results: dict, save_dir: str, eval_settings: dict, colours: list, title: str='') -> str:
+		first_key = list(eval_results.keys())[0]  # Used to get the settings if the settings are the same
 		# depth, win%-graph
 		games_equal, times_equal = Evaluator.check_equal_settings(eval_settings)
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
-		ax.set_ylabel(f"Percentage of {eval_settings[0]['n_games']} games won" if games_equal else "Percentage of games won")
+		ax.set_ylabel(f"Percentage of {eval_settings[first_key]['n_games']} games won" if games_equal else "Percentage of games won")
 		ax.set_xlabel(f"Scrambling depth: Number of random rotations applied to cubes")
 		ax.locator_params(axis='x', integer=True, tight=True)
 
 		for i, (agent, results) in enumerate(eval_results.items()):
-			used_settings = eval_settings[i]
+			used_settings = eval_settings[agent]
 			color = colours[i]
 			win_percentages = (results != -1).mean(axis=1) * 100
 
@@ -184,7 +193,7 @@ class Evaluator:
 		ax.legend()
 		ax.set_ylim([-5, 105])
 		ax.grid(True)
-		ax.set_title(title if title else (f"Percentage of cubes solved in {eval_settings[0]['max_time']:.2f} seconds" if times_equal else "Cubes solved") )
+		ax.set_title(title if title else (f"Percentage of cubes solved in {eval_settings[first_key]['max_time']:.2f} seconds" if times_equal else "Cubes solved"))
 		fig.tight_layout()
 
 		os.makedirs(save_dir, exist_ok=True)
@@ -195,8 +204,8 @@ class Evaluator:
 		return path
 
 	@staticmethod
-	def _sol_length_boxplots(eval_results: dict, save_dir: str, eval_settings: list, colours: list) -> str:
-		# solution length boxplots
+	def _sol_length_boxplots(eval_results: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
+		# Solution length boxplots
 		plt.rcParams.update(rc_params_small)
 		max_width = 2
 		width = min(len(eval_results), max_width)
@@ -210,12 +219,11 @@ class Evaluator:
 		for res in agent_results:
 			res[res > max_sollength] = max_sollength
 		ylim = np.array([-0.02, 1.02]) * max([res.max() for res in agent_results])
-		min_ = min([x["scrambling_depths"][0] for x in eval_settings])
-		max_ = max([x["scrambling_depths"][-1] for x in eval_settings])
+		min_ = min([x["scrambling_depths"][0] for x in eval_settings.values()])
+		max_ = max([x["scrambling_depths"][-1] for x in eval_settings.values()])
 		xticks = np.arange(min_, max_+1, max(np.ceil((max_-min_+1)/8).astype(int), 1))
-		for i, position in enumerate(positions):
-			# Make sure axes are stored in a matrix, so they are easire to work with
-			# Select axes object
+		for used_settings, (i, position) in zip(eval_settings.values(), enumerate(positions)):
+			# Make sure axes are stored in a matrix, so they are easire to work with, and select axes object
 			if len(eval_results) == 1:
 				axes = np.array([[axes]])
 			elif len(eval_results) <= width and i == 0:
@@ -229,7 +237,6 @@ class Evaluator:
 
 			try:
 				agent, results = agents[i], agent_results[i]
-				used_settings = eval_settings[i]
 				ax.set_title(str(agent) if axes.size > 1 else "Solution lengths for " + str(agent))
 				results = [depth[depth != -1] for depth in results]
 				ax.boxplot(results)
@@ -253,28 +260,32 @@ class Evaluator:
 		return path
 
 	@staticmethod
-	def _time_winrate_plot(eval_results: dict, times: dict, save_dir: str, eval_settings: list, colours: list) -> str:
+	def _time_winrate_plot(eval_results: dict, eval_times: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
+		# Make a (time spent, winrate) plot
+		# for (agent, res), times in zip(eval_results.items(), eval_times.values()):
+		# 	sort_idcs = np.argsort(times)
+		# 	wins_and_times[agent]
 		pass
 
 	@staticmethod
-	def _S_hist(eval_results: dict, save_dir: str, eval_settings: list, colours: list) -> str:
+	def _S_hist(eval_results: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
 		# Histograms of S
 		games_equal, times_equal = Evaluator.check_equal_settings(eval_settings)
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
-		sss = np.array([Evaluator.S_dist(results, eval_settings[i]['scrambling_depths']) for i, results in enumerate(eval_results.values())])
+		sss = np.array([Evaluator.S_dist(results, eval_settings[agent]['scrambling_depths']) for i, (agent, results) in enumerate(eval_results.items())])
 		mus, confs = zip(*[Evaluator.S_confidence(ss) for ss in sss])
 		stds = [ss.std() for ss in sss]
 		lower, higher = sss.min() - 2, sss.max() + 2
 		bins = np.arange(lower, higher+1)
-		ax.hist(x			= sss.T,
-				bins		= bins,
-				density		= True,
-				color		= colours,
-				edgecolor	= "black",
-				linewidth	= 2,
-				align		= "left",
-				label		= [f"{agent}: S = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
+		ax.hist(x           = sss.T,
+				bins        = bins,
+				density     = True,
+				color       = colours,
+				edgecolor   = "black",
+				linewidth   = 2,
+				align       = "left",
+				label       = [f"{agent}: S = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
 		highest_y = 0
 		for i in range(len(eval_results)):
 			if stds[i] > 0:
@@ -287,7 +298,8 @@ class Evaluator:
 				highest_y = max(highest_y, y.max())
 		ax.set_xlim([lower, higher])
 		ax.set_xticks(bins)
-		ax.set_title(f"Single game S distributions (evaluated on {eval_settings[0]['max_time']:.2f} s per game)" if times_equal else "Single game S distributions")
+		ax.set_title(f"Single game S distributions (evaluated on {eval_settings[list(eval_settings.keys())[0]]['max_time']:.2f} s per game)"
+		             if times_equal else "Single game S distributions")
 		ax.set_xlabel("S")
 		ax.set_ylim([0, highest_y*(1+0.1*max(3, len(eval_results)))])  # To make room for labels
 		ax.set_ylabel("Frequency")
@@ -299,11 +311,10 @@ class Evaluator:
 		return path
 
 	@staticmethod
-	def check_equal_settings(eval_settings: list):
-		"""Super simple looper just to hide the ugliness from above function
-		"""
+	def check_equal_settings(eval_settings: dict):
+		# Super simple looper just to hide the ugliness
 		games, times = list(), list()
-		for setting in eval_settings:
+		for setting in eval_settings.values():
 			games.append(setting['max_time'])
 			times.append(setting['n_games'])
 		return games.count(games[0]) == len(games), times.count(times[0]) == len(times)
