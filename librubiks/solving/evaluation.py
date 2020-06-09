@@ -4,22 +4,21 @@ import numpy as np
 from scipy import stats
 import matplotlib.colors as mcolour
 import matplotlib.pyplot as plt
-plt.rcParams.update({"font.size": 22, "legend.fontsize": 18})
 
+from librubiks import cube, rc_params, rc_params_small
 from librubiks.utils import NullLogger, Logger, TickTock, TimeUnit, bernoulli_error
-
 from librubiks.solving import agents
 
-from librubiks import cube
+plt.rcParams.update(rc_params)
 
 
 class Evaluator:
 	def __init__(self,
-			n_games,
-			scrambling_depths: range or list,
-			max_time = None,  # Max time to completion per game
-			max_states = None,
-			logger: Logger = NullLogger()
+		         n_games,
+		         scrambling_depths: range or list,
+		         max_time = None,  # Max time to completion per game
+		         max_states = None,  # The max number of states to explore per game
+		         logger: Logger = NullLogger()
 		):
 
 		self.n_games = n_games
@@ -198,7 +197,7 @@ class Evaluator:
 	@staticmethod
 	def _sol_length_boxplots(eval_results: dict, save_dir: str, eval_settings: list, colours: list) -> str:
 		# solution length boxplots
-		plt.rcParams.update({"font.size": 18})
+		plt.rcParams.update(rc_params_small)
 		max_width = 2
 		width = min(len(eval_results), max_width)
 		height = (len(eval_results)+1) // width if width == max_width else 1
@@ -241,7 +240,7 @@ class Evaluator:
 			ax.set_xlim([used_settings["scrambling_depths"].min()-1, used_settings["scrambling_depths"].max()+1])
 
 		plt.setp(axes, xticks=xticks, xticklabels=[str(x) for x in xticks])
-		plt.rcParams.update({"font.size": 22})
+		plt.rcParams.update(rc_params)
 		if axes.size > 1:
 			fig.suptitle("Solution lengths")
 		fig.tight_layout()

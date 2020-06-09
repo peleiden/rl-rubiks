@@ -1,5 +1,4 @@
-import os, sys
-from pathlib import Path
+import os
 import git
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 14})

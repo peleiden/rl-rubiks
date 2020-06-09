@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
-plt.rcParams.update({"font.size": 22})
-import numpy as np
-np.set_printoptions(precision=4, threshold=np.inf)
 
-from librubiks import gpu, cube
+import numpy as np
+
+from librubiks import gpu, cube, rc_params
 from librubiks.model import Model
 from librubiks.solving.agents import MCTS
-
 from librubiks.utils import seedsetter, Logger, TickTock, TimeUnit
+
+np.set_printoptions(precision=4, threshold=np.inf)
+plt.rcParams.update(rc_params)
 
 tt = TickTock()
 log = Logger("data/local_analyses/mcts.log", "Analyzing MCTS")

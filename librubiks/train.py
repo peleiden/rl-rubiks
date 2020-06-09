@@ -1,11 +1,10 @@
 import os
 
 import matplotlib.pyplot as plt
-plt.rcParams.update({"font.size": 22})
 import numpy as np
 import torch
 
-from librubiks import gpu, no_grad, reset_cuda
+from librubiks import gpu, no_grad, reset_cuda, rc_params
 from librubiks.utils import Logger, NullLogger, unverbose, TickTock, TimeUnit, bernoulli_error
 
 from librubiks.analysis import TrainAnalysis
@@ -14,6 +13,7 @@ from librubiks.model import Model
 
 from librubiks.solving.agents import DeepAgent
 from librubiks.solving.evaluation import Evaluator
+plt.rcParams.update(rc_params)
 
 class Train:
 
