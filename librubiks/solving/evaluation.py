@@ -266,7 +266,7 @@ class Evaluator:
 		plt.figure(figsize=(19.2, 10.8))
 		for (agent, res), times, colour in zip(eval_results.items(), eval_times.values(), colours):
 			sort_idcs = np.argsort(times[-1])  # Have lowest usage times first
-			wins, times = np.array([0, *(res!=-1)[-1, sort_idcs]]), [0, *times[-1, sort_idcs]]  # Delve too greedily and too deep into the cube
+			wins, times = (res!=-1)[-1, sort_idcs], times[-1, sort_idcs]  # Delve too greedily and too deep into the cube
 			cumulative_winrate = np.cumsum(wins) / len(wins) * 100
 			plt.plot(times, cumulative_winrate, "o-", linewidth=3, color=colour, label=agent)
 		plt.xlabel("Time used [s]")
