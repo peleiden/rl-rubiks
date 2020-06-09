@@ -362,9 +362,9 @@ class Train:
 
 		colour = "red"
 		loss_ax.set_ylabel(f"Cross Entropy + MSE loss (alpha update: {self.alpha_update:.2f})", color = colour)
-		loss_ax.plot(self.train_rollouts, self.train_losses, label="Training loss", color=colour)
-		loss_ax.plot(self.train_rollouts, self.policy_losses, linestyle="dashdot", label="Policy loss", color="orange")
-		loss_ax.plot(self.train_rollouts, self.value_losses, linestyle="dotted", label="Value loss", color="green")
+		loss_ax.plot(self.train_rollouts, self.train_losses, linewidth=3, label="Training loss", color=colour)
+		loss_ax.plot(self.train_rollouts, self.policy_losses, linewidth=3, linestyle="dashdot", label="Policy loss", color="orange")
+		loss_ax.plot(self.train_rollouts, self.value_losses, linewidth=3, linestyle="dashed", label="Value loss", color="green")
 		loss_ax.tick_params(axis='y', labelcolor = colour)
 		h1, l1 = loss_ax.get_legend_handles_labels()
 
