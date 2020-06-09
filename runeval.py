@@ -23,24 +23,24 @@ options = {
 		'choices':  ['AStar', 'MCTS', 'PolicySearch', 'ValueSearch', 'EGVM', 'BFS', 'RandomDFS', ],
 	},
 	'scrambling': {
-		'default':  '10 25',
-		'help':     'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 25")\n'
-		            'Denoting interval of number of scramblings to be run.',
+		'default':  100,
+		'help':     'The scrambling depths at which to test the model. Can be given as a singel integer for one depth or\n'
+					'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 25")',
 		# Ugly way to define list of two numbers or single number input
 		'type':     lambda args: [int(args.split()[0]), int(args.split()[1])] if len(args.split()) > 1 else [int(args), int(args)+1],
 	},
 	'games': {
-		'default':  10,
+		'default':  500,
 		'help':     'Number of games to play in evaluation for each depth, for each agent.',
 		'type':     int,
 	},
 	'max_time': {
-		'default':  30,
+		'default':  0,
 		'help':     'Max searching time for agent. 0 for unlimited. Evaluation is terminated when either max_time or max_states is reached.',
 		'type':     float,
 	},
 	'max_states': {
-		'default':  0,
+		'default':  175_000,
 		'help':     'Max number of searched states for agent per configuration. 0 for unlimited. Evaluation is terminated when either max_time or max_states is reached.',
 		'type':     lambda arg: int(float(arg)),
 	},

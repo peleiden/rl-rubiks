@@ -6,7 +6,7 @@ from librubiks.utils import get_timestamp, Parser, seedsetter
 from librubiks.jobs import TrainJob
 
 ####
-# Should correspond to  arguments in librubiks.jobs.Trainjob
+# Should correspond to arguments in librubiks.jobs.Trainjob
 ####
 options = {
 	'location': {
@@ -20,12 +20,12 @@ options = {
 		'type':     int,
 	},
 	'rollout_games': {
-		'default':  100,
+		'default':  1000,
 		'help':     'Number of simulated games, using the Auto Didactic method, in each rollout',
 		'type':     int,
 	},
 	'rollout_depth': {
-		'default':  50,
+		'default':  100,
 		'help':     'Number of random rotations applied to each game in the Auto Didactic simulation',
 		"type":     int,
 	},
@@ -55,7 +55,7 @@ options = {
 		'choices':  ['paper', 'lapanfix', 'schultzfix', 'reward0'],
 	},
 	'batch_size': {
-		'default':  50,
+		'default':  1000,
 		'help':     'Number of training examples to be used in each parameter update, e.g. minibatch size for gradient descent' +
 		            'Note: Training is done on rollout_games*rollout_depth examples, so batch_size must be <= this',
 		'type':     int
@@ -76,7 +76,7 @@ options = {
 		'type':     float,
 	},
 	'evaluation_interval': {
-		'default':  100,
+		'default':  50,
 		'help':     'An evaluation is performed every evaluation_interval rollouts. Set to 0 for never',
 		'type':     int,
 	},
