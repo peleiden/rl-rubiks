@@ -247,7 +247,7 @@ class EvalJob:
 
 				set_is2024(cfg["is2024"])
 				agent = agent.from_saved(folder, use_best=use_best, **agents_args)
-				key = f'{str(agent)}{"" if folder == search_location else " " + os.path.basename(folder.rstrip(os.sep))}'
+				key = f'{agent}{"" if folder == search_location else " " + os.path.basename(folder.rstrip(os.sep))}'
 
 				self.reps[key] = cfg["is2024"]
 				self.agents[key] = agent
@@ -259,8 +259,8 @@ class EvalJob:
 
 		else:
 			agent = agent()
-			self.agents = {agent: agent}
-			self.reps = {agent: True}
+			self.agents = { str(agent): agent }
+			self.reps   = { str(agent): True }
 
 		self.agent_results = {}
 		self.logger.log(f"Initialized {self.name} with agents {', '.join(str(s) for s in self.agents)}")

@@ -157,6 +157,7 @@ class Evaluator:
 		:return:               Locations of saved plots
 		"""
 		assert eval_results.keys() == eval_results.keys() == eval_times.keys() == eval_settings.keys(), "Keys of evaluation dictionaries should match"
+		os.makedirs(save_dir, exist_ok=True)
 
 		tab_colours = list(mcolour.TABLEAU_COLORS)
 		colours = [tab_colours[i%len(tab_colours)] for i in range(len(eval_results))]
@@ -164,20 +165,21 @@ class Evaluator:
 		save_paths = [
 			cls._plot_depth_win(eval_results, save_dir, eval_settings, colours, title),
 			cls._sol_length_boxplots(eval_results, save_dir, eval_settings, colours),
-			cls._time_winrate_plot(eval_results, eval_times, save_dir, eval_settings, colours),
 		]
-		# Only plot S if shapes are the same
-		all_results = list(eval_results.values())
-		if all(all_results[0].shape == x.shape for x in all_results):
-			save_paths.append(cls._S_hist(eval_results, save_dir, eval_settings, colours))
+		# Only plot (time, winrate) and S if shapes are the same
+		if cls.check_equal_settings(eval_settings):
+			save_paths.extend([
+				cls._time_winrate_plot(eval_results, eval_times, save_dir, eval_settings, colours),
+				cls._S_hist(eval_results, save_dir, eval_settings, colours),
+			])
 		
 		return save_paths
 	
-	@staticmethod
-	def _plot_depth_win(eval_results: dict, save_dir: str, eval_settings: dict, colours: list, title: str='') -> str:
+	@classmethod
+	def _plot_depth_win(cls, eval_results: dict, save_dir: str, eval_settings: dict, colours: list, title: str='') -> str:
 		first_key = list(eval_results.keys())[0]  # Used to get the settings if the settings are the same
 		# depth, win%-graph
-		games_equal, times_equal = Evaluator.check_equal_settings(eval_settings)
+		games_equal, times_equal = cls.check_equal_settings(eval_settings)
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		ax.set_ylabel(f"Percentage of {eval_settings[first_key]['n_games']} games won" if games_equal else "Percentage of games won")
 		ax.set_xlabel(f"Scrambling depth: Number of random rotations applied to cubes")
@@ -189,22 +191,21 @@ class Evaluator:
 			win_percentages = (results != -1).mean(axis=1) * 100
 
 			ax.plot(used_settings['scrambling_depths'], win_percentages, linestyle='dashdot', color=color)
-			ax.scatter(used_settings['scrambling_depths'], win_percentages, color=color, label=str(agent))
+			ax.scatter(used_settings['scrambling_depths'], win_percentages, color=color, label=agent)
 		ax.legend()
 		ax.set_ylim([-5, 105])
 		ax.grid(True)
 		ax.set_title(title if title else (f"Percentage of cubes solved in {eval_settings[first_key]['max_time']:.2f} seconds" if times_equal else "Cubes solved"))
 		fig.tight_layout()
 
-		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_winrates.png")
 		plt.savefig(path)
 		plt.clf()
 
 		return path
 
-	@staticmethod
-	def _sol_length_boxplots(eval_results: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
+	@classmethod
+	def _sol_length_boxplots(cls, eval_results: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
 		# Solution length boxplots
 		plt.rcParams.update(rc_params_small)
 		max_width = 2
@@ -237,7 +238,8 @@ class Evaluator:
 
 			try:
 				agent, results = agents[i], agent_results[i]
-				ax.set_title(str(agent) if axes.size > 1 else "Solution lengths for " + str(agent))
+				assert type(agent) == str, str(type(agent))
+				ax.set_title(agent if axes.size > 1 else "Solution lengths for " + agent)
 				results = [depth[depth != -1] for depth in results]
 				ax.boxplot(results)
 				ax.grid(True)
@@ -252,25 +254,38 @@ class Evaluator:
 			fig.suptitle("Solution lengths")
 		fig.tight_layout()
 		fig.subplots_adjust(top=0.88)
-		os.makedirs(save_dir, exist_ok=True)
 		path = os.path.join(save_dir, "eval_sollengths.png")
 		plt.savefig(path)
 		plt.clf()
 
 		return path
 
-	@staticmethod
-	def _time_winrate_plot(eval_results: dict, eval_times: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
+	@classmethod
+	def _time_winrate_plot(cls, eval_results: dict, eval_times: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
 		# Make a (time spent, winrate) plot
-		# for (agent, res), times in zip(eval_results.items(), eval_times.values()):
-		# 	sort_idcs = np.argsort(times)
-		# 	wins_and_times[agent]
-		pass
-
-	@staticmethod
-	def _S_hist(eval_results: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
+		plt.figure(figsize=(19.2, 10.8))
+		for (agent, res), times, colour in zip(eval_results.items(), eval_times.values(), colours):
+			sort_idcs = np.argsort(times[-1])  # Have lowest usage times first
+			wins, times = np.array([0, *(res!=-1)[-1, sort_idcs]]), [0, *times[-1, sort_idcs]]  # Delve too greedily and too deep into the cube
+			cumulative_winrate = np.cumsum(wins) / len(wins) * 100
+			plt.plot(times, cumulative_winrate, "o-", linewidth=3, color=colour, label=agent)
+		plt.xlabel("Time used [s]")
+		plt.ylabel("Winrate [%]")
+		plt.ylim([-5, 105])
+		plt.legend(loc=2)
+		plt.title("Winrate over time used for solving")
+		plt.grid(True)
+		plt.tight_layout()
+		path = os.path.join(save_dir, "time_winrate.png")
+		plt.savefig(path)
+		plt.clf()
+		
+		return path
+		
+	@classmethod
+	def _S_hist(cls, eval_results: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
 		# Histograms of S
-		games_equal, times_equal = Evaluator.check_equal_settings(eval_settings)
+		games_equal, times_equal = cls.check_equal_settings(eval_settings)
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
 		sss = np.array([Evaluator.S_dist(results, eval_settings[agent]['scrambling_depths']) for i, (agent, results) in enumerate(eval_results.items())])
