@@ -375,7 +375,7 @@ class Train:
 			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depth {self.evaluator.scrambling_depths[0]} in {self.evaluator.max_time:.2f} seconds", color=color)
 			bernoulli_errors = bernoulli_error(np.array(self.sol_percents), self.evaluator.n_games, alpha=0.05)
 			reward_ax.errorbar(self.evaluation_rollouts, self.sol_percents, bernoulli_errors, fmt="-o",
-				capsize=10, color=color, label="Fraction of cubes solved")
+				capsize=10, color=color, label="Solve rate (approx. 95 % CI)")
 			reward_ax.tick_params(axis='y', labelcolor=color)
 			h2, l2 = reward_ax.get_legend_handles_labels()
 			h1 += h2
