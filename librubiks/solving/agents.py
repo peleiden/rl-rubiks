@@ -489,7 +489,7 @@ class MCTS(DeepAgent):
 			# Find leaves
 			indices_visited, actions_taken = self.find_leaf(time_limit)
 
-		self.action_queue = deque(indices_visited)  # Generates a best guess action queue in case of no solution
+		self.action_queue = deque(actions_taken)  # Generates a best guess action queue in case of no solution
 
 		return False
 
@@ -539,8 +539,8 @@ class MCTS(DeepAgent):
 		self.tt.profile("Check for solution")
 		solved_substate = np.where(cube.multi_is_solved(substates))[0]
 		if solved_substate.size:
-			solve_action = solved_substate[0]
 			solve_leaf = substate_idcs[solve_action]
+			solve_action = solved_substate[0]
 		self.tt.end_profile("Check for solution")
 
 		# Update policy, value, and W

@@ -168,9 +168,10 @@ class Evaluator:
 		]
 		# Only plot (time, winrate) and S if shapes are the same
 		if cls.check_equal_settings(eval_settings):
+			d = eval_settings[list(eval_settings.keys())[0]]["scrambling_depths"][-1]
 			save_paths.extend([
-				cls._time_winrate_plot(eval_results, eval_times, save_dir, eval_settings, colours),
-				cls._states_winrate_plot(eval_results, eval_states, save_dir, eval_settings, colours),
+				cls._time_winrate_plot(eval_results, eval_times, d, save_dir, eval_settings, colours),
+				cls._states_winrate_plot(eval_results, eval_states, d, save_dir, eval_settings, colours),
 				cls._S_hist(eval_results, save_dir, eval_settings, colours),
 			])
 		
@@ -262,7 +263,7 @@ class Evaluator:
 		return path
 
 	@classmethod
-	def _time_winrate_plot(cls, eval_results: dict, eval_times: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
+	def _time_winrate_plot(cls, eval_results: dict, eval_times: dict, depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
 		# Make a (time spent, winrate) plot
 		plt.figure(figsize=(19.2, 10.8))
 		for (agent, res), times, colour in zip(eval_results.items(), eval_times.values(), colours):
@@ -274,7 +275,7 @@ class Evaluator:
 		plt.ylabel("Winrate [%]")
 		plt.ylim([-5, 105])
 		plt.legend()
-		plt.title("Winrate against time used for solving")
+		plt.title(f"Winrate against time used for solving at depth {depth}")
 		plt.grid(True)
 		plt.tight_layout()
 		path = os.path.join(save_dir, "time_winrate.png")
@@ -284,7 +285,7 @@ class Evaluator:
 		return path
 
 	@classmethod
-	def _states_winrate_plot(cls, eval_results: dict, eval_states: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
+	def _states_winrate_plot(cls, eval_results: dict, eval_states: dict, depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
 		# Make a (time spent, winrate) plot
 		plt.figure(figsize=(19.2, 10.8))
 		for (agent, res), states, colour in zip(eval_results.items(), eval_states.values(), colours):
@@ -296,7 +297,7 @@ class Evaluator:
 		plt.ylabel("Winrate [%]")
 		plt.ylim([-5, 105])
 		plt.legend()
-		plt.title("Winrate against states seen during solving")
+		plt.title(f"Winrate against states seen during solving at depth {depth}")
 		plt.grid(True)
 		plt.tight_layout()
 		path = os.path.join(save_dir, "states_winrate.png")

@@ -10,6 +10,7 @@ from librubiks.model import Model, ModelConfig
 from librubiks.solving.agents import Agent, RandomSearch, BFS, PolicySearch, ValueSearch, EGVM, MCTS, AStar
 
 def _action_queue_test(state, agent, sol_found):
+	assert all([0 <= x < cube.action_dim for x in agent.action_queue])
 	for action in agent.action_queue:
 		state = cube.rotate(state, *cube.action_space[action])
 	assert cube.is_solved(state) == sol_found
