@@ -278,7 +278,11 @@ class EvalJob:
 		res, states, times = self.evaluator.eval(agent)
 		subfolder = os.path.join(self.location, "evaluation_results")
 		os.makedirs(subfolder, exist_ok=True)
-		paths = [os.path.join(subfolder, f"{name}_results.npy"), os.path.join(subfolder, f"{name}_states_seen.npy"), os.path.join(subfolder, f"{name}_playtimes.npy")]
+		paths = [
+			os.path.join(subfolder, f"{name}_results.npy"),
+			os.path.join(subfolder, f"{name}_states_seen.npy"),
+			os.path.join(subfolder, f"{name}_playtimes.npy")
+		]
 		np.save(paths[0], res)
 		np.save(paths[1], states)
 		np.save(paths[2], times)
@@ -288,6 +292,7 @@ class EvalJob:
 	@staticmethod
 	def plot_all_jobs(jobs: list, save_location: str):
 		results, states, times, settings = dict(), dict(), dict(), dict()
+		export_settings = dict()
 		for job in jobs:
 			for agent, (result, states_, times_) in job.agent_results.items():
 				key = agent if len(jobs) == 1 else f"{job.name} - {agent}"
@@ -295,10 +300,14 @@ class EvalJob:
 				states[key] = states_
 				times[key] = times_
 				settings[key] = {
-					'n_games': job.evaluator.n_games,
-					'max_time': job.evaluator.max_time,
-					'scrambling_depths': job.evaluator.scrambling_depths
+					"n_games": job.evaluator.n_games,
+					"max_time": job.evaluator.max_time,
+					"scrambling_depths": job.evaluator.scrambling_depths
 				}
+				export_settings[key] = { **settings[key], "scrambling_depths": job.evaluator.scrambling_depths.tolist() }
+		eval_settings_path = os.path.join(save_location, "evaluation_results", "eval_settings.json")
+		with open(eval_settings_path, "w", encoding="utf-8") as f:
+			json.dump(export_settings, f)
 		savepaths = Evaluator.plot_evaluators(results, states, times, settings, save_location)
-		job.logger(f"Saved plots to {savepaths}")
+		job.logger(f"Saved plots to {savepaths} and settings to {eval_settings_path}")
 

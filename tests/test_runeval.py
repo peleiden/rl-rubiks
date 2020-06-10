@@ -4,6 +4,8 @@ import subprocess
 from tests import MainTest
 from tests.test_hyper_optim import TestOptimizer
 
+from librubiks.solving.agents import BFS
+
 class TestRuneval(MainTest):
 	def test_run(self):
 		run_path = os.path.join( os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  'runeval.py' )
@@ -16,9 +18,12 @@ class TestRuneval(MainTest):
 		subprocess.check_call(args) #Raises error on problems in call
 
 		expected_files = ['evaluation_results', 'eval_sollengths.png', 'eval_winrates.png']
-
 		for fname in expected_files:
 			assert fname in os.listdir(location)
+		expected_result_files = [str(BFS()) + x for x in ["_results.npy", "_states_seen.npy", "_playtimes.npy"]]\
+			+ ["eval_settings.json"]
+		for fname in expected_result_files:
+			assert fname in os.listdir(os.path.join(location, "evaluation_results"))
 
 		# DeepAgent + Optimization hyper parameter test
 		to = TestOptimizer()
