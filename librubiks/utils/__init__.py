@@ -10,6 +10,7 @@ try:
 except ModuleNotFoundError:
 	has_git = False
 
+
 def set_seeds():
 	torch.manual_seed(0)
 	torch.cuda.manual_seed(0)
@@ -20,11 +21,7 @@ def set_seeds():
 	random.seed(0)
 
 
-_quick_zs = {
-	0.1  : 1.6448536269514722,
-	0.05 : 1.959963984540054,
-	0.01 : 2.5758293035489004,
-}
+_quick_zs = { 0.1 : 1.6448536269514722, 0.05 : 1.959963984540054, 0.01 : 2.5758293035489004 }
 def bernoulli_error(p: float, n: int, alpha: float, stringify: bool=False):
 	try: z = _quick_zs[alpha]
 	except KeyError: z = norm.ppf(1-alpha/2)
@@ -32,12 +29,12 @@ def bernoulli_error(p: float, n: int, alpha: float, stringify: bool=False):
 	if stringify: return f"+/- {error*100:.0f} %"
 	return  error
 
+
 def get_commit():
 	if has_git:
 		repo = git.Repo(".")  # TODO: Search upwards in directories
 		return str(repo.head.commit)
-	return "Unknown (install GitPython to get this)"
-
+	return "Unknown (install GitPython to get the commit logged)"
 
 
 def get_timestamp(for_file=False):
