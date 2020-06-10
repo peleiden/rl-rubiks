@@ -29,7 +29,7 @@ class TestAgents(MainTest):
 
 	def _test_agents(self, agent: Agent):
 		state, _, _ = cube.scramble(4)
-		solution_found  = agent.search(state, .01)
+		solution_found  = agent.search(state, .05)
 		for action in agent.action_queue:
 			state = cube.rotate(state, *cube.action_space[action])
 		assert solution_found == cube.is_solved(state)

@@ -170,6 +170,7 @@ class Evaluator:
 		if cls.check_equal_settings(eval_settings):
 			save_paths.extend([
 				cls._time_winrate_plot(eval_results, eval_times, save_dir, eval_settings, colours),
+				cls._states_winrate_plot(eval_results, eval_states, save_dir, eval_settings, colours),
 				cls._S_hist(eval_results, save_dir, eval_settings, colours),
 			])
 		
@@ -272,11 +273,33 @@ class Evaluator:
 		plt.xlabel("Time used [s]")
 		plt.ylabel("Winrate [%]")
 		plt.ylim([-5, 105])
-		plt.legend(loc=2)
-		plt.title("Winrate over time used for solving")
+		plt.legend()
+		plt.title("Winrate against time used for solving")
 		plt.grid(True)
 		plt.tight_layout()
 		path = os.path.join(save_dir, "time_winrate.png")
+		plt.savefig(path)
+		plt.clf()
+		
+		return path
+
+	@classmethod
+	def _states_winrate_plot(cls, eval_results: dict, eval_states: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
+		# Make a (time spent, winrate) plot
+		plt.figure(figsize=(19.2, 10.8))
+		for (agent, res), states, colour in zip(eval_results.items(), eval_states.values(), colours):
+			sort_idcs = np.argsort(states[-1])  # Have lowest usage times first
+			wins, states = (res!=-1)[-1, sort_idcs], states[-1, sort_idcs]  # Delve too greedily and too deep into the cube
+			cumulative_winrate = np.cumsum(wins) / len(wins) * 100
+			plt.plot(states, cumulative_winrate, "o-", linewidth=3, color=colour, label=agent)
+		plt.xlabel("States explored [s]")
+		plt.ylabel("Winrate [%]")
+		plt.ylim([-5, 105])
+		plt.legend()
+		plt.title("Winrate against states seen during solving")
+		plt.grid(True)
+		plt.tight_layout()
+		path = os.path.join(save_dir, "states_winrate.png")
 		plt.savefig(path)
 		plt.clf()
 		
