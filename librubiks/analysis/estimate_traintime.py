@@ -6,10 +6,10 @@ import numpy as np
 
 from runtrain import options
 from librubiks.jobs import TrainJob
-from librubiks.utils import seedsetter, Logger, Parser, TickTock
+from librubiks.utils import set_seeds, Logger, Parser, TickTock
 
 if __name__ == "__main__":
-	seedsetter()
+	set_seeds()
 	parser = Parser(options, description="Estimate the amount of times required for given jobs", name="train")
 	estimated_runtime = 0
 	tt = TickTock()

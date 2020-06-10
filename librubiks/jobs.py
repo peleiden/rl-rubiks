@@ -103,10 +103,6 @@ class TrainJob:
 	@with_used_repr
 	def execute(self):
 
-		# Clears directory to avoid clutter and mixing of experiments
-		rmtree(self.location, ignore_errors=True)
-		os.makedirs(self.location)
-
 		# Sets representation
 		self.logger.section(f"Starting job:\n{self.name} with {'20x24' if get_is2024() else '6x8x6'} representation\nLocation {self.location}\nCommit: {get_commit()}")
 
@@ -158,6 +154,21 @@ class TrainJob:
 		np.save(f"{datapath}/evaluations.npy", train.sol_percents)
 
 		return train.train_rollouts, train.train_losses
+
+	@staticmethod
+	def clean_dir(loc: str):
+		"""
+		Cleans a training directory except for train_config.ini, the content of which is also returned
+		"""
+		tcpath = f"{loc}/train_config.ini"
+		with open(tcpath, encoding="utf-8") as f:
+			content = f.read()
+		rmtree(loc)
+		os.mkdir(loc)
+		with open(f"{loc}/train_config.ini", "w", encoding="utf-8") as f:
+			f.write(content)
+		return content
+
 
 class EvalJob:
 	is2024: bool

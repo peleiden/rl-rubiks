@@ -9,7 +9,7 @@ import json # For print
 import numpy as np
 from bayes_opt import BayesianOptimization, UtilityFunction
 
-from librubiks.utils import Logger, NullLogger, seedsetter
+from librubiks.utils import Logger, NullLogger, set_seeds
 
 from librubiks.solving.evaluation import Evaluator
 
@@ -139,7 +139,7 @@ def agent_optimize():
 	python runeval.py --location example/ --optimized_params True
 	```
 	"""
-	seedsetter()
+	set_seeds()
 
 	#Lot of overhead just for default argument niceness: latest model is latest
 	from runeval import train_folders

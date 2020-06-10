@@ -5,7 +5,7 @@ import numpy as np
 from librubiks import gpu, cube, rc_params
 from librubiks.model import Model
 from librubiks.solving.agents import MCTS
-from librubiks.utils import seedsetter, Logger, TickTock, TimeUnit
+from librubiks.utils import set_seeds, Logger, TickTock, TimeUnit
 
 np.set_printoptions(precision=4, threshold=np.inf)
 plt.rcParams.update(rc_params)
@@ -93,7 +93,7 @@ def analyse_time_distribution(depth: int, c: float):
 
 
 if __name__ == "__main__":
-	seedsetter()
+	set_seeds()
 	time_limit = 1
 	n = 100
 	default_vars = { "depth": 100, "c": 1 }

@@ -1,12 +1,12 @@
 import os
 from shutil import rmtree
-from librubiks.utils import seedsetter
+from librubiks.utils import set_seeds
 
 class MainTest:
 	@classmethod
 	def setup_class(cls):
 		os.makedirs("local_tests", exist_ok = True)
-		seedsetter()
+		set_seeds()
 		repo_path = os.path.join( os.path.dirname(os.path.dirname(os.path.abspath(__file__))) )
 
 		if 'PYTHONPATH' not in os.environ: os.environ['PYTHONPATH'] = ''

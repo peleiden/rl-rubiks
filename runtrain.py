@@ -2,7 +2,7 @@ import os
 from shutil import rmtree
 from ast import literal_eval
 
-from librubiks.utils import get_timestamp, Parser, seedsetter
+from librubiks.utils import get_timestamp, Parser, set_seeds
 from librubiks.jobs import TrainJob
 
 ####
@@ -104,17 +104,6 @@ options = {
 	},
 }
 
-def clean_dir(loc: str):
-	"""
-	Cleans a training directory created by runtrain
-	All except the config file is removed
-	"""
-	with open(f"{loc}/train_config.ini") as f:
-		content = f.read()
-	rmtree(loc)
-	os.mkdir(loc)
-	return content
-
 if __name__ == "__main__":
 	description = r"""
 
@@ -130,13 +119,11 @@ __________________________________________________________________
 Start one or more Reinforcement Learning training session(s)
 on the Rubik's Cube using config or CLI arguments.
 """
-	# SET SEED
-	seedsetter()
+	set_seeds()
 
 	parser = Parser(options, description=description, name='train', description_last=True)
-	jobs = [TrainJob(**settings) for settings in  parser.parse()]
-	cfg_content = clean_dir(parser.save_location)
+	parsley = parser.parse()
+	TrainJob.clean_dir(parser.save_location)
+	jobs = [TrainJob(**settings) for settings in parsley]
 	for job in jobs:
 		job.execute()
-	with open(f"{parser.save_location}/train_config.ini", "w") as f:
-		f.write(cfg_content)

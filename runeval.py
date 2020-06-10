@@ -2,7 +2,7 @@ from glob import glob as glob #glob
 
 from ast import literal_eval
 
-from librubiks.utils import Parser, seedsetter
+from librubiks.utils import Parser, set_seeds
 from librubiks.jobs import EvalJob
 
 train_folders = sorted(glob('data/local_train2*')) #Stops working in the next millenium
@@ -116,8 +116,7 @@ is given, data/local_train with newest name is used. If the location
 contains multiple neural networks, the deep agents are evalued for
 each of them.
 """
-	# SET SEED
-	seedsetter()
+	set_seeds()
 
 	parser = Parser(options, description=description, name='eval', description_last='Tue')
 	run_settings = parser.parse()

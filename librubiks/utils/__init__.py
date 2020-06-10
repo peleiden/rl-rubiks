@@ -10,7 +10,7 @@ try:
 except ModuleNotFoundError:
 	has_git = False
 
-def seedsetter():
+def set_seeds():
 	torch.manual_seed(0)
 	torch.cuda.manual_seed(0)
 	torch.cuda.manual_seed_all(0)
