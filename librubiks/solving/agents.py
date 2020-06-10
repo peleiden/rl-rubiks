@@ -233,7 +233,7 @@ class AStar(DeepAgent):
 		self.indices[state.tostring()], self.states[1], self.G[1] = 1, state, 0
 		heapq.heappush( self.open_queue, (0, 1) ) #Given cost 0: Should not matter; just to avoid np.empty weirdness
 
-		while self.tt.tock() < time_limit and len(self) + self.expansions <= max_states:
+		while self.tt.tock() < time_limit and len(self) + self.expansions * cube.action_dim <= max_states:
 			self.tt.profile("Remove nodes from open priority queue")
 			n_remove = min( len(self.open_queue), self.expansions )
 			expand_idcs = np.array([ heapq.heappop(self.open_queue)[1] for _ in range(n_remove) ], dtype=int)
@@ -555,7 +555,7 @@ class MCTS(DeepAgent):
 		self.tt.profile("Update P, V, and W")
 		self.P[new_substate_idcs] = p
 		self.V[new_substate_idcs] = v
-		
+
 		best_substate_v = v.max()
 		self.W[leaf_index] = np.maximum(self.V[self.neighbors[leaf_index]], self.V[leaf_index])
 		self.W[new_substate_idcs] = np.tile(v, (cube.action_dim, 1)).T
