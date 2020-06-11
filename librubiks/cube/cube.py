@@ -239,6 +239,7 @@ class _Cube2024:
 	maps = get_tensor_map(dtype)
 	corner_side_idcs = np.array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 	corner_633map, side_633map = get_633maps(F, B, T, D, L, R)
+	oh_idcs = np.arange(20) * 24
 
 	@classmethod
 	def rotate(cls, state: np.ndarray, face: int, direction: int):
@@ -261,20 +262,19 @@ class _Cube2024:
 		states = states + maps[idcs, corners_sides, states.ravel()].reshape((len(states), 20))
 		return states
 
-	@staticmethod
-	def as_oh(states: np.ndarray):
+	@classmethod
+	def as_oh(cls, states: np.ndarray):
 		# Takes in n states and returns an n x 480 one-hot tensor
 		if len(states.shape) == 1:
 			oh = torch.zeros(1, 480, device=gpu)
-			idcs = np.arange(20) * 24 + states
+			idcs = cls.oh_idcs + states
 			oh[0, idcs] = 1
 		else:
 			oh = torch.zeros(states.shape[0], 480, device=gpu)
-			idcs = np.arange(20) * 24 + states
-			all_idcs = np.repeat(np.arange(len(states)), 20)
-			oh[all_idcs, idcs.ravel()] = 1
+			idcs = cls.oh_idcs + states
+			all_idcs = np.broadcast_to(np.arange(len(states)), (20, len(states)))
+			oh[all_idcs.T.ravel(), idcs.ravel()] = 1
 		return oh
-
 
 	@classmethod
 	def as633(cls, state: np.ndarray):
