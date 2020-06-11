@@ -365,7 +365,7 @@ class _Cube686:
 		# This representation is already one-hot encoded, so only ravelling is done
 		if len(states.shape) == 3:
 			states = np.expand_dims(states, 0)
-		states = torch.from_numpy(states.reshape(len(states), 288)).to(gpu, torch.float)
+		states = torch.from_numpy(states.reshape(len(states), 288)).to(gpu).float()
 		return states
 
 	@classmethod
