@@ -314,8 +314,6 @@ class Evaluator:
 					highest_y = max(highest_y, y.max())
 			plt.xlim([lower, higher])
 			plt.ylim([0, highest_y*(1+0.1*max(3, len(eval_results)))])  # To make room for labels
-			if xlab == "Solution length":
-				plt.xticks(bins)
 			plt.xlabel(xlab)
 			plt.ylabel("Frequency")
 			plt.title(f"{title} at depth {depth}")
