@@ -81,8 +81,6 @@ class Evaluator:
 		for i, d in enumerate(self.scrambling_depths):
 			self.log_this_depth(res[i], states[i], times[i], d)
 
-		S_mu, S_conf = self.S_confidence(self.S_dist(res, self.scrambling_depths))
-		self.log(f"S: {S_mu:.2f} p/m {S_conf:.2f}", with_timestamp=False)
 		self.log.verbose(f"Evaluation runtime\n{self.tt}")
 
 		return res, states, times
@@ -115,34 +113,6 @@ class Evaluator:
 			f"\tStates seen: Pr. game: {states.mean():.2f} +/- {states.std():.0f} (std.), "\
 			f"Pr. sec.: {states_per_sec.mean():.2f} +/- {states_per_sec.std():.0f} (std.)", with_timestamp=False)
 		self.log(f"\tTime:  {times.mean():.2f} +/- {times.std():.2f} (std.)", with_timestamp=False)
-	
-	@staticmethod
-	def S_dist(res: np.ndarray, scrambling_depths: np.ndarray) -> np.ndarray:
-		"""
-		Computes sum score game wise, that is it returns an array of length self.n_games
-		It assumes that all srambling depths lower that self.scrambling_depths[0] are always solved
-		and that all depths above self.scrambling_depths[-1] are never solved
-		Overall S is the mean of the returned array
-		:param res: Numpy array of evaluation results as returned by self.eval
-		:param scrambling_depths: The scrambling depths used for the evaluation
-		:return: Numpy array of length self.n_games
-		"""
-		solved = res != -1
-		lower_depths = scrambling_depths[0] - 1
-		return solved.sum(axis=0) + lower_depths
-
-	@staticmethod
-	def S_confidence(S_dist: np.ndarray, alpha=0.05):
-		"""
-		Calculates mean and confidence interval assuming normality on a distribution of S values as given by Evaluator.S_dist
-		:param S_dist: numpy array of S values
-		:param alpha: confidence interval
-		:return: mean and z * sigma
-		"""
-		mu = np.mean(S_dist)
-		std = np.std(S_dist)
-		z = stats.norm.ppf(1 - alpha / 2)
-		return mu, z * std / np.sqrt(len(S_dist))
 
 	@classmethod
 	def plot_evaluators(cls, eval_results: dict, eval_states: dict, eval_times: dict, eval_settings: dict, save_dir: str, title: str='') -> list:
@@ -151,7 +121,7 @@ class Evaluator:
 		:param eval_results:   { agent name: [steps to solve, -1 for unfinished] }
 		:param eval_states:    { agent name: [states seen during solving] }
 		:param eval_times:     { agent name: [time spent solving] }
-		:param eval_settings:  { agent name: { 'n_games': int, 'max_time': float, 'scrambling_depths': np.ndarray } }
+		:param eval_settings:  { agent name: { 'n_games': int, 'max_time': float, 'max_states': int, 'scrambling_depths': np.ndarray } }
 		:param save_dir:       Directory in which to save plots
 		:param title:          If given, overrides auto generated title in (depth, winrate) plot
 		:return:               Locations of saved plots
@@ -166,24 +136,23 @@ class Evaluator:
 			cls._plot_depth_win(eval_results, save_dir, eval_settings, colours, title),
 			cls._sol_length_boxplots(eval_results, save_dir, eval_settings, colours),
 		]
-		# Only plot (time, winrate) and S if shapes are the same
-		if cls.check_equal_settings(eval_settings):
-			d = eval_settings[list(eval_settings.keys())[0]]["scrambling_depths"][-1]
+		# Only plot (time, winrate), (states, winrate), and their distributions if settings are the same
+		if all(cls.check_equal_settings(eval_settings)):
+			d = cls._get_a_value(eval_settings)["scrambling_depths"][-1]
 			save_paths.extend([
 				cls._time_states_winrate_plot(eval_results, eval_times, True, d, save_dir, eval_settings, colours),
 				cls._time_states_winrate_plot(eval_results, eval_times, False, d, save_dir, eval_settings, colours),
-				cls._S_hist(eval_results, save_dir, eval_settings, colours),
 			])
+			save_paths.extend(cls._distributions(eval_results, eval_times, eval_states, d, save_dir, eval_settings, colours))
 		
 		return save_paths
 	
 	@classmethod
 	def _plot_depth_win(cls, eval_results: dict, save_dir: str, eval_settings: dict, colours: list, title: str='') -> str:
-		first_key = list(eval_results.keys())[0]  # Used to get the settings if the settings are the same
 		# depth, win%-graph
 		games_equal, times_equal = cls.check_equal_settings(eval_settings)
 		fig, ax = plt.subplots(figsize=(19.2, 10.8))
-		ax.set_ylabel(f"Percentage of {eval_settings[first_key]['n_games']} games won" if games_equal else "Percentage of games won")
+		ax.set_ylabel(f"Percentage of {cls._get_a_value(eval_settings)['n_games']} games won" if games_equal else "Percentage of games won")
 		ax.set_xlabel(f"Scrambling depth: Number of random rotations applied to cubes")
 		ax.locator_params(axis='x', integer=True, tight=True)
 
@@ -197,7 +166,7 @@ class Evaluator:
 		ax.legend()
 		ax.set_ylim([-5, 105])
 		ax.grid(True)
-		ax.set_title(title if title else (f"Percentage of cubes solved in {eval_settings[first_key]['max_time']:.2f} seconds" if times_equal else "Cubes solved"))
+		ax.set_title(title if title else (f"Percentage of cubes solved in {cls._get_a_value(eval_settings)['max_time']:.2f} seconds" if times_equal else "Cubes solved"))
 		fig.tight_layout()
 
 		path = os.path.join(save_dir, "eval_winrates.png")
@@ -265,6 +234,7 @@ class Evaluator:
 	@classmethod
 	def _time_states_winrate_plot(cls, eval_results: dict, eval_times_or_states: dict, is_times: bool, depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
 		# Make a (time spent, winrate) plot if is_times else (states explored, winrate)
+		# Only done for the deepest configuration
 		plt.figure(figsize=(19.2, 10.8))
 		for (agent, res), values, colour in zip(eval_results.items(), eval_times_or_states.values(), colours):
 			sort_idcs = np.argsort(values[-1])  # Have lowest values of times or states first
@@ -285,51 +255,82 @@ class Evaluator:
 		return path
 		
 	@classmethod
-	def _S_hist(cls, eval_results: dict, save_dir: str, eval_settings: dict, colours: list) -> str:
-		# Histograms of S
-		games_equal, times_equal = cls.check_equal_settings(eval_settings)
-		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
-		fig, ax = plt.subplots(figsize=(19.2, 10.8))
-		sss = np.array([Evaluator.S_dist(results, eval_settings[agent]['scrambling_depths']) for i, (agent, results) in enumerate(eval_results.items())])
-		mus, confs = zip(*[Evaluator.S_confidence(ss) for ss in sss])
-		stds = [ss.std() for ss in sss]
-		lower, higher = sss.min() - 2, sss.max() + 2
-		bins = np.arange(lower, higher+1)
-		ax.hist(x           = sss.T,
-				bins        = bins,
-				density     = True,
-				color       = colours,
-				edgecolor   = "black",
-				linewidth   = 2,
-				align       = "left",
-				label       = [f"{agent}: S = {mus[i]:.2f} p/m {confs[i]:.2f}" for i, agent in enumerate(eval_results.keys())])
-		highest_y = 0
-		for i in range(len(eval_results)):
-			if stds[i] > 0:
-				x = np.linspace(lower, higher, 500)
-				y = normal_pdf(x, mus[i], stds[i])
-				x = x[~np.isnan(y)]
-				y = y[~np.isnan(y)]
-				plt.plot(x, y, color="black", linewidth=9)
-				plt.plot(x, y, color=colours[i], linewidth=5)
-				highest_y = max(highest_y, y.max())
-		ax.set_xlim([lower, higher])
-		ax.set_xticks(bins)
-		ax.set_title(f"Single game S distributions (evaluated on {eval_settings[list(eval_settings.keys())[0]]['max_time']:.2f} s per game)"
-		             if times_equal else "Single game S distributions")
-		ax.set_xlabel("S")
-		ax.set_ylim([0, highest_y*(1+0.1*max(3, len(eval_results)))])  # To make room for labels
-		ax.set_ylabel("Frequency")
-		ax.legend(loc=2)
-		path = os.path.join(save_dir, "eval_S.png")
-		plt.savefig(path)
-		plt.clf()
+	def _distributions(cls, eval_results: dict, eval_times: dict, eval_states: dict, depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
+		"""Histograms of solution length, time used, and states explored for won games"""
 
-		return path
+		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
+
+		# Only use won games from the deepest depth
+		won_games    = { agent: (-1, res[-1] != -1) for agent, res in eval_results.items() }
+		if all(w[1].sum() <= 1 for w in won_games.values()): return "No distributions were plotted as not enough cubes were solved"
+		eval_results = { agent: res[won_games[agent]] for agent, res in eval_results.items() if won_games[agent][1].sum() > 1 }
+		eval_times   = { agent: times[won_games[agent]] for agent, times in eval_times.items() if won_games[agent][1].sum() > 1 }
+		eval_states  = { agent: states[won_games[agent]] for agent, states in eval_states.items() if won_games[agent][1].sum() > 1 }
+
+		eval_data    = [eval_results, eval_times, eval_states]
+		x_labels     = ["Solution length", "Time used [s]", "States seen"]
+		titles       = ["Distribution of solution lengths for solved cubes",
+		                "Distribution of time used for solved cubes",
+						"Distribution of states seen for solved cubes"]
+		paths        = [os.path.join(save_dir, x) + ".png" for x in ["solve_length_dist", "time_dist", "state_dist"]]
+		paths_iter   = iter(paths)
+
+		for data, xlab, title, path in zip(eval_data, x_labels, titles, paths):
+			plt.figure(figsize=(19.2, 10.8))
+			agents = list(data.keys())
+			values = [data[agent] for agent in agents]
+			apply_to_values = lambda fun: fun([fun(v) for v in values])
+			mus, sigmas = np.array([v.mean() for v in values]), np.array([v.std() for v in values])
+			min_, max_ = apply_to_values(np.min), apply_to_values(np.max)
+			if xlab == "Solution length":
+				lower, higher = min_ - 2, max_ + 2
+			else:
+				lower = min_ - (max_ - min_) * 0.1
+				higher = max_ + (max_ - min_) * 0.1
+			highest_y = 0
+			for i, (agent, v) in enumerate(zip(agents, values)):
+				bins = np.arange(lower, higher+1) if xlab == "Solution length" else int(np.sqrt(len(v))/2) + 1
+				heights, _, _ = plt.hist(x         = v,
+				                  bins      = bins,
+				                  density   = True,
+				                  color     = colours[i],
+				                  edgecolor = "black",
+				                  linewidth = 2,
+				                  alpha     = 0.5,
+				                  align     = "left" if xlab == "Solution length" else "mid",
+				                  label     = f"{agent}: {mus[i]:.2f}",
+				)
+				highest_y = max(highest_y, np.max(heights))
+			for i in range(len(data)):
+				if sigmas[i] > 0:
+					x = np.linspace(lower, higher, 1000)
+					y = normal_pdf(x, mus[i], sigmas[i])
+					x = x[~np.isnan(y)]
+					y = y[~np.isnan(y)]
+					plt.plot(x, y, color="black", linewidth=9)
+					plt.plot(x, y, color=colours[i], linewidth=5)
+					highest_y = max(highest_y, y.max())
+			plt.xlim([lower, higher])
+			plt.ylim([0, highest_y*(1+0.1*max(3, len(eval_results)))])  # To make room for labels
+			if xlab == "Solution length":
+				plt.xticks(bins)
+			plt.xlabel(xlab)
+			plt.ylabel("Frequency")
+			plt.title(f"{title} at depth {depth}")
+			plt.legend()
+			plt.savefig(next(paths_iter))
+			plt.clf()
+
+		return paths
+	
+	@staticmethod
+	def _get_a_value(obj: dict):
+		"""Returns a vaue from the object"""
+		return obj[list(obj.keys())[0]]
 
 	@staticmethod
 	def check_equal_settings(eval_settings: dict):
-		# Super simple looper just to hide the ugliness
+		"""Super simple looper just to hide the ugliness"""
 		games, times = list(), list()
 		for setting in eval_settings.values():
 			games.append(setting['max_time'])

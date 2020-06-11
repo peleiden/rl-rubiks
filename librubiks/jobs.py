@@ -313,12 +313,14 @@ class EvalJob:
 				settings[key] = {
 					"n_games": job.evaluator.n_games,
 					"max_time": job.evaluator.max_time,
-					"scrambling_depths": job.evaluator.scrambling_depths
+					"max_states": job.evaluator.max_states,
+					"scrambling_depths": job.evaluator.scrambling_depths,
 				}
 				export_settings[key] = { **settings[key], "scrambling_depths": job.evaluator.scrambling_depths.tolist() }
-		eval_settings_path = os.path.join(save_location, "evaluation_results", "eval_settings.json")
+		eval_settings_path = os.path.join(save_location, "eval_settings.json")
 		with open(eval_settings_path, "w", encoding="utf-8") as f:
-			json.dump(export_settings, f)
+			json.dump(export_settings, f, indent=4)
 		savepaths = Evaluator.plot_evaluators(results, states, times, settings, save_location)
-		job.logger(f"Saved plots to {savepaths} and settings to {eval_settings_path}")
+		joinedpaths = "\n".join(savepaths)
+		job.logger(f"Saved settings to {eval_settings_path} and plots to\n{joinedpaths}")
 

@@ -17,11 +17,11 @@ class TestRuneval(MainTest):
 		for k, v in run_settings.items(): args.extend([f'--{k}', str(v)])
 		subprocess.check_call(args) #Raises error on problems in call
 
-		expected_files = ['evaluation_results', 'eval_sollengths.png', 'eval_winrates.png', 'time_winrate.png', 'states_winrate.png']
+		expected_files = ['evaluation_results', 'eval_sollengths.png', 'eval_winrates.png', 'time_winrate.png',
+		                  'states_winrate.png', 'solve_length_dist.png', 'time_dist.png', 'state_dist.png', 'eval_settings.json']
 		for fname in expected_files:
 			assert fname in os.listdir(location)
-		expected_result_files = [str(BFS()) + x for x in ["_results.npy", "_states_seen.npy", "_playtimes.npy"]]\
-			+ ["eval_settings.json"]
+		expected_result_files = [str(BFS()) + x for x in ["_results.npy", "_states_seen.npy", "_playtimes.npy"]]
 		for fname in expected_result_files:
 			assert fname in os.listdir(os.path.join(location, "evaluation_results"))
 
