@@ -224,6 +224,7 @@ class Train:
 					best_net = net.clone()
 					self.log(f"Updated best net with solve rate {eval_reward*100:.2f} % at depth {self.evaluator.scrambling_depths}")
 
+		self.log.section("Finished training")
 		if len(self.evaluation_rollouts):
 			self.log(f"Best net solves {best_solve*100:.2f} % of games at depth {self.evaluator.scrambling_depths}")
 		self.log.verbose("Training time distribution")
