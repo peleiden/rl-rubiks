@@ -557,7 +557,7 @@ class MCTS(DeepAgent):
 		self.V[new_substate_idcs] = v
 
 		best_substate_v = v.max()
-		self.W[leaf_index] = np.maximum(self.V[self.neighbors[leaf_index]], self.V[leaf_index])
+		self.W[leaf_index] = self.V[self.neighbors[leaf_index]]
 		self.W[new_substate_idcs] = np.tile(v, (cube.action_dim, 1)).T
 		self.W[visited_states_idcs[:-1], actions_taken] = np.maximum(self.W[visited_states_idcs[:-1], actions_taken], best_substate_v)
 		self.tt.end_profile("Update P, V, and W")
