@@ -145,7 +145,7 @@ class Evaluator:
 				cls._time_states_winrate_plot(eval_results, eval_times, True, d, save_dir, eval_settings, colours),
 				cls._time_states_winrate_plot(eval_results, eval_states, False, d, save_dir, eval_settings, colours),
 			])
-			save_paths.extend(cls._distributions(eval_results, eval_times, eval_states, d, save_dir, eval_settings, colours))
+			save_paths.extend(cls._distribution_plots(eval_results, eval_times, eval_states, d, save_dir, eval_settings, colours))
 		
 		return save_paths
 	
@@ -238,13 +238,16 @@ class Evaluator:
 		# Make a (time spent, winrate) plot if is_times else (states explored, winrate)
 		# Only done for the deepest configuration
 		plt.figure(figsize=(19.2, 10.8))
+		max_value = 0
 		for (agent, res), values, colour in zip(eval_results.items(), eval_times_or_states.values(), colours):
 			sort_idcs = np.argsort(values[-1])  # Have lowest values of times or states first
 			wins, values = (res!=-1)[-1, sort_idcs], values[-1, sort_idcs]  # Delve too greedily and too deep into the cube
+			max_value = max(max_value, values.max())
 			cumulative_winrate = np.cumsum(wins) / len(wins) * 100
 			plt.plot(values, cumulative_winrate, "o-", linewidth=3, color=colour, label=agent)
 		plt.xlabel("Time used [s]" if is_times else "States explored")
 		plt.ylabel("Winrate [%]")
+		plt.xlim([-0.05*max_value, 1.05*max_value])
 		plt.ylim([-5, 105])
 		plt.legend()
 		plt.title(f"Winrate against {'time used for' if is_times else 'states seen during'} solving at depth {depth}")
@@ -257,7 +260,7 @@ class Evaluator:
 		return path
 		
 	@classmethod
-	def _distributions(cls, eval_results: dict, eval_times: dict, eval_states: dict, depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
+	def _distribution_plots(cls, eval_results: dict, eval_times: dict, eval_states: dict, depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
 		"""Histograms of solution length, time used, and states explored for won games"""
 
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
