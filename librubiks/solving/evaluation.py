@@ -141,7 +141,7 @@ class Evaluator:
 			d = cls._get_a_value(eval_settings)["scrambling_depths"][-1]
 			save_paths.extend([
 				cls._time_states_winrate_plot(eval_results, eval_times, True, d, save_dir, eval_settings, colours),
-				cls._time_states_winrate_plot(eval_results, eval_times, False, d, save_dir, eval_settings, colours),
+				cls._time_states_winrate_plot(eval_results, eval_states, False, d, save_dir, eval_settings, colours),
 			])
 			save_paths.extend(cls._distributions(eval_results, eval_times, eval_states, d, save_dir, eval_settings, colours))
 		
