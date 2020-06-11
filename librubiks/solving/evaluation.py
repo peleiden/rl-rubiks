@@ -96,15 +96,17 @@ class Evaluator:
 		share_completed = np.count_nonzero(res!=-1)*100/len(res)
 		won_games = res[res!=-1]
 		self.log(f"Scrambling depth {depth}", with_timestamp=False)
-		self.log(f"\tShare completed: {share_completed:.2f} % {bernoulli_error(share_completed/100, len(res), 0.05, stringify=True)} (approx. 95 % CI)", with_timestamp=False)
+		self.log(
+			f"\tShare completed: {share_completed:.2f} % {bernoulli_error(share_completed/100, len(res), 0.05, stringify=True)} (approx. 95 % CI)",
+			with_timestamp=False
+		)
 		if won_games.size:
 			mean_turns = won_games.mean()
 			median_turns = np.median(won_games)
 			std_turns = won_games.std()
 			self.log(
-				f"\tTurns to win: "\
-				f"{mean_turns:.2f} +/- {std_turns:.1f} (std.), Median: {median_turns:.0f}"
-				, with_timestamp=False
+				f"\tTurns to win: {mean_turns:.2f} +/- {std_turns:.1f} (std.), Median: {median_turns:.0f}",
+				with_timestamp=False
 			)
 
 		safe_times = times != 0
@@ -289,7 +291,7 @@ class Evaluator:
 				higher = max_ + (max_ - min_) * 0.1
 			highest_y = 0
 			for i, (agent, v) in enumerate(zip(agents, values)):
-				bins = np.arange(lower, higher+1) if xlab == "Solution length" else int(np.sqrt(len(v))/2) + 1
+				bins = np.arange(lower, higher+1) if xlab == "Solution length" else int(np.sqrt(len(v))*2) + 1
 				heights, _, _ = plt.hist(x         = v,
 				                  bins      = bins,
 				                  density   = True,
