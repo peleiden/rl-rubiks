@@ -1,4 +1,5 @@
 import os
+import sys
 
 import argparse
 from glob import glob as glob #glob
@@ -9,7 +10,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 
+from librubiks import rc_params
 from librubiks.utils import Logger
+plt.rcParams.update(rc_params)
 
 class StatisticalComparison:
 	def __init__(self, path: str, log: Logger, compare_all: bool = False):
@@ -21,7 +24,7 @@ class StatisticalComparison:
 		self.results = None
 
 	def dataload(self):
-		""" Loads data from  path self.p """
+		""" Loads data from path self.p """
 		self.names = self._check_agents(self.p)
 		if not self.names:
 			self.p = os.path.join(self.p, 'evaluation_results')
@@ -33,6 +36,7 @@ class StatisticalComparison:
 				choices = "\n".join(f'{i}: {f}' for i, f in enumerate(self.names))
 				chosen = [ int(input(f"Please choose {w} agent (give index): {choices}")) for w in ('first', 'second') ]
 				self.names = [ self.names[i] for i in chosen ]
+		
 		self.results = [ np.load(os.path.join(self.p, f"{name}_results.npy")) for name in self.names ]
 		self.log(f"Results loaded for agents\n\t{self.names}\nfrom path\n\t{self.p}")
 
@@ -116,20 +120,24 @@ class StatisticalComparison:
 		"""Check normality of solution lengths"""
 		for i, result in enumerate(self.results):
 			result, name = result[result!=-1], self.names[i]
-			plt.figure(figsize=(10,10))
+			plt.figure(figsize=(15, 10))
+			plt.subplot(121)
+			Z = (result - result.mean()) / (result.std(ddof=1) + 1e-6)
+			(osm, osr), (a, b, r) = stats.probplot(Z, dist="norm")
+			plt.scatter(osm, osr, 4)
+			x = np.array([osm.min() - 0.05 * (osm.max() - osm.min()), osm.max() + 0.05 * (osm.max() - osm.min())])
+			y = a * x + b
+			plt.plot(x, y, linewidth=5)
+			plt.title("QQplot")
 
-			plt.subplot(2,2,1)
-			Z = (result-result.mean())/(result.std(ddof=1) + 1e-6)
-			stats.probplot(Z, dist="norm", plot=plt)
-			plt.title("QQplot of data")
-
-			plt.subplot(2,2,2)
+			plt.subplot(122)
 			plt.title(f"Histogram: {result.size} data points")
 			plt.xlabel("Solution lengths")
 			plt.hist(result, density=True, align="left", edgecolor="black")
 			x = np.linspace(*plt.xlim(), 1000)
 			p = stats.norm.pdf(x, result.mean(), result.std())
-			plt.plot(x, p, linewidth=2)
+			plt.plot(x, p, linewidth=9, color="black")
+			plt.plot(x, p, linewidth=5)
 
 			means = np.array(self.bootstrap_means(result, k))
 			plt.subplot(2,2,3)
@@ -149,6 +157,7 @@ class StatisticalComparison:
 			plt.tight_layout()
 			plt.subplots_adjust(top=0.88)
 			plt.savefig(os.path.join(self.p, f"{name}_normality.png"))
+			plt.clf()
 			self.log(f"Normality plot saved for {name}")
 
 	@staticmethod
@@ -168,8 +177,9 @@ class StatisticalComparison:
 
 	@staticmethod
 	def _check_agents(p: str):
+		splitter = "\\" if sys.platform == "win32" else "/"
 		# Files are named "evaluation_results/ASTAR (lambda=0.2, N=100) bignetwork_results.npy"
-		return list({ f.split('/')[-1].split('_')[0] for f in glob(os.path.join(p, "*.npy")) }) #FIXME: Split path better
+		return list({ f.split(splitter)[-1].split('_')[0] for f in glob(os.path.join(p, "*.npy")) }) #FIXME: Split path better
 
 
 def statscompare():
@@ -191,4 +201,5 @@ def statscompare():
 	comp.run_comparisons(alpha=args.alpha)
 	comp.normality_plot()
 
-if __name__ == '__main__': statscompare()
+if __name__ == '__main__':
+	statscompare()
