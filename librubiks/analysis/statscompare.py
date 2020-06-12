@@ -92,10 +92,10 @@ class StatisticalComparison:
 		prop = X.sum() / N.sum()
 		if mu == 0:
 			if P[0] == 1:
-				self.log("Proportions are both at 100%, no analysis can be carried out")
+				self.log("Proportions are both at 100%, no analysis can be carried out", with_timestamp=False)
 				return 0, np.array([0,0])
 			if P[1] == 0:
-				self.log("Proportions are both at 0%, no analysis can be carried out")
+				self.log("Proportions are both at 0%, no analysis can be carried out", with_timestamp=False)
 				return 0, np.array([0,0])
 		z_obs = mu / np.sqrt( prop * (1-prop) * (1/N).sum() )
 		p = 2*(1-stats.norm.cdf(abs(z_obs)))
