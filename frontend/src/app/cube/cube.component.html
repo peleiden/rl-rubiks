@@ -93,7 +93,6 @@
         </p>
       </div>
     </div>
-    <p *ngIf="!commonService.status.connectedToServer">Connecting to server (this may take a while the first time)...</p>
     <p *ngIf="commonService.error">{{commonService.error}}</p>
     <p>
       Developed at the Technical University of Denmark by
@@ -102,6 +101,7 @@
         <a href="mailto:s174300@student.dtu.dk">Anne Agathe Pedersen</a>.<br>
       Visit our <a href="https://github.com/peleiden/rl-rubiks" target="_blank">repository on GitHub</a> to try the methods for yourself.
     </p>
+    <p *ngIf="!commonService.status.connectedToServer">Connecting to server (this may take a while the first time)...</p>
   </div>
 
   <!-- Cube -->
