@@ -29,25 +29,44 @@ class StatisticalComparison:
 			chosen = [ int(input(f"Please choose {w} agent (give index): {choices}")) for w in ('first', 'second') ]
 			self.names = [ self.names[i] for i in chosen ]
 		self.results = [ np.load(os.path.join(self.p, f"{name}_results.npy")) for name in self.names ]
-		self.log(f"Results loaded for agents {self.names}from path\n{self.p}")
+		self.log(f"Results loaded for agents\n\t{self.names}\nfrom path\n\t{self.p}")
 
 	def length_ttest(self, alpha: float):
 		""" Welch T test """
+		self.log.section("Solution length comparison")
 		solution_lengths = [r[r != -1] for r in self.results]
-		t_obs, p = stats.ttest_ind(*solution_lengths, equal_var=False)
+		V = np.array([s.var(ddof=1) for s in solution_lengths])
+		M = np.array([s.mean() for s in solution_lengths])
+		N = np.array([s.shape[0] for s in solution_lengths])
 
-		self.log("Welch t-test of H0: mean(sol_lengths_agent1) = mean(sol_lengths_agent2) performed")
+		mu = M[0]-M[1]
+		m_var = (V/N).sum() #V[mean(X)-mean(Y)]
+		df_welch = m_var**2 / ( (V[0]/N[0])**2/(N[0]-1) + (V[1]/N[1])**2/(N[1]-1))
+
+		t_obs = (mu)/np.sqrt(m_var)
+		p = 2*(1-stats.t.cdf(abs(t_obs), df=df_welch))
+
+		qt = stats.t.ppf(1-alpha/2, df=df_welch)
+		mean_error = qt * np.sqrt(m_var)
+		CI = mu + np.array([-1, 1]) * mean_error
+
+		 # Brug til tjek:
+		# t_obs, p =
+		self.log("Two-sided Welch t-test of H0: mean(sol_lengths_agent1) = mean(sol_lengths_agent2) performed\n"
+			f"in t-distribution with {df_welch} degrees of freedom")
 		self.log(f"Resulting p value and t test statistic:\n\t {p} {t_obs}")
-		#TODO: Compute confidence interval
-		#TODO: model validation
+		self.log(f"Confidence interval at level {alpha} of difference is\n"
+				f"\t{mu} +/- {mean_error}\n\t(which is {CI})")
+		return p, CI
 
-	def solve_proptest(self, alpha: float):
-		#TODO: DO
-		pass
+
+	def solve_proptest(self, alpha: float): pass
+
+	def validate_model(self): pass
 
 	@staticmethod
 	def _check_agents(p: str):
-		# Files are named "./ASTAR (lambda=0.2, N=100) bignetwork_results.npy"
+		# Files are named "evaluation_results/ASTAR (lambda=0.2, N=100) bignetwork_results.npy"
 		return list({ f.split('/')[-1].split('_')[0] for f in glob(os.path.join(p, "*.npy")) }) #FIXME: Split path better
 
 
@@ -59,7 +78,7 @@ def statscompare():
 	parser = argparse.ArgumentParser(description='Compare two agents by doing t test of solution lengths and Xi-squared test of solve proportions')
 	parser.add_argument('--location', help="Folder containing evaluation results. If exactly two different agents are contained herein,"
 		"these will be compared.\nOtherwise, the user will be prompted", type =str)
-	parser.add_argument('--alpha', help="Significane level used", type=float)
+	parser.add_argument('--alpha', help="Significane level used", type=float, default=0.01)
 
 	args = parser.parse_args()
 
