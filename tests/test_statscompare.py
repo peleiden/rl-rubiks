@@ -8,7 +8,7 @@ from tests import MainTest
 
 
 from librubiks.analysis.statscompare import StatisticalComparison
-from librubiks.utils import NullLogger
+from librubiks.utils import  Logger
 
 class TestStatisticalComparison(MainTest):
 	def test_run(self):
@@ -22,7 +22,7 @@ class TestStatisticalComparison(MainTest):
 		for k, v in run_settings.items(): args.extend([f'--{k}', str(v)])
 		subprocess.check_call(args) #Raises error on problems in call
 
-		expected_files = ['stats.log']
+		expected_files = ['stats.log', 'a_normality.png', 'b_normality.png']
 		for fname in expected_files: assert fname in os.listdir(location)
 
 	def test_statcomp(self):
@@ -31,13 +31,12 @@ class TestStatisticalComparison(MainTest):
 		A[np.arange(100)[p1]] = -1
 		B[np.arange(100)[p2]] = -1
 
-		s = StatisticalComparison(None, NullLogger)
-		s.names = ["a","b"]
-		s.results = [A, B]
+		s = StatisticalComparison(None, Logger('local_tests/a', ''))
 
-		### T test ###
 		_, p_exp = stats.ttest_ind(A[A!=-1], B[B!=-1], equal_var=False)
-		p_gotten, _ = s.length_ttest(0.05)
+		p_gotten, _ = s.length_ttest([A,B], 0.05)
 		assert np.isclose(p_exp, p_gotten)
 
+		p_gotten, _ = s.solve_proptest([A,B], 0.05)
+		assert 0 <= p_gotten <= 1
 
