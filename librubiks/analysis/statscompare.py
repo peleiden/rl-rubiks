@@ -112,17 +112,18 @@ class StatisticalComparison:
 				f"{[int(i) for i in N*P]}, {[int(i) for i in N*(1-P)]}", with_timestamp=False)
 		return p, CI
 
-	def normality_plot(self):
+	def normality_plot(self, k: int = 10000):
 		"""Check normality of solution lengths"""
 		for i, result in enumerate(self.results):
 			result, name = result[result!=-1], self.names[i]
-			plt.figure()
-			plt.subplot(1,2,1)
+			plt.figure(figsize=(10,10))
+
+			plt.subplot(2,2,1)
 			Z = (result-result.mean())/(result.std(ddof=1) + 1e-6)
 			stats.probplot(Z, dist="norm", plot=plt)
-			plt.title("QQplot")
+			plt.title("QQplot of data")
 
-			plt.subplot(1,2,2)
+			plt.subplot(2,2,2)
 			plt.title(f"Histogram: {result.size} data points")
 			plt.xlabel("Solution lengths")
 			plt.hist(result, density=True, align="left", edgecolor="black")
@@ -130,11 +131,31 @@ class StatisticalComparison:
 			p = stats.norm.pdf(x, result.mean(), result.std())
 			plt.plot(x, p, linewidth=2)
 
+			means = np.array(self.bootstrap_means(result, k))
+			plt.subplot(2,2,3)
+			Z = (means-means.mean())/(means.std(ddof=1) + 1e-6)
+			stats.probplot(Z, dist="norm", plot=plt)
+			plt.title("QQplot of bootstrapped means")
+
+			plt.subplot(2,2,4)
+			plt.title(f"Histogram of {k} boostrapped means")
+			plt.xlabel("Mean solution lengths")
+			plt.hist(means, density=True, align="left", edgecolor="black", bins = max(50, k//500))
+			x = np.linspace(*plt.xlim(), 1000)
+			p = stats.norm.pdf(x, means.mean(), means.std())
+			plt.plot(x, p, linewidth=2)
+
 			plt.suptitle(f"Normality for {name}")
 			plt.tight_layout()
 			plt.subplots_adjust(top=0.88)
 			plt.savefig(os.path.join(self.p, f"{name}_normality.png"))
 			self.log(f"Normality plot saved for {name}")
+
+	@staticmethod
+	def bootstrap_means(data: np.ndarray, k: int):
+		""" Boostrap means to check for mean distribution """
+		l = data.size
+		return [data[np.random.randint(0, l-1, l)].mean() for _ in range(k)]
 
 	@staticmethod
 	def fdr_correction(p_vals: np.ndarray):
