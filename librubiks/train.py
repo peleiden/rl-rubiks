@@ -384,8 +384,7 @@ class Train:
 		loss_ax.legend(h1, l1, loc=1)
 
 		fig.tight_layout()
-		title = (f"Training of {name}" if name != "train" else "Training") +\
-		         f" - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*cube.action_dim)} states"
+		title = (f"Training - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*cube.action_dim)} states")
 		plt.title(title)
 		if semi_logy: plt.semilogy()
 		plt.grid(True)
