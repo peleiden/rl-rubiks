@@ -27,7 +27,7 @@ options = {
 		'help':     'The scrambling depths at which to test the model. Can be given as a singel integer for one depth or\n'
 					'Two space-seperated integers (given in string delimeters such as --eval_scrambling "10 25")',
 		# Ugly way to define list of two numbers or single number input or 'deep', such that type('deep') = 0
-		'type':     lambda args: ([int(args.split()[0]), int(args.split()[1])] if len(args.split()) > 1 else [int(args), int(args)+1]) if args != 'deep' else 0,
+		'type':     lambda args: ([int(args.split()[0]), int(args.split()[1])] if len(args.split()) > 1 else [int(args), int(args)+1]) if args != 'deep' else [0],
 	},
 	'games': {
 		'default':  500,

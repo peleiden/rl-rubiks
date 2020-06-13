@@ -124,7 +124,7 @@ class StatisticalComparison:
 				f"{[int(i) for i in N*P]}, {[int(i) for i in N*(1-P)]}", with_timestamp=False)
 		return p, CI
 
-	def normality_plot(self, k: int = 10000):
+	def normality_plot(self, k=10000):
 		"""Check normality of solution lengths"""
 		for i, result in enumerate(self.results):
 			result, name = result[result!=-1], self.names[i]

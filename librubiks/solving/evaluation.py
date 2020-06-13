@@ -151,8 +151,10 @@ class Evaluator:
 				cls._time_states_winrate_plot(eval_results, eval_times, True, d, save_dir, eval_settings, colours),
 				cls._time_states_winrate_plot(eval_results, eval_states, False, d, save_dir, eval_settings, colours),
 			])
-			save_paths.extend(cls._distribution_plots(eval_results, eval_times, eval_states, d, save_dir, eval_settings, colours))
-		
+			p = cls._distribution_plots(eval_results, eval_times, eval_states, d, save_dir, eval_settings, colours)
+			if p != "ERROR":
+				save_paths.extend(p)
+
 		return save_paths
 	
 	@classmethod
@@ -240,14 +242,15 @@ class Evaluator:
 		return path
 
 	@classmethod
-	def _time_states_winrate_plot(cls, eval_results: dict, eval_times_or_states: dict, is_times: bool, depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
+	def _time_states_winrate_plot(cls, eval_results: dict, eval_times_or_states: dict, is_times: bool,
+	                              depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
 		# Make a (time spent, winrate) plot if is_times else (states explored, winrate)
 		# Only done for the deepest configuration
 		plt.figure(figsize=(19.2, 10.8))
 		max_value = 0
 		for (agent, res), values, colour in zip(eval_results.items(), eval_times_or_states.values(), colours):
-			sort_idcs = np.argsort(values[-1])  # Have lowest values of times or states first
-			wins, values = (res!=-1)[-1, sort_idcs], values[-1, sort_idcs]  # Delve too greedily and too deep into the cube
+			sort_idcs = np.argsort(values.ravel())  # Use values from all different depths - mainly for deep evaluation
+			wins, values = (res != -1).ravel()[sort_idcs], values.ravel()[sort_idcs]
 			max_value = max(max_value, values.max())
 			cumulative_winrate = np.cumsum(wins) / len(wins) * 100
 			plt.plot(values, cumulative_winrate, "o-", linewidth=3, color=colour, label=agent)
@@ -256,7 +259,7 @@ class Evaluator:
 		plt.xlim([-0.05*max_value, 1.05*max_value])
 		plt.ylim([-5, 105])
 		plt.legend()
-		plt.title(f"Winrate against {'time used for' if is_times else 'states seen during'} solving at depth {depth}")
+		plt.title(f"Winrate against {'time used for' if is_times else 'states seen during'} solving at depth {depth if depth else '100 - 999'}")
 		plt.grid(True)
 		plt.tight_layout()
 		path = os.path.join(save_dir, "time_winrate.png" if is_times else "states_winrate.png")
@@ -266,14 +269,16 @@ class Evaluator:
 		return path
 		
 	@classmethod
-	def _distribution_plots(cls, eval_results: dict, eval_times: dict, eval_states: dict, depth: int, save_dir: str, eval_settings: dict, colours: list) -> str:
+	def _distribution_plots(cls, eval_results: dict, eval_times: dict, eval_states: dict, depth: int,
+	                        save_dir: str, eval_settings: dict, colours: list) -> str:
 		"""Histograms of solution length, time used, and states explored for won games"""
 
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 
 		# Only use won games from the deepest depth
-		won_games    = { agent: (-1, res[-1] != -1) for agent, res in eval_results.items() }
-		if all(w[1].sum() <= 1 for w in won_games.values()): return "No distributions were plotted as not enough cubes were solved"
+		won_games    = { agent: (res != -1).ravel() for agent, res in eval_results.items() }
+		if all(w[1].sum() <= 1 for w in won_games.values()):
+			return "ERROR"
 		eval_results = { agent: res[won_games[agent]] for agent, res in eval_results.items() if won_games[agent][1].sum() > 1 }
 		eval_times   = { agent: times[won_games[agent]] for agent, times in eval_times.items() if won_games[agent][1].sum() > 1 }
 		eval_states  = { agent: states[won_games[agent]] for agent, states in eval_states.items() if won_games[agent][1].sum() > 1 }
@@ -317,7 +322,7 @@ class Evaluator:
 			plt.ylim([0, highest_y*(1+0.1*max(3, len(eval_results)))])  # To make room for labels
 			plt.xlabel(xlab)
 			plt.ylabel("Frequency")
-			plt.title(f"{title} at depth {depth}")
+			plt.title(f"{title} at depth {depth if depth else '100 - 999'}")
 			plt.legend()
 			plt.savefig(next(paths_iter))
 			plt.clf()
