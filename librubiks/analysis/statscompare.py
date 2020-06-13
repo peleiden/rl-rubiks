@@ -11,8 +11,16 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 
 from librubiks import rc_params
-from librubiks.utils import Logger
+from librubiks.utils import Logger, TickTock
 plt.rcParams.update(rc_params)
+
+def interval(min_, max_, margin=0.05):
+	return np.array([ min_ - margin * (max_ - min_), max_ + margin * (max_ - min_) ])
+
+def linear(a, b, min_, max_, margin=0.05):
+	x = interval(min_, max_, margin)
+	y = a * x + b
+	return x, y
 
 class StatisticalComparison:
 	def __init__(self, path: str, log: Logger, compare_all: bool = False):
@@ -121,37 +129,56 @@ class StatisticalComparison:
 		for i, result in enumerate(self.results):
 			result, name = result[result!=-1], self.names[i]
 			plt.figure(figsize=(15, 10))
-			plt.subplot(121)
+			plt.subplot(221)
 			Z = (result - result.mean()) / (result.std(ddof=1) + 1e-6)
 			(osm, osr), (a, b, r) = stats.probplot(Z, dist="norm")
-			plt.scatter(osm, osr, 4)
-			x = np.array([osm.min() - 0.05 * (osm.max() - osm.min()), osm.max() + 0.05 * (osm.max() - osm.min())])
-			y = a * x + b
-			plt.plot(x, y, linewidth=5)
-			plt.title("QQplot")
+			plt.scatter(osm, osr, s=50, c="blue")
+			x, y = linear(a, b, osm.min(), osm.max())
+			plt.plot(x, y, linewidth=5, color="black")
+			plt.plot(x, y, linewidth=3, color="orange")
+			plt.xlim(x)
+			plt.xlabel("Theoretical quantiles")
+			plt.ylabel("Standardized\nsolution lengths")
+			plt.title("QQ-plot")
 
-			plt.subplot(122)
-			plt.title(f"Histogram: {result.size} data points")
-			plt.xlabel("Solution lengths")
-			plt.hist(result, density=True, align="left", edgecolor="black")
-			x = np.linspace(*plt.xlim(), 1000)
+			plt.subplot(222)
+			plt.hist(result,
+			         bins      = np.arange(result.min()-1, result.max()+2),
+					 density   = True,
+					 align     = "left",
+					 edgecolor = "black")
+			x = np.linspace(*interval(result.min()-1, result.max()+2), 1000)
 			p = stats.norm.pdf(x, result.mean(), result.std())
-			plt.plot(x, p, linewidth=9, color="black")
-			plt.plot(x, p, linewidth=5)
+			plt.plot(x, p, linewidth=7, color="black")
+			plt.plot(x, p, linewidth=4, color="orange")
+			plt.xlim([x.min(), x.max()])
+			plt.xlabel("Solution lengths")
+			plt.ylabel("Frequency")
+			plt.title(f"{TickTock.thousand_seps(result.size)} solution lengths")
 
 			means = np.array(self.bootstrap_means(result, k))
-			plt.subplot(2,2,3)
-			Z = (means-means.mean())/(means.std(ddof=1) + 1e-6)
-			stats.probplot(Z, dist="norm", plot=plt)
-			plt.title("QQplot of bootstrapped means")
+			plt.subplot(223)
+			Z = (means - means.mean()) / (means.std(ddof=1) + 1e-6)
+			(osm, osr), (a, b, r) = stats.probplot(Z, dist="norm")
+			plt.scatter(osm, osr, s=50, c="blue")
+			x, y = linear(a, b, osm.min(), osm.max())
+			plt.plot(x, y, linewidth=5, color="black")
+			plt.plot(x, y, linewidth=3, color="orange")
+			plt.xlim(x)
+			plt.xlabel("Theoretical quantiles")
+			plt.ylabel("Standardized means")
+			plt.title("QQ-plot of bootstrapped means")
 
-			plt.subplot(2,2,4)
-			plt.title(f"Histogram of {k} boostrapped means")
-			plt.xlabel("Mean solution lengths")
-			plt.hist(means, density=True, align="left", edgecolor="black", bins = max(50, k//500))
-			x = np.linspace(*plt.xlim(), 1000)
+			plt.subplot(224)
+			plt.hist(means, bins=max(50, k//500), density=True, align="left", edgecolor="black")
+			x = np.linspace(*interval(means.min(), means.max()), 1000)
 			p = stats.norm.pdf(x, means.mean(), means.std())
-			plt.plot(x, p, linewidth=2)
+			plt.plot(x, p, linewidth=5, color="black")
+			plt.plot(x, p, linewidth=3, color="orange")
+			plt.xlim([x.min(), x.max()])
+			plt.xlabel("Mean solution lengths")
+			plt.ylabel("Frequency")
+			plt.title(f"{TickTock.thousand_seps(k)} boostrapped means")
 
 			plt.suptitle(f"Normality for {name}")
 			plt.tight_layout()

@@ -295,16 +295,8 @@ class Evaluator:
 			highest_y = 0
 			for i, (agent, v) in enumerate(zip(agents, values)):
 				bins = np.arange(lower, higher+1) if xlab == "Solution length" else int(np.sqrt(len(v))*2) + 1
-				heights, _, _ = plt.hist(x         = v,
-				                  bins      = bins,
-				                  density   = True,
-				                  color     = colours[i],
-				                  edgecolor = "black",
-				                  linewidth = 2,
-				                  alpha     = 0.5,
-				                  align     = "left" if xlab == "Solution length" else "mid",
-				                  label     = f"{agent}: {mus[i]:.2f}",
-				)
+				heights, _, _ = plt.hist(x=v, bins=bins, density=True, color=colours[i], edgecolor="black", linewidth=2,
+				                         alpha=0.5, align="left" if xlab == "Solution length" else "mid", label=f"{agent}: {mus[i]:.2f}")
 				highest_y = max(highest_y, np.max(heights))
 			for i in range(len(data)):
 				if sigmas[i] > 0:
