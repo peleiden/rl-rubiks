@@ -23,7 +23,7 @@ download(url % "model-best.pt", net_loc)
 download(url % "config.json", net_loc)
 
 agents = [
-	{ "name": "AStar", "agent": AStar.from_saved(net_loc, use_best=True, lambda_=0.4, expansions=100) },
+	{ "name": "AStar", "agent": AStar.from_saved(net_loc, use_best=True, lambda_=0.4, expansions=50) },
 	{ "name": "MCTS", "agent": MCTS.from_saved(net_loc, use_best=True, c=0.6, search_graph=True) },
 	{ "name": "Greedy policy", "agent": PolicySearch.from_saved(net_loc, use_best=True) },
 	{ "name": "Greedy value", "agent": ValueSearch.from_saved(net_loc, use_best=True) },
