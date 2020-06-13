@@ -157,7 +157,7 @@ def agent_optimize():
 	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
 		type=int, default=100)
 	parser.add_argument('--agent', help='Name of agent corresponding to agent class in librubiks.solving.agents',
-		type=str, default='AStar', choices = ['MCTS', 'AStar'])
+		type=str, default='AStar', choices = ['AStar', 'MCTS', 'EGVM'])
 	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test',
 		type=int, default=100)
 	parser.add_argument('--eval_games', help='Number of games to evaluate at depth',
@@ -194,8 +194,23 @@ def agent_optimize():
 		persistent_params = {
 			'net' : Model.load(args.location, load_best=args.use_best),
 		}
+	elif agent_name == 'EGVM':
+		params = {
+				'epsilon': (0,0.3),
+				'workers': (1, 100),
+				'depth': (1, 1000),
+			}
+
+		def prepper(params):
+			params['workers'] = int(params['workers'])
+			params['depth'] = int(params['depth'])
+			return params
+
+		persistent_params = {
+			'net' : Model.load(args.location, load_best=args.use_best),
+		}
 	else:
-		raise NameError(f"{agent_name} does not correspond to a known agent, please pick either AStar og MCTS")
+		raise NameError(f"{agent_name} does not correspond to a known agent, please pick either AStar, MCTS or EGVM")
 
 	logger = Logger(os.path.join(args.location, f'{agent_name}_optimization.log'), 'Optimization')
 
