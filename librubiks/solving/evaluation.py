@@ -27,13 +27,17 @@ class Evaluator:
 
 		self.tt = TickTock()
 		self.log = logger
-		self.scrambling_depths = np.array(scrambling_depths)
+		# Use array of scrambling of scrambling depths if not deep evaluation else just a one element array with 0
+		self.scrambling_depths = np.array(scrambling_depths) if scrambling_depths != range(0) else np.array([0])
 
 		self.log("\n".join([
 			"Creating evaluator",
 			f"Games per scrambling depth: {self.n_games}",
-			f"Scrambling depths: {scrambling_depths}",
+			f"Scrambling depths: {scrambling_depths if self._isdeep() else 'Uniformly sampled in [100, 999]'}",
 		]))
+
+	def _isdeep(self):
+		return self.scrambling_depths.size == 1 and self.scrambling_depths[0] == 0
 
 	def approximate_time(self):
 		return self.max_time * self.n_games * len(self.scrambling_depths)
@@ -64,6 +68,8 @@ class Evaluator:
 		times = []
 		for d in self.scrambling_depths:
 			for _ in range(self.n_games):
+				if self._isdeep():  # Randomly sample evaluation depth for deep evaluations
+					d = np.random.randint(100, 1000)
 				self.tt.profile(f"Evaluation of {agent}. Depth {d}")
 				r = self._eval_game(agent, d)
 				t = self.tt.end_profile(f"Evaluation of {agent}. Depth {d}")
@@ -86,7 +92,7 @@ class Evaluator:
 		return res, states, times
 
 	def log_this_depth(self, res: np.ndarray, states: np.ndarray, times: np.ndarray, depth: int):
-		"""Logs summary statistics for given deth
+		"""Logs summary statistics for given depth
 
 		:param res:  Vector of results
 		:param states: Vector of seen states for each game
@@ -95,7 +101,7 @@ class Evaluator:
 		"""
 		share_completed = np.count_nonzero(res!=-1)*100/len(res)
 		won_games = res[res!=-1]
-		self.log(f"Scrambling depth {depth}", with_timestamp=False)
+		self.log(f"Scrambling depth {depth if depth else 'deep'}", with_timestamp=False)
 		self.log(
 			f"\tShare completed: {share_completed:.2f} % {bernoulli_error(share_completed/100, len(res), 0.05, stringify=True)} (approx. 95 % CI)",
 			with_timestamp=False

@@ -206,11 +206,10 @@ class EvalJob:
 		assert max_states >= 0
 		assert max_time or max_states
 		scrambling = range(*scrambling)
-		assert scrambling[0] #dirty check for iter and not starting with 0 :)
 		assert isinstance(optimized_params, bool)
 
 		#Create evaluator
-		self.logger = Logger(f"{self.location}/{self.name}.log", name, verbose) #Already creates logger at init to test whether path works
+		self.logger = Logger(f"{self.location}/{self.name}.log", name, verbose)  # Already creates logger at init to test whether path works
 		self.evaluator = Evaluator(n_games=games, max_time=max_time, max_states=max_states, scrambling_depths=scrambling, logger=self.logger)
 
 		#Create agents
