@@ -6,13 +6,14 @@ from tests import MainTest
 from librubiks.solving.hyper_optim import Optimizer, BayesianOptimizer
 from librubiks.model import ModelConfig, Model
 class TestOptimizer(MainTest):
-	# def test_BO(self): #TODO: Find out why this fails with weird arraycheck error in GH actions
-		# def f(params): return -params['x']+42
-
-		# bo = BayesianOptimizer(f, {'x': (0, 42)},  n_restarts=2)
-		# bo.optimize(2)
-		# assert len(bo.score_history) == 2
-		# assert bo.highscore >= bo.score_history[0]
+	def test_BO(self):
+		"""NOTE: This fails on sklearn 0.23"""
+		def f(params): return -params['x']+42
+#
+		bo = BayesianOptimizer(f, {'x': (0, 42)},  n_restarts=2)
+		bo.optimize(2) # WARNING: fails on sklearn 0.23
+		assert len(bo.score_history) == 2
+		assert bo.highscore >= bo.score_history[1]
 
 	def test_agent_optim(self, agents = ['MCTS', 'AStar', 'EGVM']):
 
