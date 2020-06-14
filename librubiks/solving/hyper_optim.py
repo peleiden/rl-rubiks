@@ -158,8 +158,8 @@ def agent_optimize():
 		type=int, default=100)
 	parser.add_argument('--agent', help='Name of agent corresponding to agent class in librubiks.solving.agents',
 		type=str, default='AStar', choices = ['AStar', 'MCTS', 'EGVM'])
-	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test',
-		type=int, default=100)
+	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test. If 0 ',
+		type=int, default=0)
 	parser.add_argument('--eval_games', help='Number of games to evaluate at depth',
 			type = int, default='100')
 	parser.add_argument('--save_optimal', help='If Tue, saves a JSON of optimal hyperparameters usable for runeval',
@@ -219,7 +219,7 @@ def agent_optimize():
 
 	agent = getattr(agents, agent_name)
 
-	evaluator = Evaluator(n_games=args.eval_games, max_time=1, scrambling_depths=[args.depth])
+	evaluator = Evaluator(n_games=args.eval_games, max_time=5, scrambling_depths=range(0))#[args.depth])
 	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
 	optimizer.objective_from_evaluator(evaluator, agent, persistent_params, param_prepper=prepper, optim_lengths=args.optim_lengths)
 	optimizer.optimize(args.iterations)
