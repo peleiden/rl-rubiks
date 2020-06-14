@@ -158,7 +158,7 @@ def agent_optimize():
 		type=int, default=100)
 	parser.add_argument('--agent', help='Name of agent corresponding to agent class in librubiks.solving.agents',
 		type=str, default='AStar', choices = ['AStar', 'MCTS', 'EGVM'])
-	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test. If 0 ',
+	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test.',
 		type=int, default=0)
 	parser.add_argument('--eval_games', help='Number of games to evaluate at depth',
 			type = int, default='100')
@@ -184,7 +184,7 @@ def agent_optimize():
 		}
 	elif agent_name == 'AStar':
 		params = {
-			'lambda_': (0, 1),
+			'lambda_': (0, 0.5),
 			'expansions': (0, 4),
 		}
 		def prepper(params):
