@@ -165,7 +165,7 @@ def agent_optimize():
 			type = int, default='100')
 	parser.add_argument('--save_optimal', help='If Tue, saves a JSON of optimal hyperparameters usable for runeval',
 			type=literal_eval, default=True, choices = [True, False])
-	parser.add_argument('--use_best', help="Set to True to use model-best.pt instead of model.pt.", type=literal_eval, default=False,
+	parser.add_argument('--use_best', help="Set to True to use model-best.pt instead of model.pt.", type=literal_eval, default=True,
 			choices = [True, False])
 	parser.add_argument('--optim_lengths', help="Set to true to optimize against sol percentage / solution length. Else, simply use sol %", type=literal_eval,
 			default=True, choices = [True, False])
