@@ -99,7 +99,7 @@ class BayesianOptimizer(Optimizer):
 			verbose=0,
 		)
 		self.optimizer.set_gp_params(alpha=alpha, n_restarts_optimizer=n_restarts)
-		self.utility = UtilityFunction(kind=acquisition, kappa=2.5, xi=0.05)
+		self.utility = UtilityFunction(kind=acquisition, kappa=2.5, xi=0.2)
 
 		self.logger(f"Created Bayesian Optimizer with alpha={alpha} and {n_restarts} restarts for each optimization. Acquisition function is {acquisition}.")
 
