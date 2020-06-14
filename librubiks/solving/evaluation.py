@@ -275,13 +275,12 @@ class Evaluator:
 
 		normal_pdf = lambda x, mu, sigma: np.exp(-1/2 * ((x-mu)/sigma)**2) / (sigma * np.sqrt(2*np.pi))
 
-		# Only use won games from the deepest depth
 		won_games    = { agent: (res != -1).ravel() for agent, res in eval_results.items() }
-		if all(w[1].sum() <= 1 for w in won_games.values()):
+		if all(w.sum() <= 1 for w in won_games.values()):
 			return "ERROR"
-		eval_results = { agent: res[won_games[agent]] for agent, res in eval_results.items() if won_games[agent][1].sum() > 1 }
-		eval_times   = { agent: times[won_games[agent]] for agent, times in eval_times.items() if won_games[agent][1].sum() > 1 }
-		eval_states  = { agent: states[won_games[agent]] for agent, states in eval_states.items() if won_games[agent][1].sum() > 1 }
+		eval_results = { agent: res.ravel()[won_games[agent]]    for agent, res    in eval_results.items() if won_games[agent].sum() > 1 }
+		eval_times   = { agent: times.ravel()[won_games[agent]]  for agent, times  in eval_times.items()   if won_games[agent].sum() > 1 }
+		eval_states  = { agent: states.ravel()[won_games[agent]] for agent, states in eval_states.items()  if won_games[agent].sum() > 1 }
 
 		eval_data    = [eval_results, eval_times, eval_states]
 		x_labels     = ["Solution length", "Time used [s]", "States seen"]
