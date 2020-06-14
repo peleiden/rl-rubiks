@@ -197,9 +197,9 @@ def agent_optimize():
 		}
 	elif agent_name == 'EGVM':
 		params = {
-				'epsilon': (0, 1),
-				'workers': (1, 2000),
-				'depth': (1, 1000),
+				'epsilon': (0, 0.5),
+				'workers': (1, 1000),
+				'depth': (1, 500),
 			}
 
 		def prepper(params):
