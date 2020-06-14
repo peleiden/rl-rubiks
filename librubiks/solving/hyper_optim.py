@@ -175,13 +175,13 @@ def agent_optimize():
 	agent_name = args.agent
 	if agent_name == 'MCTS':
 		params = {
-			'c': (0.1, 4),
+			'c': (0.1, 100),
 		}
 		def prepper(params): return params
 
 		persistent_params = {
 			'net' : Model.load(args.location, load_best=args.use_best),
-			'search_graph': False,
+			'search_graph': True,
 		}
 	elif agent_name == 'AStar':
 		params = {
