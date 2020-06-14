@@ -174,7 +174,7 @@ def agent_optimize():
 	agent_name = args.agent
 	if agent_name == 'MCTS':
 		params = {
-			'c': (0.1, 1),
+			'c': (0.1, 4),
 		}
 		def prepper(params): return params
 
@@ -196,8 +196,8 @@ def agent_optimize():
 		}
 	elif agent_name == 'EGVM':
 		params = {
-				'epsilon': (0,0.3),
-				'workers': (1, 100),
+				'epsilon': (0, 1),
+				'workers': (1, 2000),
 				'depth': (1, 1000),
 			}
 
