@@ -80,7 +80,7 @@ class TrainAnalysis:
 		# Keeping track of the entropy off on the 12-dimensional log-probability policy-output
 		entropies = [entropy(policy, axis=1) for policy in self.rollout_policy]
 		#Currently:  Mean over all games in entire rollout. Maybe we want it more fine grained later.
-		self.policy_entropies.append(np.mean( [entropy.mean() for entropy in entropies] ))
+		self.policy_entropies.append(np.mean( [np.nanmean(entropy) for entropy in entropies] ))
 		self.rollout_policy = list() #reset for next rollout
 
 		if rollout in self.evaluations:
