@@ -70,9 +70,9 @@ class Evaluator:
 			for _ in range(self.n_games):
 				if self._isdeep():  # Randomly sample evaluation depth for deep evaluations
 					d = np.random.randint(100, 1000)
-				self.tt.profile(f"Evaluation of {agent}. Depth {d if d else 0}")
+				self.tt.profile(f"Evaluation of {agent}. Depth {'100 - 999' if self._isdeep() else d}")
 				r = self._eval_game(agent, d)
-				t = self.tt.end_profile(f"Evaluation of {agent}. Depth {d if d else 0}")
+				t = self.tt.end_profile(f"Evaluation of {agent}. Depth {'100 - 999' if self._isdeep() else d}")
 
 				res.append(r)
 				states.append(len(agent))
