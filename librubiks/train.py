@@ -103,7 +103,7 @@ class Train:
 
 		self.with_analysis = with_analysis
 		if self.with_analysis:
-			self.analysis = TrainAnalysis(self.evaluation_rollouts, self.rollout_games, self.rollout_depth, extra_evals=50, reward_method=reward_method, logger=self.log) #Logger should not be set in standard use
+			self.analysis = TrainAnalysis(self.evaluation_rollouts, self.rollout_games, self.rollout_depth, extra_evals=100, reward_method=reward_method, logger=self.log) #Logger should not be set in standard use
 
 		self.tt = TickTock()
 
