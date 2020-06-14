@@ -360,9 +360,9 @@ class Train:
 
 		colour = "red"
 		loss_ax.set_ylabel("Loss", color=colour)
+		loss_ax.plot(self.train_rollouts, self.train_losses,  linewidth=3,                        color=colour,   label="Training loss")
 		loss_ax.plot(self.train_rollouts, self.policy_losses, linewidth=2, linestyle="dashdot",   color="orange", label="Policy loss")
 		loss_ax.plot(self.train_rollouts, self.value_losses,  linewidth=2, linestyle="dashed",    color="green",  label="Value loss")
-		loss_ax.plot(self.train_rollouts, self.train_losses,  linewidth=2,                        color=colour,   label="Training loss")
 		loss_ax.tick_params(axis='y', labelcolor=colour)
 		loss_ax.set_xlabel(f"Rollout, each of {TickTock.thousand_seps(self.states_per_rollout)} states")
 		loss_ax.set_ylim(np.array([-0.05, 1.2]) * self.train_losses.max())
