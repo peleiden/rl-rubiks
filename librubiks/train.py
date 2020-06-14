@@ -236,12 +236,12 @@ class Train:
 		nstates = self.rollouts * self.rollout_games * self.rollout_depth * cube.action_dim
 		states_per_sec = int(nstates / (adi_time+train_time))
 		self.log("\n".join([
-			f"Total running time:            {self.tt.stringify_time(total_time, TimeUnit.second)}",
-			f"- Training data for ADI:       {self.tt.stringify_time(adi_time, TimeUnit.second)} or {adi_time/total_time*100:.2f} %",
-			f"- Training time:               {self.tt.stringify_time(train_time, TimeUnit.second)} or {train_time/total_time*100:.2f} %",
-			f"- Evaluation time:             {self.tt.stringify_time(eval_time, TimeUnit.second)} or {eval_time/total_time*100:.2f} %",
-			f"States witnessed:              {TickTock.thousand_seps(nstates)}",
-			f"- States per training second:  {TickTock.thousand_seps(states_per_sec)}",
+			f"Total running time:               {self.tt.stringify_time(total_time, TimeUnit.second)}",
+			f"- Training data for ADI:          {self.tt.stringify_time(adi_time, TimeUnit.second)} or {adi_time/total_time*100:.2f} %",
+			f"- Training time:                  {self.tt.stringify_time(train_time, TimeUnit.second)} or {train_time/total_time*100:.2f} %",
+			f"- Evaluation time:                {self.tt.stringify_time(eval_time, TimeUnit.second)} or {eval_time/total_time*100:.2f} %",
+			f"States witnessed incl. substates: {TickTock.thousand_seps(nstates)}",
+			f"- Per training second:            {TickTock.thousand_seps(states_per_sec)}",
 		]))
 
 		return net, best_net
@@ -356,24 +356,24 @@ class Train:
 		Visualizes training by showing training loss + evaluation reward in same plot
 		"""
 		self.log("Making plot of training")
-		ylim = np.array([-0.05, 1.05])
 		fig, loss_ax = plt.subplots(figsize=(19.2, 10.8))
-		loss_ax.set_xlabel(f"Rollout, each of {TickTock.thousand_seps(self.states_per_rollout)} states")
-		loss_ax.set_ylim(ylim*np.max(self.train_losses))
 
 		colour = "red"
-		loss_ax.set_ylabel(f"Cross Entropy + MSE loss (alpha update: {self.alpha_update:.2f})", color = colour)
-		loss_ax.plot(self.train_rollouts, self.train_losses, linewidth=3, label="Training loss", color=colour)
-		loss_ax.plot(self.train_rollouts, self.policy_losses, linewidth=3, linestyle="dashdot", label="Policy loss", color="orange")
-		loss_ax.plot(self.train_rollouts, self.value_losses, linewidth=3, linestyle="dashed", label="Value loss", color="green")
-		loss_ax.tick_params(axis='y', labelcolor = colour)
+		loss_ax.set_ylabel("Loss", color=colour)
+		loss_ax.plot(self.train_rollouts, self.policy_losses, linewidth=2, linestyle="dashdot",   color="orange", label="Policy loss")
+		loss_ax.plot(self.train_rollouts, self.value_losses,  linewidth=2, linestyle="dashed",    color="green",  label="Value loss")
+		loss_ax.plot(self.train_rollouts, self.train_losses,  linewidth=2,                        color=colour,   label="Training loss")
+		loss_ax.tick_params(axis='y', labelcolor=colour)
+		loss_ax.set_xlabel(f"Rollout, each of {TickTock.thousand_seps(self.states_per_rollout)} states")
+		loss_ax.set_ylim(np.array([-0.05, 1.2]) * self.train_losses.max())
 		h1, l1 = loss_ax.get_legend_handles_labels()
 
 		if len(self.evaluation_rollouts):
 			color = 'blue'
+			ylim = np.array([-0.05, 1.2])
 			reward_ax = loss_ax.twinx()
 			reward_ax.set_ylim(ylim)
-			reward_ax.set_ylabel(f"Fraction of {self.evaluator.n_games} won when evaluating at depth {self.evaluator.scrambling_depths[0]} in {self.evaluator.max_time:.2f} seconds", color=color)
+			reward_ax.set_ylabel(f"Cubes solved at depth {self.evaluator.scrambling_depths[0]} in {self.evaluator.max_time:.2f} s [%]", color=color)
 			bernoulli_errors = bernoulli_error(np.array(self.sol_percents), self.evaluator.n_games, alpha=0.05)
 			reward_ax.errorbar(self.evaluation_rollouts, self.sol_percents, bernoulli_errors, fmt="-o",
 				capsize=10, color=color, label="Solve rate (approx. 95 % CI)")
@@ -383,9 +383,9 @@ class Train:
 			l1 += l2
 		loss_ax.legend(h1, l1, loc=1)
 
-		fig.tight_layout()
-		title = (f"Training - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth*cube.action_dim)} states")
+		title = (f"Training - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth)} states")
 		plt.title(title)
+		fig.tight_layout()
 		if semi_logy: plt.semilogy()
 		plt.grid(True)
 
