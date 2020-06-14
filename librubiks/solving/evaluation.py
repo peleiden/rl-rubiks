@@ -308,15 +308,16 @@ class Evaluator:
 				heights, _, _ = plt.hist(x=v, bins=bins, density=True, color=colours[i], edgecolor="black", linewidth=2,
 				                         alpha=0.5, align="left" if xlab == "Solution length" else "mid", label=f"{agent}: {mus[i]:.2f}")
 				highest_y = max(highest_y, np.max(heights))
-			for i in range(len(data)):
-				if sigmas[i] > 0:
-					x = np.linspace(lower, higher, 1000)
-					y = normal_pdf(x, mus[i], sigmas[i])
-					x = x[~np.isnan(y)]
-					y = y[~np.isnan(y)]
-					plt.plot(x, y, color="black", linewidth=9)
-					plt.plot(x, y, color=colours[i], linewidth=5)
-					highest_y = max(highest_y, y.max())
+			if xlab == "Solution length":
+				for i in range(len(data)):
+					if sigmas[i] > 0:
+						x = np.linspace(lower, higher, 1000)
+						y = normal_pdf(x, mus[i], sigmas[i])
+						x = x[~np.isnan(y)]
+						y = y[~np.isnan(y)]
+						plt.plot(x, y, color="black", linewidth=9)
+						plt.plot(x, y, color=colours[i], linewidth=5)
+						highest_y = max(highest_y, y.max())
 			plt.xlim([lower, higher])
 			plt.ylim([0, highest_y*(1+0.1*max(3, len(eval_results)))])  # To make room for labels
 			plt.xlabel(xlab)
