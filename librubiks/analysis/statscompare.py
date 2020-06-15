@@ -44,7 +44,7 @@ class StatisticalComparison:
 				choices = "\n".join(f'{i}: {f}' for i, f in enumerate(self.names))
 				chosen = [ int(input(f"Please choose {w} agent (give index): {choices}")) for w in ('first', 'second') ]
 				self.names = [ self.names[i] for i in chosen ]
-		
+
 		self.results = [ np.load(os.path.join(self.p, f"{name}_results.npy")) for name in self.names ]
 		self.log(f"Results loaded for agents\n\t{self.names}\nfrom path\n\t{self.p}")
 
@@ -97,7 +97,7 @@ class StatisticalComparison:
 		""" Test that solve proportions are equal.
 		See method 7.18 in https://02402.compute.dtu.dk/enotes/ """
 		self.log.section("Test of equal solve proportions")
-		X = np.array([(r != 1).sum() for r in results])
+		X = np.array([(r != -1).sum() for r in results])
 		N = np.array([r.size for r in results])
 		P = X / N
 		mu = P[0] - P[1]
@@ -105,10 +105,10 @@ class StatisticalComparison:
 		if mu == 0:
 			if P[0] == 1:
 				self.log("Proportions are both at 100%, no analysis can be carried out", with_timestamp=False)
-				return 0, np.array([0,0])
+				return 1, np.array([0,0])
 			if P[1] == 0:
 				self.log("Proportions are both at 0%, no analysis can be carried out", with_timestamp=False)
-				return 0, np.array([0,0])
+				return 1, np.array([0,0])
 		z_obs = mu / np.sqrt( prop * (1-prop) * (1/N).sum() )
 		p = 2*(1-stats.norm.cdf(abs(z_obs)))
 
