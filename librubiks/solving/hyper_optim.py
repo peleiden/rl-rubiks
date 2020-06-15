@@ -79,7 +79,7 @@ class BayesianOptimizer(Optimizer):
 			target_function: Callable[[dict], float],
 			parameters: dict,
 
-			alpha: float =1e-3,
+			alpha: float =1e-5,
 			n_restarts: int = 20,
 			acquisition: str='ei',
 
