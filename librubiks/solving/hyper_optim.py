@@ -186,7 +186,7 @@ def agent_optimize():
 	elif agent_name == 'AStar':
 		params = {
 			'lambda_': (0, 0.5),
-			'expansions': (1, 1000),
+			'expansions': (1, 5000),
 		}
 		def prepper(params):
 			params['expansions'] = int(params['expansions'])
