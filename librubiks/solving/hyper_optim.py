@@ -5,6 +5,7 @@ from ast import literal_eval
 from copy import copy
 import argparse
 import json # For print
+from pprint import pformat
 
 import numpy as np
 from bayes_opt import BayesianOptimization, UtilityFunction
@@ -15,6 +16,8 @@ from librubiks.solving.evaluation import Evaluator
 
 from librubiks.solving import agents
 from librubiks.model import Model
+
+np.set_printoptions(threshold=np.inf)
 
 class Optimizer:
 	def __init__(self,
@@ -58,30 +61,26 @@ class Optimizer:
 			won = res != -1
 			solve = won.mean() if won.any() else 0
 			meanlength = res[won].mean() if solve else -1
-			self.logger.log(f"\t RESULTS: Solved:: {solve}, Mean length {meanlength}")
-			if optim_lengths: return solve/meanlength
+			self.logger.log(f"\tRESULTS:           Solved {solve*100:.2f} %, mean solve length {meanlength}")
+			if optim_lengths: return solve / meanlength
 			return solve
 
 		self.target_function = target_function
 
 	def plot_optimization(self):
-		raise NotImplementedError #TODO
+		raise NotImplementedError  # TODO
 
 	@staticmethod
-	def format_params(params: str, prep=None):
+	def format_params(params: dict, prep=None):
 		if prep is not None: params = prep(copy(params))
-		return json.dumps(params, indent=4, sort_keys=True)
+		return ", ".join([f"{kw}: {v}" for kw, v in params.items()])
 
 class GridSearch(Optimizer):
 	""" Search the grid """
 	def __init__(self,
-			# Maximizes target function
-			target_function: Callable[[dict], float],
+			target_function: Callable[[dict], float], # Maximizes target function
 			parameters: dict,
-
-
 			logger: Logger=NullLogger(),
-
 		):
 		"""Set op BO class, set up utility function (acqusition function) and gaussian process.
 
@@ -90,23 +89,47 @@ class GridSearch(Optimizer):
 		"""
 		super().__init__(target_function, parameters, logger)
 
-
 		self.logger(f"Created grid search")
 
 	def optimize(self, iterations: int):
-		for i in range(iterations):
-			self.logger(f"Optimization {i}: Score: {score}")
+		
+		n = int(iterations ** (1 / len(self.parameters)) + 1e-6)  # Number of values checked for each parameter
+		param_spaces = np.array([np.linspace(*interval, n) for interval in self.parameters.values()])
+		scores = np.ones([n]*len(self.parameters))
+		indices = np.array(np.where(scores)).T  # Get every index in scores
+		
+		self.logger.section(f"Starting search over {scores.size} parameter combinations")
+		for i, index in enumerate(indices):
+			params_array = param_spaces[np.arange(len(self.parameters)), index]
+			next_params = {kw: param for kw, param in zip(self.parameters.keys(), params_array)}
+			self.parameter_history.append(next_params)
+			self.logger.section(f"Optimization {i}\n\tChosen parameters: {self.format_params(next_params, prep=self.param_prepper)}")
+			
+			score = self.target_function(next_params)
+			self.score_history.append(score)
+			scores[tuple(index)] = score
+			self.logger(f"\tScore:             {score}")
 
 		high_idx = np.argmax(self.score_history)
 		self.highscore = self.score_history[high_idx]
 		self.optimal = self.parameter_history[high_idx]
 
 		self.logger(f"Optimization done. Best parameters: {self.format_params(self.optimal, prep=self.param_prepper)} with score {self.highscore}")
+		
+		self.logger.section("All parameters and scores")
+		self.logger("\n".join([
+			"Parameter spaces",
+			*[f"{kw}: {param_spaces[i]}" for i, kw in enumerate(self.parameters.keys())]
+		]))
+		self.logger("\n".join([
+			"Scores",
+			str(scores),
+		]))
 
 		return self.optimal
 
 	def __str__(self):
-		return f"GridSearch()"
+		return f"Grid Search"
 
 
 class BayesianOptimizer(Optimizer):
@@ -121,7 +144,6 @@ class BayesianOptimizer(Optimizer):
 			acquisition: str='ei',
 
 			logger: Logger=NullLogger(),
-
 		):
 		"""Set op BO class, set up utility function (acqusition function) and gaussian process.
 
@@ -138,7 +160,7 @@ class BayesianOptimizer(Optimizer):
 		self.optimizer.set_gp_params(alpha=alpha, n_restarts_optimizer=n_restarts)
 		self.utility = UtilityFunction(kind=acquisition, kappa=2.5, xi=0.2)
 
-		self.logger(f"Created Bayesian Optimizer with alpha={alpha} and {n_restarts} restarts for each optimization. Acquisition function is {acquisition}.")
+		self.logger(f"Created Bayesian Optimizer with alpha = {alpha} and {n_restarts} restarts for each optimization. Acquisition function is {acquisition}.")
 
 	def optimize(self, iterations: int):
 		for i in range(iterations):
@@ -161,7 +183,8 @@ class BayesianOptimizer(Optimizer):
 		return self.optimal
 
 	def __str__(self):
-		return f"BayesianOptimizer()"
+		return f"Bayesian Optimizer"
+
 
 def agent_optimize():
 	"""
@@ -193,7 +216,7 @@ def agent_optimize():
 	parser.add_argument('--location', help='Folder which includes  model.pt. Results will also be saved here',
 		type=str, default=model_path)
 	parser.add_argument('--iterations', help='Number of iterations of Bayesian Optimization',
-		type=int, default=100)
+		type=int, default=125)
 	parser.add_argument('--agent', help='Name of agent corresponding to agent class in librubiks.solving.agents',
 		type=str, default='AStar', choices = ['AStar', 'MCTS', 'EGVM'])
 	parser.add_argument('--depth', help='Single number corresponding to the depth at which to test. If 0: run this at deep',
@@ -218,26 +241,26 @@ def agent_optimize():
 		def prepper(params): return params
 
 		persistent_params = {
-			'net' : Model.load(args.location, load_best=args.use_best),
+			'net': Model.load(args.location, load_best=args.use_best),
 			'search_graph': True,
 		}
 	elif agent_name == 'AStar':
 		params = {
-			'lambda_': (0, 0.5),
-			'expansions': (1, 5000),
+			'lambda_':    (0, 0.5),
+			'expansions': (1, 2000),
 		}
 		def prepper(params):
 			params['expansions'] = int(params['expansions'])
 			return params
 
 		persistent_params = {
-			'net' : Model.load(args.location, load_best=args.use_best),
+			'net': Model.load(args.location, load_best=args.use_best),
 		}
 	elif agent_name == 'EGVM':
 		params = {
 				'epsilon': (0, 0.5),
 				'workers': (1, 500),
-				'depth': (1, 250),
+				'depth':   (1, 250),
 			}
 
 		def prepper(params):
@@ -246,7 +269,7 @@ def agent_optimize():
 			return params
 
 		persistent_params = {
-			'net' : Model.load(args.location, load_best=args.use_best),
+			'net': Model.load(args.location, load_best=args.use_best),
 		}
 	else:
 		raise NameError(f"{agent_name} does not correspond to a known agent, please pick either AStar, MCTS or EGVM")
@@ -259,7 +282,11 @@ def agent_optimize():
 	agent = getattr(agents, agent_name)
 
 	evaluator = Evaluator(n_games=args.eval_games, max_time=5, scrambling_depths=range(0) if args.depth == 0 else [args.depth])
-	optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
+	assert args.optimizer in ["BO", "grid"], f"Optimizer should be 'BO' or 'grid', not '{args.optimizer}'"
+	if args.optimizer == "BO":
+		optimizer = BayesianOptimizer(target_function=None, parameters=params, logger=logger)
+	else:
+		optimizer = GridSearch(target_function=None, parameters=params, logger=logger)
 	optimizer.objective_from_evaluator(evaluator, agent, persistent_params, param_prepper=prepper, optim_lengths=args.optim_lengths)
 	optimizer.optimize(args.iterations)
 

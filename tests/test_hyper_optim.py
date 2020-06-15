@@ -24,7 +24,7 @@ class TestOptimizer(MainTest):
 		net.save(location)
 		for agent in agents:
 
-			run_settings = { 'location': location, 'agent': agent, 'iterations': 1, 'eval_games': 1, 'depth': 2, 'save_optimal': True, 'use_best': True}
+			run_settings = { 'location': location, 'agent': agent, 'iterations': 1, 'eval_games': 1, 'depth': 2, 'save_optimal': True, 'use_best': True, 'optimizer': 'BO' }
 			args = [sys.executable, run_path,]
 			for k, v in run_settings.items(): args.extend([f'--{k}', str(v)])
 			subprocess.check_call(args) #Raises error on problems in call
