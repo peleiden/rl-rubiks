@@ -65,12 +65,49 @@ class Optimizer:
 		self.target_function = target_function
 
 	def plot_optimization(self):
-		raise NotImplementedError
+		raise NotImplementedError #TODO
 
 	@staticmethod
 	def format_params(params: str, prep=None):
 		if prep is not None: params = prep(copy(params))
 		return json.dumps(params, indent=4, sort_keys=True)
+
+class GridSearch(Optimizer):
+	""" Search the grid """
+	def __init__(self,
+			# Maximizes target function
+			target_function: Callable[[dict], float],
+			parameters: dict,
+
+
+			logger: Logger=NullLogger(),
+
+		):
+		"""Set op BO class, set up utility function (acqusition function) and gaussian process.
+
+		:param float alpha:  Handles how much noise the GP can deal with
+		:param int n_restarts: Higher => more expensive, but more accurate
+		"""
+		super().__init__(target_function, parameters, logger)
+
+
+		self.logger(f"Created grid search")
+
+	def optimize(self, iterations: int):
+		for i in range(iterations):
+			self.logger(f"Optimization {i}: Score: {score}")
+
+		high_idx = np.argmax(self.score_history)
+		self.highscore = self.score_history[high_idx]
+		self.optimal = self.parameter_history[high_idx]
+
+		self.logger(f"Optimization done. Best parameters: {self.format_params(self.optimal, prep=self.param_prepper)} with score {self.highscore}")
+
+		return self.optimal
+
+	def __str__(self):
+		return f"GridSearch()"
+
 
 class BayesianOptimizer(Optimizer):
 	""" An optimizer using https://github.com/fmfn/BayesianOptimization."""
@@ -169,6 +206,7 @@ def agent_optimize():
 			choices = [True, False])
 	parser.add_argument('--optim_lengths', help="Set to true to optimize against sol percentage / solution length. Else, simply use sol %", type=literal_eval,
 			default=True, choices = [True, False])
+	parser.add_argument('--optimizer', help="Either BO or grid", type=str, default="grid", choices = ("grid", "BO"))
 
 	args = parser.parse_args()
 
