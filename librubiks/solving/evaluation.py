@@ -42,12 +42,14 @@ class Evaluator:
 	def approximate_time(self):
 		return self.max_time * self.n_games * len(self.scrambling_depths)
 
-	def _eval_game(self, agent: agents.Agent, depth: int):
+	def _eval_game(self, agent: agents.Agent, depth: int, profile: str):
 		turns_to_complete = -1  # -1 for unfinished
 		state, _, _ = cube.scramble(depth, True)
+		self.tt.profile(profile)
 		solution_found = agent.search(state, self.max_time, self.max_states)
+		dt = self.tt.end_profile(profile)
 		if solution_found: turns_to_complete = len(agent.action_queue)
-		return turns_to_complete
+		return turns_to_complete, dt
 
 	def eval(self, agent: agents.Agent) -> (np.ndarray, np.ndarray, np.ndarray):
 		"""
@@ -70,14 +72,14 @@ class Evaluator:
 			for _ in range(self.n_games):
 				if self._isdeep():  # Randomly sample evaluation depth for deep evaluations
 					d = np.random.randint(100, 1000)
-				self.tt.profile(f"Evaluation of {agent}. Depth {'100 - 999' if self._isdeep() else d}")
-				r = self._eval_game(agent, d)
-				t = self.tt.end_profile(f"Evaluation of {agent}. Depth {'100 - 999' if self._isdeep() else d}")
+				p = f"Evaluation of {agent}. Depth {'100 - 999' if self._isdeep() else d}"
+				r, dt = self._eval_game(agent, d, p)
 
 				res.append(r)
 				states.append(len(agent))
-				times.append(t)
-			self.log.verbose(f"Performed evaluation at depth: {d}/{self.scrambling_depths[-1]}")
+				times.append(dt)
+			if not self._isdeep():
+				self.log.verbose(f"Performed evaluation at depth: {d}/{self.scrambling_depths[-1]}")
 
 		res = np.reshape(res, (len(self.scrambling_depths), self.n_games))
 		states = np.reshape(states, (len(self.scrambling_depths), self.n_games))
