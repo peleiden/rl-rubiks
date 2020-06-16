@@ -1,6 +1,7 @@
 import os
 import sys
 
+from copy import copy
 import argparse
 from glob import glob as glob #glob
 from ast import literal_eval
@@ -34,18 +35,32 @@ class StatisticalComparison:
 	def dataload(self):
 		""" Loads data from path self.p """
 		self.names = self._check_agents(self.p)
+		paths = copy(self.names)
 		if not self.names:
-			self.p = os.path.join(self.p, 'evaluation_results')
-			self.names = self._check_agents(self.p)
-			if not self.names: raise FileNotFoundError(f"No results found in {self.p} or parent folder")
+			p = os.path.join(self.p, 'evaluation_results')
+			names = self._check_agents(p)
+			if names:
+				self.names, self.p = names, p
+				paths = copy(self.names)
+			else:
+				for f in os.listdir(self.p):
+					subfolder = os.path.join(self.p, f, 'evaluation_results')
+					if os.path.isdir(subfolder):
+						agents = self._check_agents(subfolder)
+						print(subfolder, agents)
+						self.names.extend(agents)
+						paths.extend([os.path.join(f, 'evaluation_results', a) for a in agents])
+		print(paths)
+		if not self.names: raise FileNotFoundError(f"No results found in{self.p} or subfolders")
 		if len(self.names) > 2:
 			if not self.compare_all:
 				self.log("Multiple agents were submitted. If you want to run all combinations, rerun with --compare_all True.")
 				choices = "\n".join(f'{i}: {f}' for i, f in enumerate(self.names))
 				chosen = [ int(input(f"Please choose {w} agent (give index): {choices}")) for w in ('first', 'second') ]
 				self.names = [ self.names[i] for i in chosen ]
+				paths = copy(self.names)
 
-		self.results = [ np.load(os.path.join(self.p, f"{name}_results.npy")) for name in self.names ]
+		self.results = [ np.load(os.path.join(self.p, f"{path}_results.npy")) for path in paths ]
 		self.log(f"Results loaded for agents\n\t{self.names}\nfrom path\n\t{self.p}")
 
 	def run_comparisons(self, alpha: float):
@@ -128,6 +143,7 @@ class StatisticalComparison:
 		"""Check normality of solution lengths"""
 		for i, result in enumerate(self.results):
 			result, name = result[result!=-1], self.names[i]
+			if not len(result): continue
 			plt.figure(figsize=(15, 10))
 			plt.subplot(221)
 			Z = (result - result.mean()) / (result.std(ddof=1) + 1e-6)
