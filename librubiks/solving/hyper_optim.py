@@ -22,7 +22,7 @@ np.set_printoptions(threshold=np.inf)
 class Optimizer:
 	def __init__(self,
 			# Maximizes target function
-			target_function: Callable[[dict], float],
+			target_function,
 			parameters: dict, #str name : tuple limits
 
 			logger: Logger=NullLogger(),
@@ -56,14 +56,15 @@ class Optimizer:
 
 		def target_function(agent_params):
 			agent = self.agent_class(**self.persistent_agent_params, **self.param_prepper(copy(agent_params)))
-			res, _, _ = self.evaluator.eval(agent)
+			res, states, times = self.evaluator.eval(agent)
 			res = res.ravel()
 			won = res != -1
 			solve = won.mean() if won.any() else 0
 			meanlength = res[won].mean() if solve else -1
 			self.logger.log(f"\tRESULTS:           Solved {solve*100:.2f} %, mean solve length {meanlength}")
+			self.logger.log(f"\t                   Used {times.mean():.2f} s and saw {states.mean():.0f} states on average", with_timestamp=False)
 			if optim_lengths: return solve / meanlength
-			return solve
+			return solve, states, times
 
 		self.target_function = target_function
 
@@ -108,7 +109,7 @@ class GridSearch(Optimizer):
 			score = self.target_function(next_params)
 			self.score_history.append(score)
 			scores[tuple(index)] = score
-			self.logger(f"\tScore:             {score}")
+			self.logger(f"\tScore:             {score}", with_timestamp=False)
 
 		high_idx = np.argmax(self.score_history)
 		self.highscore = self.score_history[high_idx]
@@ -168,7 +169,7 @@ class BayesianOptimizer(Optimizer):
 			self.parameter_history.append(next_params)
 			self.logger(f"Optimization {i}: Chosen parameters:\t: {self.format_params(next_params, prep=self.param_prepper)}")
 
-			score = self.target_function(next_params)
+			score, states, times = self.target_function(next_params)
 			self.score_history.append(score)
 			self.logger(f"Optimization {i}: Score: {score}")
 
@@ -246,7 +247,7 @@ def agent_optimize():
 		}
 	elif agent_name == 'AStar':
 		params = {
-			'lambda_':    (0, 0.5),
+			'lambda_':    (0, 0.4),
 			'expansions': (1, 2000),
 		}
 		def prepper(params):
