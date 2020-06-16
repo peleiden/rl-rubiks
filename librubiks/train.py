@@ -365,13 +365,13 @@ class Train:
 		loss_ax.plot(self.train_rollouts, self.value_losses,  linewidth=2, linestyle="dashed",    color="green",  label="Value loss")
 		loss_ax.tick_params(axis='y', labelcolor=colour)
 		loss_ax.set_xlabel(f"Rollout, each of {TickTock.thousand_seps(self.states_per_rollout)} states")
-		loss_ax.set_ylim(np.array([-0.05, 1.2]) * self.train_losses.max())
+		loss_ax.set_ylim(np.array([-0.05, 1.3]) * self.train_losses.max())
 		h1, l1 = loss_ax.get_legend_handles_labels()
 
 		if len(self.evaluation_rollouts):
 			color = 'blue'
 			reward_ax = loss_ax.twinx()
-			reward_ax.set_ylim([-5, 120])
+			reward_ax.set_ylim([-5, 105])
 			reward_ax.set_ylabel(f"Cubes solved at depth {self.evaluator.scrambling_depths[0]} in {self.evaluator.max_time:.2f} s [%]", color=color)
 			sol_shares = np.array(self.sol_percents)
 			bernoulli_errors = bernoulli_error(sol_shares, self.evaluator.n_games, alpha=0.05)
@@ -381,7 +381,7 @@ class Train:
 			h2, l2 = reward_ax.get_legend_handles_labels()
 			h1 += h2
 			l1 += l2
-		loss_ax.legend(h1, l1, loc=1)
+		loss_ax.legend(h1, l1, loc=2)
 
 		title = (f"Training - {TickTock.thousand_seps(self.rollouts*self.rollout_games*self.rollout_depth)} states")
 		plt.title(title)
