@@ -356,10 +356,10 @@ class Train:
 		Visualizes training by showing training loss + evaluation reward in same plot
 		"""
 		self.log("Making plot of training")
-		fig, loss_ax = plt.subplots(figsize=(25, 10))
+		fig, loss_ax = plt.subplots(figsize=(23, 10))
 
 		colour = "red"
-		loss_ax.set_ylabel("Traing loss")
+		loss_ax.set_ylabel("Training loss")
 		loss_ax.plot(self.train_rollouts, self.train_losses,  linewidth=3,                        color=colour,   label="Training loss")
 		loss_ax.plot(self.train_rollouts, self.policy_losses, linewidth=2, linestyle="dashdot",   color="orange", label="Policy loss")
 		loss_ax.plot(self.train_rollouts, self.value_losses,  linewidth=2, linestyle="dashed",    color="green",  label="Value loss")
@@ -376,7 +376,7 @@ class Train:
 			sol_shares = np.array(self.sol_percents)
 			bernoulli_errors = bernoulli_error(sol_shares, self.evaluator.n_games, alpha=0.05)
 			reward_ax.errorbar(self.evaluation_rollouts, sol_shares*100, bernoulli_errors*100, fmt="-o",
-				capsize=10, color=color, label="Greedy policy performance")
+				capsize=10, color=color, label="Policy performance", errorevery=2, alpha=0.8)
 			reward_ax.tick_params(axis='y', labelcolor=color)
 			h2, l2 = reward_ax.get_legend_handles_labels()
 			h1 += h2
