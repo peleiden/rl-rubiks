@@ -6,7 +6,6 @@ import { FormsModule } from "@angular/forms";
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
 import { CubeComponent } from './cube/cube.component';
-import { AppendixComponent } from './appendix/appendix.component';
 import { DocumentationComponent } from './documentation/documentation.component';
 import { MethodsComponent } from './methods/methods.component';
 
@@ -14,7 +13,6 @@ import { MethodsComponent } from './methods/methods.component';
   declarations: [
     AppComponent,
     CubeComponent,
-    AppendixComponent,
     DocumentationComponent,
     MethodsComponent,
   ],
