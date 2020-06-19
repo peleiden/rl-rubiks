@@ -9,7 +9,7 @@ import { DocumentationComponent } from './documentation/documentation.component'
 const routes: Routes = [
   { path: "", redirectTo: "cube", pathMatch: "full" },
   { path: "cube", component: CubeComponent },
-  { path: "methods", component: MethodsComponent },
+  // { path: "methods", component: MethodsComponent },
   { path: "appendix", component: AppendixComponent },
   { path: "documentation", component: DocumentationComponent },
   { path: "**", component: CubeComponent },
