@@ -42,7 +42,7 @@ class Optimizer:
 		self.score_history = list()
 		self.parameter_history = list()
 
-		self.logger=logger
+		self.logger = logger
 		self.logger.log(f"Optimizer {self} created parameters: {self.format_params(self.parameters)}")
 
 	def optimize(self, iterations: int):
@@ -63,8 +63,7 @@ class Optimizer:
 			meanlength = res[won].mean() if solve else -1
 			self.logger.log(f"\tRESULTS:           Solved {solve*100:.2f} %, mean solve length {meanlength}")
 			self.logger.log(f"\t                   Used {times.mean():.2f} s and saw {states.mean():.0f} states on average", with_timestamp=False)
-			if optim_lengths: return solve / meanlength
-			return solve, states, times
+			return (solve / meanlength if optim_lengths else solve), states, times
 
 		self.target_function = target_function
 
@@ -79,7 +78,7 @@ class Optimizer:
 class GridSearch(Optimizer):
 	""" Search the grid """
 	def __init__(self,
-			target_function: Callable[[dict], float], # Maximizes target function
+			target_function, # Maximizes target function
 			parameters: dict,
 			logger: Logger=NullLogger(),
 		):
@@ -106,7 +105,7 @@ class GridSearch(Optimizer):
 			self.parameter_history.append(next_params)
 			self.logger.section(f"Optimization {i}\n\tChosen parameters: {self.format_params(next_params, prep=self.param_prepper)}")
 			
-			score = self.target_function(next_params)
+			score, _, _ = self.target_function(next_params)
 			self.score_history.append(score)
 			scores[tuple(index)] = score
 			self.logger(f"\tScore:             {score}", with_timestamp=False)
@@ -137,7 +136,7 @@ class BayesianOptimizer(Optimizer):
 	""" An optimizer using https://github.com/fmfn/BayesianOptimization."""
 	def __init__(self,
 			# Maximizes target function
-			target_function: Callable[[dict], float],
+			target_function,
 			parameters: dict,
 
 			alpha: float =1e-5,
@@ -169,7 +168,7 @@ class BayesianOptimizer(Optimizer):
 			self.parameter_history.append(next_params)
 			self.logger(f"Optimization {i}: Chosen parameters:\t: {self.format_params(next_params, prep=self.param_prepper)}")
 
-			score, states, times = self.target_function(next_params)
+			score, _, _ = self.target_function(next_params)
 			self.score_history.append(score)
 			self.logger(f"Optimization {i}: Score: {score}")
 
