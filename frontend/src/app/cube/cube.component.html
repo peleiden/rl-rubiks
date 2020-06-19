@@ -58,6 +58,7 @@
     </form>
     <p *ngIf="commonService.status.connectedToServer && commonService.isDeep()">
       Parameters for selected agent: {{commonService.prettyParams}}.
+      <span *ngIf="commonService.getAgent() === 'EGVM'">Please be aware that a bug exists, where ε-GVM may not return the correct sequence of actions, if a solution is found.</span>
     </p>
     <p *ngIf="commonService.timeLimit >= 30 && httpService.selectedHost.name === 'Heroku'">
       Be aware that the server will time out after 30 seconds of attempting to solve.

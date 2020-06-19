@@ -37,7 +37,7 @@ export class CommonService {
   }
 
   get prettyParams(): string {
-    const params = this.parameters[this.agents[this.selectedSearcher]];
+    const params = this.parameters[this.getAgent()];
     return Object.keys(params)
       .map(param => `${param} = ${params[param]}`)
       .join("---")
@@ -51,6 +51,10 @@ export class CommonService {
       .join(", ");
   }
 
+  public getAgent() {
+    return this.agents[this.selectedSearcher];
+  }
+
   public formatAgent(agent: string) {
     if (agent === "EGVM") {
       return "ε-GVM";
@@ -60,7 +64,7 @@ export class CommonService {
   }
 
   public isDeep() {
-    return ["A*", "MCTS", "EGVM"].includes(this.agents[this.selectedSearcher]);
+    return ["A*", "MCTS", "EGVM"].includes(this.getAgent());
   }
 
   public getTimeSearchedStyle(): string {
