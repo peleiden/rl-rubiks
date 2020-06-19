@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col-12 col-md-5">
-    <h2 class="h5 mt-2">Perform action</h2>
+    <h2 class="h5 mt-2">⚙️ Perform action</h2>
     <!-- Actions -->
     <div style="max-width: 450px;">
       <div class="row my-1">
@@ -41,7 +41,7 @@
 
     <h2 class="h5 mt-4">🤖 Agents</h2>
     <p>Choose a solver from one of our agents. See <a routerLink="/methods">methods</a>&nbsp;for details.</p>
-    <form class="form-inline" (ngSubmit)="commonService.solve()" *ngIf="commonService.status.connectedToServer">
+    <form class="form-inline mb-2" (ngSubmit)="commonService.solve()" *ngIf="commonService.status.connectedToServer">
       <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Try</button>
       to solve in
       <div class="form-group mx-2">
@@ -53,13 +53,16 @@
       </div>
       seconds with
       <select class="my-2 ml-2" [(ngModel)]="commonService.selectedSearcher" [ngModelOptions]="{standalone: true}">
-        <option *ngFor="let agent of commonService.agents; let i = index" [ngValue]="i">{{agent}}</option>
+        <option *ngFor="let agent of commonService.agents; let i = index" [ngValue]="i">{{commonService.formatAgent(agent)}}</option>
       </select>
     </form>
+    <p *ngIf="commonService.status.connectedToServer && commonService.isDeep()">
+      Parameters for selected agent: {{commonService.prettyParams}}.
+    </p>
     <p *ngIf="commonService.timeLimit >= 30 && httpService.selectedHost.name === 'Heroku'">
       Be aware that the server will time out after 30 seconds of attempting to solve.
     </p>
-    <div *ngIf="commonService.hasSearchedForSolution && !commonService.error" class="mt-2">
+    <div *ngIf="commonService.hasSearchedForSolution && !commonService.error">
       <p>
         {{commonService.exploredStates || "A number of"}} states were explored,
         <span *ngIf="commonService.hasSolution">and a solution of {{commonService.solveLength}} steps was found.</span>

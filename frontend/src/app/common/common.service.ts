@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-import { cube, ISolveRequest, host } from './rubiks';
+import { cube, ISolveRequest, host, parameter } from './rubiks';
 import { HttpService } from './http.service';
 import { deepCopy, CubeService } from './cube.service';
 
@@ -17,6 +17,7 @@ export class CommonService {
   scrambleDepth = 10;
   cuda: boolean;
   agents: string[];
+  parameters: { [key: string]: parameter };
   progress = 0;
   timeLimit = 5;
   selectedSearcher: number;
@@ -33,6 +34,33 @@ export class CommonService {
 
   get prettyActionQueue(): string {
     return this.actionQueue.map(val => this.cubeService.actions[val]).join(" ");
+  }
+
+  get prettyParams(): string {
+    const params = this.parameters[this.agents[this.selectedSearcher]];
+    return Object.keys(params)
+      .map(param => `${param} = ${params[param]}`)
+      .join("---")
+      .replace("lambda_", "λ")
+      .replace("expansions", "N")
+      .replace("epsilon", "ε")
+      .replace("workers", "W")
+      .replace("depth", "D")
+      .split("---")
+      .sort((a, b) => a > b ? -1 : 1)
+      .join(", ");
+  }
+
+  public formatAgent(agent: string) {
+    if (agent === "EGVM") {
+      return "ε-GVM";
+    } else {
+      return agent;
+    }
+  }
+
+  public isDeep() {
+    return ["A*", "MCTS", "EGVM"].includes(this.agents[this.selectedSearcher]);
   }
 
   public getTimeSearchedStyle(): string {
@@ -64,10 +92,11 @@ export class CommonService {
   private async getInfo() {
     const callId = this.status.serverCallId;
     this.status.loading = true;
-    const { cuda, agents } = await this.httpService.getInfo();
+    const { cuda, agents, parameters } = await this.httpService.getInfo();
     if (callId === this.status.serverCallId) {
       this.cuda = cuda;
       this.agents = agents;
+      this.parameters = parameters;
       this.selectedSearcher = 0;
       this.status.loading = false;
       this.status.connectedToServer = true;

@@ -7,10 +7,12 @@ export type cube69 = side[];
 export type action = [number, boolean];
 
 export type host = { name: string, address: string };
+export type parameter = { [key: string]: number };
 
 export interface IInfoResponse {
 	cuda: boolean;
 	agents: string[];
+	parameters: { [key: string]: parameter };
 }
 
 export interface ISolveRequest {

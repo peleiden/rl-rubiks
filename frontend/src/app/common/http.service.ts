@@ -15,8 +15,8 @@ export class HttpService {
   constructor(private http: HttpClient) { }
 
   hosts: host[] = [
-    { name: "Heroku", address: "https://rl-rubiks.herokuapp.com" },
     { name: "Local", address: "http://127.0.0.1:8000" },
+    { name: "Heroku", address: "https://rl-rubiks.herokuapp.com" },
   ];
 
   private _selectedHost = this.hosts[0];
