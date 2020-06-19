@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import norm
 
 from librubiks import cube
 from librubiks.cube import get_is2024, set_is2024, store_repr, restore_repr
@@ -90,12 +91,15 @@ class CubeBench:
 	
 	def _log_method_results(self, description: str, pname: str, divider=1):
 		threshold = 2
+		n = len(self.tt.profiles[pname])
 		removed = self.tt.profiles[pname].remove_outliers(threshold)
 		self.log("\n".join([
 			description + ": " + TickTock.stringify_time(self.tt.profiles[pname].mean() / divider, TimeUnit.microsecond),
-			"Mean: " + TickTock.stringify_time(self.tt.profiles[pname].mean(), TimeUnit.microsecond),
+			"Mean: " + TickTock.stringify_time(self.tt.profiles[pname].mean(), TimeUnit.microsecond) + " p/m " +\
+				TickTock.stringify_time(norm.ppf(0.975) * self.tt.profiles[pname].std() / np.sqrt(n-removed), TimeUnit.nanosecond),
 			"Std.: " + TickTock.stringify_time(self.tt.profiles[pname].std(), TimeUnit.microsecond),
-			f"Removed {TickTock.thousand_seps(removed)} outliers with threshold {threshold} * mean",
+			f"Removed {TickTock.thousand_seps(removed)} outliers with threshold {threshold} * mean.",
+			f"Mean and std. are based on the remaining {TickTock.thousand_seps(n-removed)} measurements",
 		]))
 
 def benchmark():
