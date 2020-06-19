@@ -40,7 +40,7 @@
     </form>
 
     <h2 class="h5 mt-4">🤖 Agents</h2>
-    <p>Choose a solver from one of our agents. See <a routerLink="/methods">methods</a>&nbsp;for details.</p>
+    <p>Choose a solver from one of our agents.
     <form class="form-inline mb-2" (ngSubmit)="commonService.solve()" *ngIf="commonService.status.connectedToServer">
       <button type="submit" class="btn btn-secondary mr-2" [disabled]="commonService.status.loading">Try</button>
       to solve in
@@ -91,7 +91,8 @@
       <div *ngIf="httpService.selectedHost.name === 'Heroku'">
         <p>
           <strong>Note:</strong>
-          We are using a free backend server without CUDA so the agents will need considerable time, and memory overflow is common for some agents if given too much time.
+          We are using a free backend server without CUDA, so agents relying on a neural network will need considerably more time than presented in the report,
+          and memory overflow is common for some agents if given too much time.
           To speed them up, you can <a [routerLink]="['/documentation']">start a local server</a>.
         </p>
       </div>
