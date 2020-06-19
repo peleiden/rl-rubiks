@@ -22,13 +22,17 @@ url = "https://github.com/peleiden/rubiks-models/blob/master/local_sota_attempt/
 download(url % "model-best.pt", net_loc)
 download(url % "config.json", net_loc)
 
+astar_params = { "lambda_": 0.07, "expansions": 27 }
+mcts_params  = { "c": 4.13 }
+egvm_params  = { "epsilon": 0.5, "workers": 10, "depth": 50 }
+
 agents = [
-	{ "name": "AStar", "agent": AStar.from_saved(net_loc, use_best=True, lambda_=0.1, expansions=50) },
-	{ "name": "MCTS", "agent": MCTS.from_saved(net_loc, use_best=True, c=0.6, search_graph=True) },
-	{ "name": "Greedy policy", "agent": PolicySearch.from_saved(net_loc, use_best=True) },
-	{ "name": "Greedy value", "agent": ValueSearch.from_saved(net_loc, use_best=True) },
-	{ "name": "EGVM", "agent": EGVM.from_saved(net_loc, use_best=True, epsilon=0.5, workers=10, depth=100) },
-	{ "name": "BFS", "agent": BFS() },
+	{ "name": "A*",             "agent": AStar.from_saved(net_loc, use_best=True, **astar_params) },
+	{ "name": "MCTS",           "agent": MCTS.from_saved(net_loc, use_best=True, **mcts_params, search_graph=True) },
+	{ "name": "Greedy policy",  "agent": PolicySearch.from_saved(net_loc, use_best=True) },
+	{ "name": "Greedy value",   "agent": ValueSearch.from_saved(net_loc, use_best=True) },
+	{ "name": "EGVM",           "agent": EGVM.from_saved(net_loc, use_best=True, **egvm_params) },
+	{ "name": "BFS",            "agent": BFS() },
 	{ "name": "Random actions", "agent": RandomSearch()},
 ]
 
@@ -41,6 +45,7 @@ def get_info():
 	return jsonify({
 		"cuda": torch.cuda.is_available(),
 		"agents": [x["name"] for x in agents],
+		"parameters": { "A*": astar_params, "MCTS": mcts_params, "EGVM": egvm_params }
 	})
 
 @app.route("/solve", methods=["POST"])
