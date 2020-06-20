@@ -539,7 +539,7 @@ class MCTS(DeepAgent):
 		self.tt.profile("Check for solution")
 		solved_substate = np.where(cube.multi_is_solved(substates))[0]
 		if solved_substate.size:
-			solve_leaf = substate_idcs[solve_action]
+			solve_leaf = substate_idcs[solved_substate[0]]
 			solve_action = solved_substate[0]
 		self.tt.end_profile("Check for solution")
 
@@ -607,6 +607,7 @@ class MCTS(DeepAgent):
 		substate_idcs = np.array([self.indices[s] if s in self.indices else 0 for s in substate_strs])
 		self.neighbors[repeated_leaves_idcs, actions_taken] = substate_idcs
 		self.neighbors[substate_idcs, cube.rev_actions(actions_taken)] = repeated_leaves_idcs
+		self.neighbors[0] = 0
 		self.tt.end_profile("Complete graph")
 
 	def _shorten_action_queue(self, solved_index: int):
@@ -666,14 +667,14 @@ class EGVM(DeepAgent):
 			paths, states, states_oh, solved = self.expand(state)
 			# Break if solution is found
 			if solved != (-1, -1):
-				self.action_queue += deque(paths[solved[0]][:solved[1]])
+				self.action_queue += deque(paths[solved[0], :solved[1]])
 				return True
 			# Update state with the high ground
 			v = self.net(states_oh, policy=False).cpu().squeeze()
 			best_value_index = int(v.argmax())
 			state = states[best_value_index]
 			worker, depth = best_value_index // self.depth, best_value_index % self.depth
-			self.action_queue += deque(paths[worker][:depth])
+			self.action_queue += deque(paths[worker, :depth+1])
 
 		return False
 
@@ -684,7 +685,7 @@ class EGVM(DeepAgent):
 		# Initialize needed data structures
 		states = cube.repeat_state(state, self.workers)
 		states_oh = cube.as_oh(states)
-		paths = [[] for _ in range(self.workers)]
+		paths = paths = np.empty((self.workers, self.depth), dtype=int)  # Index n contains path for worker n
 		new_states = np.empty((self.workers * self.depth, *cube.shape()), dtype=cube.dtype)
 		new_states_oh = torch.empty(self.workers * self.depth, cube.get_oh_shape(), dtype=torch.float, device=gpu)
 		# Expand for self.depth iterations
@@ -699,7 +700,7 @@ class EGVM(DeepAgent):
 			p = self.net(states_oh[use_policy], value=False).cpu().numpy()
 			actions[use_policy] = p.argmax(axis=1)
 			# Update paths
-			[path.append(a) for path, a in zip(paths, actions)]
+			paths[:, d] = actions
 
 			# Expand using selected actions
 			faces, dirs = cube.indices_to_actions(actions)

@@ -18,13 +18,13 @@ CORS(app)
 
 net_loc = "local_net"
 os.makedirs(net_loc, exist_ok=True)
-url = "https://github.com/peleiden/rubiks-models/blob/master/local_sota_attempt/depth30/%s?raw=true"
+url = "https://github.com/peleiden/rubiks-models/blob/master/main/%s?raw=true"
 download(url % "model-best.pt", net_loc)
 download(url % "config.json", net_loc)
 
 astar_params = { "lambda_": 0.07, "expansions": 27 }
 mcts_params  = { "c": 4.13 }
-egvm_params  = { "epsilon": 0.5, "workers": 10, "depth": 50 }
+egvm_params  = { "epsilon": 0.375, "workers": 10, "depth": 50 }
 
 agents = [
 	{ "name": "A*",             "agent": AStar.from_saved(net_loc, use_best=True, **astar_params) },
