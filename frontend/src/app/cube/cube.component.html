@@ -83,19 +83,19 @@
       <div class="progress-bar" role="progressbar" [ngStyle]="{'width': commonService.getTimeSearchedStyle()}"></div>
     </div>
     <div *ngIf="!commonService.cuda" class="mt-2">
-      <div *ngIf="httpService.selectedHost.name === 'Local'">
-          <p>
-            <strong>Note:</strong> No CUDA available on your local server. Agents will need more time to solve the cube.
-          </p>
-      </div>
-      <div *ngIf="httpService.selectedHost.name === 'Heroku'">
-        <p>
+      <p *ngIf="httpService.selectedHost.name === 'Local'">
+        <strong>Note:</strong>
+        No CUDA available on your local server. Agents will need more time to solve the cube.
+        A* should solve most configurations in 20 seconds or less, but you can give it more time if needed.
+      </p>
+      <p *ngIf="httpService.selectedHost.name === 'Heroku'">
           <strong>Note:</strong>
           We are using a free backend server without CUDA, so agents relying on a neural network will need considerably more time than presented in the report,
           and memory overflow is common for some agents if given too much time.
           To speed them up, you can <a [routerLink]="['/documentation']">start a local server</a>.
-        </p>
-      </div>
+          <br>
+          Using the server, A* solves most configurations within 20 seconds.
+      </p>
     </div>
     <p *ngIf="commonService.error">{{commonService.error}}</p>
     <p>

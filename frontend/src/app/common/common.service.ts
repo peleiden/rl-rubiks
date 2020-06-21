@@ -14,12 +14,12 @@ export class CommonService {
     connectedToServer: false,
     serverCallId: Math.random(),  // Resets on server change to prevent old server calls messing things up
   };
-  scrambleDepth = 10;
+  scrambleDepth = 100;
   cuda: boolean;
   agents: string[];
   parameters: { [key: string]: parameter };
   progress = 0;
-  timeLimit = 5;
+  timeLimit = 20;
   selectedSearcher: number;
   hasSearchedForSolution = false;
   hasSolution: boolean;
