@@ -14,8 +14,8 @@ For the standard setup and use case, this should reproduce our results.
 git clone https://github.com/peleiden/rl-rubiks
 cd rl-rubiks
 pip install -r rlrequirements.txt
-python runtrain.py --config configs/train_ex.ini
-python runeval.py --config configs/eval_ex.ini
+python runtrain.py --config configs/main_train.ini
+python runeval.py --config configs/main_eval.ini
 ```
 For more instructions on reproducing the training and evaluation, read Installation and Usage below.
 
