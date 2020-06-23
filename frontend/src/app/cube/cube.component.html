@@ -4,7 +4,7 @@
     <!-- Actions -->
     <div style="max-width: 450px;">
       <div class="row my-1">
-        <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
+        <div class="col-2" *ngFor="let i of [1, 3, 5, 7, 9, 11]">
           <button [class]="getActionButtonClass(i)"
                   (click)="cubeService.inplaceRotate(cubeService.actionSpace[i][0], cubeService.actionSpace[i][1])"
                   [disabled]="commonService.status.loading && commonService.status.connectedToServer">
@@ -13,7 +13,7 @@
         </div>
       </div>
       <div class="row my-1">
-        <div class="col-2" *ngFor="let i of [1, 3, 5, 7, 9, 11]">
+        <div class="col-2" *ngFor="let i of [0, 2, 4, 6, 8, 10]">
           <button [class]="getActionButtonClass(i)"
                   (click)="cubeService.inplaceRotate(cubeService.actionSpace[i][0], cubeService.actionSpace[i][1])"
                   [disabled]="commonService.status.loading && commonService.status.connectedToServer">

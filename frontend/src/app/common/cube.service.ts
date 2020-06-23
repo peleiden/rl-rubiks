@@ -34,7 +34,7 @@ export class CubeService {
   private _currentState: cube = deepCopy(this.solvedState);
   currentState69: cube69 = this.as69(this._currentState);
 
-  actions = ["f", "F", "b", "B", "t", "T", "d", "D", "l", "L", "r", "R"];
+  actions = ["F'", "F", "B'", "B", "T'", "T", "D'", "D", "L'", "L", "R'", "R"];
 
   get currentState() {
     return deepCopy(this._currentState);
