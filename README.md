@@ -52,9 +52,9 @@ The training can be started using `runtrain.py`. From the main repo folder, run
 ```
 python runtrain.py --help
 ```
-to show the possible options. In many cases, using the parameters from a configuration file is preferable. We have included an example configuration file, which starts two trainings with different learning rates. Run the following command to start the trainings:
+to show the possible options. In many cases, using the parameters from a configuration file is preferable.
 ```
-python runtrain.py --config configs/train_ex.ini
+python runtrain.py --config configs/main_train.ini
 ```
 
 ### Evaluation of Agents
@@ -65,5 +65,5 @@ python runeval.py --help
 ```
 to show options. This also works with configuration files; an example of which can be seen by running
 ```
-python runeval.py --config configs/eval_ex.ini
+python runeval.py --config configs/main_eval.ini
 ```
