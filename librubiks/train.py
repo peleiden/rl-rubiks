@@ -88,7 +88,7 @@ class Train:
 		self.log = logger
 		self.log("\n".join([
 			"Created trainer",
-			f"Alpha update: {self.alpha_update:.2f}"
+			f"Alpha update: {self.alpha_update:.2f}",
 			f"Learning rate and gamma: {self.lr} and {self.gamma}",
 			f"Learning rate and alpha will update every {self.update_interval} rollouts: lr <- {self.gamma:.4f} * lr and alpha += {self.alpha_update:.4f}"\
 				if self.update_interval else "Learning rate and alpha will not be updated during training",
