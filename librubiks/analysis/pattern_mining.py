@@ -1,3 +1,5 @@
+import numpy as np
+
 from librubiks.utils import Logger
 from librubiks import cube
 from librubiks.solving.agents import Agent, AStar
@@ -43,11 +45,11 @@ def find_generalized_patterns(sequence_list, support):
 	return patterns
 
 
-def generate_actions(agent: Agent, games: int, max_time: float, scramble: int = 100):
+def generate_actions(agent: Agent, games: int, max_time: float):
 	sequences = list()
 	for i in range(games):
 		actions_taken = []
-		state, _, _ = cube.scramble(scramble, True)
+		state, _, _ = cube.scramble(np.random.randint(100, 1000), True)
 		won = agent.search(state, max_time, None)
 		if not won: log(f"Game {i+1} was not won")
 		else:
@@ -62,13 +64,14 @@ def generate_actions(agent: Agent, games: int, max_time: float, scramble: int = 
 
 if __name__ == "__main__":
 	### Hyper parameters ###
-	net_path, use_best = '../rubiks-models/somerolloutcompare/smallroll', False
-	max_time = 30
-	lambda_, N = 0.2, 10
+	net_path, use_best = '../rubiks-models/main', True
+	max_time = 5
+	lambda_, N = 0.16, 700
 
-	output_path = 'data/patterns.log'
-	games = 10
-	support = 0.4
+	output_path = '../rubiks-models/main/patterns.log'
+	games = 1000
+	support = 0.3
+
 	########################
 	log = Logger(output_path, "Pattern mining")
 	agent = AStar.from_saved(net_path, use_best, lambda_, N)
