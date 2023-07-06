@@ -7,4 +7,4 @@ numpy==1.18.4
 --find-links https://download.pytorch.org/whl/torch_stable.html
 torch==1.5.0+cpu
 wget==3.2
-scipy==1.4.1
+scipy==1.10.0
